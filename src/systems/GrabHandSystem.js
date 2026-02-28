@@ -22,6 +22,12 @@ export default class GrabHandSystem {
         this.onCooldown        = false;
         this.cooldownRemaining = 0;     // seconds
 
+        // Dangle spring state (shared; only one object held at a time)
+        this._prevHeldPos  = null;  // {x,y} last frame — for velocity calc
+        this._dangAngle    = 0;     // current tilt in radians
+        this._dangVel      = 0;     // angular velocity (rad/s)
+        this._dangleTween  = null;  // return-to-zero tween
+
         this.canvas.style.cursor = 'crosshair';
 
         // Right-click down → grab closest grabbable within range
@@ -62,7 +68,17 @@ export default class GrabHandSystem {
 
     // ── Internal helpers ─────────────────────────────────────────────────────
 
+    /** Cancel any in-flight return-tween and reset spring state so a fresh pickup starts clean. */
+    _resetDangle(obj) {
+        if (this._dangleTween) { this._dangleTween.stop(); this._dangleTween = null; }
+        if (obj) obj.setRotation(0);
+        this._dangAngle   = 0;
+        this._dangVel     = 0;
+        this._prevHeldPos = null;
+    }
+
     _pickupSnail() {
+        this._resetDangle(this.snail);
         this.heldTarget = 'snail';
         this.canvas.style.cursor = 'none';
         this.onPickup(); // let GameScene cancel hacks and drop battery if snail is carrying one
@@ -71,6 +87,7 @@ export default class GrabHandSystem {
     }
 
     _pickupBattery(battery) {
+        this._resetDangle(battery);
         this.heldTarget        = battery;
         this.batteryGrabOrigin = { x: battery.x, y: battery.y };
         battery.state          = 'mouse';
@@ -78,6 +95,8 @@ export default class GrabHandSystem {
     }
 
     _drop() {
+        const releasedObj = (this.heldTarget === 'snail') ? this.snail : this.heldTarget;
+
         if (this.heldTarget === 'snail') {
             this.snail.hackingActive = false;
             this.snail.setState('IDLE');
@@ -85,6 +104,19 @@ export default class GrabHandSystem {
             // Battery: stays at its current position on the ground
             this.heldTarget.state = 'ground';
         }
+
+        // Spring the rotation back to neutral
+        this._dangAngle   = 0;
+        this._dangVel     = 0;
+        this._prevHeldPos = null;
+        if (releasedObj && releasedObj.active) {
+            this._dangleTween = this.scene.tweens.add({
+                targets: releasedObj, rotation: 0, duration: 380,
+                ease: 'Back.easeOut',
+                onComplete: () => { this._dangleTween = null; },
+            });
+        }
+
         this.heldTarget        = null;
         this.batteryGrabOrigin = null;
         this.onCooldown        = true;
@@ -109,6 +141,28 @@ export default class GrabHandSystem {
         target.y = Phaser.Math.Clamp(target.y, m, 720 - m);
     }
 
+    /**
+     * Spring-damper tilt: velocity drives a target rotation, a spring pulls toward it,
+     * damping prevents oscillation. Result feels like the object lags behind movement.
+     */
+    _applyDangle(obj, delta) {
+        const dt = delta / 1000;
+
+        // Velocity from position delta (px/s)
+        const velX = this._prevHeldPos ? (obj.x - this._prevHeldPos.x) / dt : 0;
+        this._prevHeldPos = { x: obj.x, y: obj.y };
+
+        // Target tilt: rightward movement → clockwise lean, capped at ±22°
+        const targetRot = Phaser.Math.Clamp(velX * 0.0009, -0.38, 0.38);
+
+        // Spring-damper: accel = (target - current) * K  −  velocity * D
+        const accel     = (targetRot - this._dangAngle) * 14 - this._dangVel * 7;
+        this._dangVel  += accel * dt;
+        this._dangAngle += this._dangVel * dt;
+
+        obj.setRotation(this._dangAngle);
+    }
+
     // ── Public update ─────────────────────────────────────────────────────────
 
     update(delta) {
@@ -130,11 +184,13 @@ export default class GrabHandSystem {
 
         if (this.heldTarget === 'snail') {
             this._moveToward(this.snail, pointer, CONFIG.GRAB.MAX_SPEED, delta);
+            this._applyDangle(this.snail, delta);
 
         } else if (this.heldTarget) {
             // Battery drag
             const battery = this.heldTarget;
             this._moveToward(battery, pointer, CONFIG.GRAB.MAX_SPEED, delta);
+            this._applyDangle(battery, delta);
 
             // Auto-release when max drag distance from pickup origin is reached
             const dragDist = Phaser.Math.Distance.Between(
