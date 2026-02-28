@@ -1,10 +1,10 @@
+import { CONFIG } from '../config.js';
+
 const FLAVOR_TEXT = {
     3: ['The station holds... for now.', 'Gerald catches his breath.', 'Systems nominal. Barely.'],
     6: ['Halfway through the assault.', 'The aliens are adapting.', 'More systems failing.'],
     9: ['One final wave.', 'Gerald knows what must be done.', 'The last stand approaches.'],
 };
-
-import { CONFIG } from '../config.js';
 
 export default class IntermissionScene extends Phaser.Scene {
     constructor() {
