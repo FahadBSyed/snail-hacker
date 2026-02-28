@@ -9,6 +9,7 @@ import HackingStation from '../entities/HackingStation.js';
 import TeleportSystem from '../systems/TeleportSystem.js';
 import Terminal from '../entities/Terminal.js';
 import HackMinigame from '../minigames/HackMinigame.js';
+import RhythmMinigame from '../minigames/RhythmMinigame.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
 
@@ -89,14 +90,22 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // ── Service terminals ─────────────────────────────────────────────────
-        // RELOAD — left side. P1 walks here to refill P2's ammo. No minigame needed.
-        const reloadTerm = new Terminal(this, 160, 400, {
+        // Shared helper: wraps a RhythmMinigame launch and registers it with the
+        // teleport system so teleporting mid-minigame cancels it cleanly.
+        const rhythmLauncher = (_term, onSuccess, onFailure) => {
+            const mg = new RhythmMinigame(this, {
+                onSuccess: () => { this.teleportSystem.activeMinigame = null; onSuccess(); },
+                onFailure: () => { this.teleportSystem.activeMinigame = null; onFailure(); },
+            });
+            this.teleportSystem.activeMinigame = mg;
+        };
+
+        // RELOAD — halfway between left edge and station. Rhythm minigame to earn ammo.
+        const reloadTerm = new Terminal(this, 400, 400, {
             label:    'RELOAD',
             cooldown: CONFIG.STATIONS.RELOAD_COOLDOWN,
             color:    0x44ddff,
-            launchMinigame: (_term, onSuccess, _onFailure) => {
-                this.time.delayedCall(80, () => onSuccess());
-            },
+            launchMinigame: rhythmLauncher,
             onSuccess: () => {
                 this.ammo = this.ammoMax;
                 this.updateAmmoDisplay();
@@ -104,14 +113,12 @@ export default class GameScene extends Phaser.Scene {
             },
         });
 
-        // TELEPORT — right side. P1 walks here to recharge P2's teleport.
-        const teleportTerm = new Terminal(this, 1120, 400, {
+        // TELEPORT — halfway between station and right edge. Rhythm minigame to earn charge.
+        const teleportTerm = new Terminal(this, 880, 400, {
             label:    'TELEPORT',
             cooldown: CONFIG.STATIONS.TELEPORT_COOLDOWN,
             color:    0xcc66ff,
-            launchMinigame: (_term, onSuccess, _onFailure) => {
-                this.time.delayedCall(80, () => onSuccess());
-            },
+            launchMinigame: rhythmLauncher,
             onSuccess: () => {
                 this.teleportSystem.recharge();
                 this.updateTeleportDisplay();

@@ -4,11 +4,11 @@ export const DEFAULTS = {
     DEV_MODE: true,
 
     PLAYER: {
-        SNAIL_SPEED:       40,   // px/s
-        STARTING_AMMO:     10,
-        MAX_AMMO:          10,
-        PROJECTILE_SPEED:  800,  // px/s
-        PROJECTILE_RADIUS: 4,    // px
+        SNAIL_SPEED:       40,    // px/s
+        STARTING_AMMO:     20,
+        MAX_AMMO:          20,
+        PROJECTILE_SPEED:  3200,  // px/s
+        PROJECTILE_RADIUS: 4,     // px
     },
 
     SNAIL: {
