@@ -4,6 +4,7 @@ import BasicAlien from '../entities/aliens/BasicAlien.js';
 import HackingStation from '../entities/HackingStation.js';
 import ReloadBuffer from '../systems/ReloadBuffer.js';
 import TeleportSystem from '../systems/TeleportSystem.js';
+import Terminal from '../entities/Terminal.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -134,6 +135,42 @@ export default class GameScene extends Phaser.Scene {
             },
         });
 
+        // --- Terminals ---
+        this.terminals = [];
+        this.activeMinigame = null;
+        const terminalPositions = [
+            { x: 440, y: 250, label: 'TERM-1' },
+            { x: 840, y: 250, label: 'TERM-2' },
+            { x: 440, y: 470, label: 'TERM-3' },
+            { x: 840, y: 470, label: 'TERM-4' },
+        ];
+        for (const pos of terminalPositions) {
+            const terminal = new Terminal(this, pos.x, pos.y, {
+                label: pos.label,
+                cooldown: 10000,
+                launchMinigame: (term, onSuccess, onFailure) => {
+                    // Placeholder — will be replaced with real minigames in Step 12
+                    this.logDebug(`Minigame started at ${pos.label}! (auto-success in 2s)`);
+                    this.time.delayedCall(2000, onSuccess);
+                },
+                onSuccess: () => {
+                    this.logDebug(`${pos.label} hacked successfully!`);
+                },
+            });
+            this.terminals.push(terminal);
+        }
+
+        // E key to activate nearest terminal
+        this.eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+        this.eKey.on('down', () => {
+            if (this.snail.hackingActive) return;
+            for (const terminal of this.terminals) {
+                if (terminal.tryActivate(this.snail)) {
+                    break;
+                }
+            }
+        });
+
         // --- Alien spawning ---
         this.aliens = [];
         this.score = 0;
@@ -237,6 +274,11 @@ export default class GameScene extends Phaser.Scene {
 
     update(time, delta) {
         this.snail.update(time, delta);
+
+        // Update terminal proximity checks
+        for (const terminal of this.terminals) {
+            terminal.updateProximity(this.snail);
+        }
 
         // Tick projectiles
         this.projectiles = this.projectiles.filter(p => {
