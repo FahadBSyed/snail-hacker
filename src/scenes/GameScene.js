@@ -52,25 +52,15 @@ export default class GameScene extends Phaser.Scene {
             this.station.drawStation();
         }
 
-        // Debug text area
-        this.debugText = this.add.text(10, 680, '', {
-            fontSize: '14px',
-            fontFamily: 'monospace',
-            color: '#00ff00',
-        }).setOrigin(0, 1).setDepth(100);
-
-        this.debugLines = [];
-        this.maxDebugLines = 5;
-
-        this.logDebug('GameScene started. P1: WASD+E  P2: click+drag');
-
         // Disable right-click context menu on the canvas
         this.input.mouse.disableContextMenu();
 
+        // --- ESC / P to pause ---
+        this.input.keyboard.on('keydown-ESC', () => this._openPause());
+        this.input.keyboard.on('keydown-P',   () => this._openPause());
+
         // --- Snail (Player 1) ---
         this.snail = new Snail(this, 300, 400);
-
-        this.logDebug('Gerald the Snail spawned at (300, 400)');
 
         // --- Alien speed multiplier (1.0 = normal, 0.4 = SlowField) ---
         this.alienSpeedMultiplier = 1.0;
@@ -286,13 +276,16 @@ export default class GameScene extends Phaser.Scene {
 
     }
 
+    // Redirect game-event logging to the browser console (no on-screen overlay)
     logDebug(message) {
-        const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
-        this.debugLines.push(`[${timestamp}] ${message}`);
-        if (this.debugLines.length > this.maxDebugLines) {
-            this.debugLines.shift();
-        }
-        this.debugText.setText(this.debugLines.join('\n'));
+        console.log(`[GameScene] ${message}`);
+    }
+
+    _openPause() {
+        // Don't double-launch if PauseScene is already up
+        if (this.scene.isActive('PauseScene')) return;
+        this.scene.launch('PauseScene');
+        this.scene.pause();
     }
 
     updateAmmoDisplay() {
