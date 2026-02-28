@@ -53,9 +53,9 @@ export default class HackingStation extends Phaser.GameObjects.Container {
 
         // Hexagon outline — color shifts from cyan to red as health drops
         const healthPct = this.health / this.maxHealth;
-        const r = Math.round(255 * (1 - healthPct));
+        const rc = Math.round(255 * (1 - healthPct));
         const gb = Math.round(255 * healthPct);
-        const outlineColor = (r << 16) | (gb << 8) | gb;
+        const outlineColor = (rc << 16) | (gb << 8) | gb;
         const outlineAlpha = 0.4 + 0.6 * healthPct;
 
         g.lineStyle(2.5, outlineColor, outlineAlpha);
