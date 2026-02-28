@@ -20,12 +20,16 @@
 - **Step 6: Collision Detection** — Circle-to-circle distance checks: projectile vs alien (destroys both, increments score), alien vs station (deals damage). Post-collision cleanup pass.
 - **Step 7: Hacking Station** — Created `HackingStation.js`: cyan hexagon at (640,360), health 100, glow/outline shifts cyan→red with damage. Aliens deal 10 damage on arrival. HUD health bar (top-left, green/yellow/red). Game over at health 0 → GameOverScene with wave + score.
 
+## Session 2 — 2026-02-28 (Phase 2: Co-op Mechanics)
+
+### Completed Steps
+- **Step 9: RELOAD Typing Detection** — Created `ReloadBuffer.js`: rolling 6-char buffer passively listens to keydown without blocking WASD (TENSION_1 resolved). Detects "RELOAD" substring, triggers 2s charge delay, then refills ammo. Snail shows partial letter progress (R·E·L...) and a fill-bar tween during charge. `cancel()` clears buffer and aborts in-progress reloads. Shooting blocked during reload.
+- **Step 10: Teleport System** — Created `TeleportSystem.js`: right-click drag shows targeting line + circle, release teleports snail instantly. Warp particle rings (8 circles expanding outward, 0.3s) at origin and destination. Cancels active reload buffer and minigame on teleport. Snail flashes red if teleported mid-action (TENSION_2 resolved). Target clamped to screen bounds.
+- **Step 11: Terminal Entity** — Created `Terminal.js`: teal rectangle with screen glow, states IDLE/ACTIVE/COOLING_DOWN. Highlights white + shows [E] prompt when snail is within 50px. E key activates nearest terminal, sets snail to HACKING (suppresses WASD per TENSION_3). Cooldown timer with countdown text. 4 terminals placed around station.
+- **Step 12: Sequence Minigame** — Created `SequenceMinigame.js`: displays 4-6 random keys (non-WASD) at bottom-center with 4s countdown bar. Correct key advances pointer (green), wrong key flashes red. Timer bar color-shifts as time runs out. Cancellable by teleport. Wired into all terminals.
+- **Step 13: Cannon Defense Station** — Created `DefenseStation.js` (CANNON type): geometric turret at (200,150). Hacking the CANNON terminal triggers sequence minigame; on success, auto-fires at nearest alien once/second for 5s. 20s cooldown with arc fill animation. READY/FIRING/COOLDOWN status display.
+
 ### Steps Remaining
-- **Step 9:** RELOAD typing detection + ammo refill
-- **Step 10:** Teleport system (right-click drag)
-- **Step 11:** Terminal entity — proximity, activation, cooldown
-- **Step 12:** Sequence minigame
-- **Step 13:** Cannon defense station
 - **Step 14:** Rhythm minigame
 - **Step 15:** Typing minigame
 - **Step 16:** Shield defense station
