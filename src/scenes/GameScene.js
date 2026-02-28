@@ -1,6 +1,7 @@
 import Snail from '../entities/Snail.js';
 import Projectile from '../entities/Projectile.js';
 import BasicAlien from '../entities/aliens/BasicAlien.js';
+import HackingStation from '../entities/HackingStation.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -26,19 +27,15 @@ export default class GameScene extends Phaser.Scene {
             this.add.circle(x, y, size, 0xffffff, alpha);
         }
 
-        // Placeholder center station marker
-        const centerX = 640;
-        const centerY = 360;
-        const stationGraphics = this.add.graphics();
-        stationGraphics.lineStyle(2, 0x00ffcc, 0.6);
-        stationGraphics.strokeCircle(centerX, centerY, 50);
+        // --- Hacking Station (center) ---
+        this.station = new HackingStation(this, 640, 360);
 
         // Debug text area
         this.debugText = this.add.text(10, 680, '', {
             fontSize: '14px',
             fontFamily: 'monospace',
             color: '#00ff00',
-        }).setOrigin(0, 1);
+        }).setOrigin(0, 1).setDepth(100);
 
         this.debugLines = [];
         this.maxDebugLines = 5;
@@ -92,7 +89,7 @@ export default class GameScene extends Phaser.Scene {
                 return;
             }
             this.ammo--;
-            const proj = new Projectile(this, 640, 360, pointer.x, pointer.y);
+            const proj = new Projectile(this, this.station.x, this.station.y, pointer.x, pointer.y);
             this.projectiles.push(proj);
             this.updateAmmoDisplay();
             this.logDebug(`SHOOT → (${Math.round(pointer.x)}, ${Math.round(pointer.y)}) ammo: ${this.ammo}/${this.ammoMax}`);
@@ -101,8 +98,9 @@ export default class GameScene extends Phaser.Scene {
         // --- Alien spawning ---
         this.aliens = [];
         this.score = 0;
+        this.wave = 1;
         this.spawnTimer = this.time.addEvent({
-            delay: 2000, // every 2 seconds
+            delay: 2000,
             callback: this.spawnAlien,
             callbackScope: this,
             loop: true,
@@ -113,15 +111,25 @@ export default class GameScene extends Phaser.Scene {
             fontSize: '16px',
             fontFamily: 'monospace',
             color: '#ffdd44',
-        }).setOrigin(1, 0);
+        }).setOrigin(1, 0).setDepth(100);
         this.updateAmmoDisplay();
 
+        // --- Station health HUD (top-left) ---
+        this.healthLabel = this.add.text(10, 10, 'STATION INTEGRITY', {
+            fontSize: '12px',
+            fontFamily: 'monospace',
+            color: '#ff6666',
+        }).setDepth(100);
+
+        this.healthBarBg = this.add.rectangle(10, 30, 204, 16, 0x333333).setOrigin(0, 0).setDepth(100);
+        this.healthBarFill = this.add.rectangle(12, 32, 200, 12, 0x44ff44).setOrigin(0, 0).setDepth(100);
+
         // Scene label
-        this.add.text(640, 20, 'GAME SCENE — Input Debug Mode', {
+        this.add.text(640, 20, 'GAME SCENE', {
             fontSize: '18px',
             fontFamily: 'monospace',
             color: '#888888',
-        }).setOrigin(0.5, 0);
+        }).setOrigin(0.5, 0).setDepth(100);
     }
 
     logDebug(message) {
@@ -137,17 +145,29 @@ export default class GameScene extends Phaser.Scene {
         this.ammoLabel.setText(`AMMO: ${this.ammo} / ${this.ammoMax}`);
     }
 
+    updateHealthDisplay() {
+        const pct = this.station.health / this.station.maxHealth;
+        this.healthBarFill.width = 200 * pct;
+
+        if (pct > 0.5) {
+            this.healthBarFill.fillColor = 0x44ff44;
+        } else if (pct > 0.25) {
+            this.healthBarFill.fillColor = 0xffdd44;
+        } else {
+            this.healthBarFill.fillColor = 0xff4444;
+        }
+    }
+
     spawnAlien() {
-        // Pick a random edge: 0=top, 1=left, 2=right
         const edge = Phaser.Math.Between(0, 2);
         let x, y;
-        if (edge === 0) { // top
+        if (edge === 0) {
             x = Phaser.Math.Between(50, 1230);
             y = -20;
-        } else if (edge === 1) { // left
+        } else if (edge === 1) {
             x = -20;
             y = Phaser.Math.Between(50, 670);
-        } else { // right
+        } else {
             x = 1300;
             y = Phaser.Math.Between(50, 670);
         }
@@ -163,14 +183,14 @@ export default class GameScene extends Phaser.Scene {
             for (const alien of this.aliens) {
                 if (!alien.active) continue;
                 const dist = Phaser.Math.Distance.Between(proj.x, proj.y, alien.x, alien.y);
-                if (dist < alien.radius + 4) { // 4 = projectile radius
+                if (dist < alien.radius + 4) {
                     proj.destroy();
                     const died = alien.takeDamage(10);
                     if (died) {
                         this.score++;
                         this.logDebug(`Alien destroyed! Score: ${this.score}`);
                     }
-                    break; // projectile can only hit one alien
+                    break;
                 }
             }
         }
@@ -179,7 +199,7 @@ export default class GameScene extends Phaser.Scene {
     update(time, delta) {
         this.snail.update(time, delta);
 
-        // Tick projectiles, remove destroyed ones
+        // Tick projectiles
         this.projectiles = this.projectiles.filter(p => {
             if (!p.active) return false;
             return p.update(time, delta);
@@ -190,8 +210,14 @@ export default class GameScene extends Phaser.Scene {
             if (!alien.active) return false;
             const status = alien.update(time, delta);
             if (status === 'reached_station') {
-                this.logDebug('Alien reached station! (placeholder damage)');
+                const destroyed = this.station.takeDamage(10);
+                this.updateHealthDisplay();
+                this.logDebug(`Station hit! Health: ${this.station.health}/${this.station.maxHealth}`);
                 alien.destroy();
+                if (destroyed) {
+                    this.spawnTimer.remove(false);
+                    this.scene.start('GameOverScene', { wave: this.wave, score: this.score });
+                }
                 return false;
             }
             return true;
