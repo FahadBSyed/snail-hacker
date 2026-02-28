@@ -257,12 +257,21 @@ export default class GameScene extends Phaser.Scene {
             color: '#ffffff',
         }).setOrigin(0.5, 0).setDepth(100);
 
-        // --- Ammo HUD (top-right) ---
-        this.ammoLabel = this.add.text(1270, 10, '', {
-            fontSize: '16px',
-            fontFamily: 'monospace',
-            color: '#ffdd44',
-        }).setOrigin(1, 0).setDepth(100);
+        // --- Ammo HUD (top-right) — bullet icons ---
+        this.ammoBullets = [];
+        const bulletGap = 12;
+        const bulletsStartX = 1270 - (this.ammoMax - 1) * bulletGap;
+        for (let i = 0; i < this.ammoMax; i++) {
+            const bx = bulletsStartX + i * bulletGap;
+            const bullet = this.add.rectangle(bx, 18, 7, 14, 0xffdd44, 1).setDepth(100);
+            this.ammoBullets.push(bullet);
+        }
+
+        // Low ammo warning
+        this.lowAmmoLabel = this.add.text(1270, 38, '! LOW AMMO !', {
+            fontSize: '10px', fontFamily: 'monospace', color: '#ff4444',
+        }).setOrigin(1, 0).setDepth(100).setVisible(false);
+
         this.updateAmmoDisplay();
 
         // --- Station health HUD (top-left) ---
@@ -287,7 +296,16 @@ export default class GameScene extends Phaser.Scene {
     }
 
     updateAmmoDisplay() {
-        this.ammoLabel.setText(`AMMO: ${this.ammo} / ${this.ammoMax}`);
+        if (this.ammoBullets) {
+            this.ammoBullets.forEach((b, i) => {
+                const loaded = i < this.ammo;
+                b.fillColor = loaded ? 0xffdd44 : 0x444444;
+                b.fillAlpha  = loaded ? 1.0 : 0.4;
+            });
+        }
+        if (this.lowAmmoLabel) {
+            this.lowAmmoLabel.setVisible(this.ammo <= 2 && this.ammo > 0);
+        }
     }
 
     updateScoreDisplay() {
@@ -329,6 +347,26 @@ export default class GameScene extends Phaser.Scene {
             if (this.slowOverlay) this.slowOverlay.setVisible(false);
             this.logDebug('SlowField expired.');
         });
+    }
+
+    spawnDeathBurst(x, y, color = 0xff4444) {
+        const count = 7;
+        for (let i = 0; i < count; i++) {
+            const angle  = (Math.PI * 2 / count) * i;
+            const speed  = Phaser.Math.Between(30, 70);
+            const dot    = this.add.circle(x, y, Phaser.Math.Between(2, 5), color, 0.9).setDepth(55);
+            this.tweens.add({
+                targets: dot,
+                x: x + Math.cos(angle) * speed,
+                y: y + Math.sin(angle) * speed,
+                alpha: 0,
+                scaleX: 0.2,
+                scaleY: 0.2,
+                duration: Phaser.Math.Between(250, 450),
+                ease: 'Power2',
+                onComplete: () => dot.destroy(),
+            });
+        }
     }
 
     triggerBomberExplosion(bx, by) {
@@ -407,6 +445,8 @@ export default class GameScene extends Phaser.Scene {
                         this.score++;
                         this.updateScoreDisplay();
                         this.logDebug(`Alien destroyed! Score: ${this.score}`);
+                        const burstColor = { basic: 0xdd3333, fast: 0xaa44ff, tank: 0x7799aa, bomber: 0xff7722 }[alien.alienType] || 0xffffff;
+                        this.spawnDeathBurst(bx, by, burstColor);
                         if (isBomber) this.triggerBomberExplosion(bx, by);
                     }
                     break;
@@ -430,9 +470,18 @@ export default class GameScene extends Phaser.Scene {
             terminal.updateProximity(this.snail);
         }
 
-        // Tick projectiles
+        // Tick projectiles (with trail particles)
         this.projectiles = this.projectiles.filter(p => {
             if (!p.active) return false;
+            // Emit a trail dot every ~40ms
+            if (time - (p._lastTrail || 0) > 40) {
+                p._lastTrail = time;
+                const trail = this.add.circle(p.x, p.y, 2, 0xffffaa, 0.5).setDepth(30);
+                this.tweens.add({
+                    targets: trail, alpha: 0, scaleX: 0.3, scaleY: 0.3,
+                    duration: 150, onComplete: () => trail.destroy(),
+                });
+            }
             return p.update(time, delta);
         });
 

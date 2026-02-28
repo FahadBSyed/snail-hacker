@@ -129,13 +129,28 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         const pct = this.health / this.maxHealth;
         this.healthBarFill.width = 100 * pct;
 
-        // Color: green → yellow → red
         if (pct > 0.5) {
             this.healthBarFill.fillColor = 0x44ff44;
         } else if (pct > 0.25) {
             this.healthBarFill.fillColor = 0xffdd44;
         } else {
             this.healthBarFill.fillColor = 0xff4444;
+        }
+
+        // Pulse glow when low health
+        if (pct <= 0.3 && !this._pulseTween) {
+            this._pulseTween = this.scene.tweens.add({
+                targets: this.gfx,
+                alpha: 0.55,
+                duration: 400,
+                ease: 'Sine.easeInOut',
+                yoyo: true,
+                repeat: -1,
+            });
+        } else if (pct > 0.3 && this._pulseTween) {
+            this._pulseTween.stop();
+            this._pulseTween = null;
+            this.gfx.alpha = 1;
         }
     }
 }
