@@ -1,5 +1,15 @@
 import { CONFIG } from '../../config.js';
 
+const DIRS = [
+    'right', 'diag-right-down', 'down', 'diag-left-down',
+    'left',  'diag-left-up',    'up',   'diag-right-up',
+];
+
+function angleToDir(rad) {
+    const a = ((rad % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    return DIRS[Math.round(a / (Math.PI / 4)) % 8];
+}
+
 export default class FastAlien extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
         super(scene, x, y);
@@ -18,20 +28,10 @@ export default class FastAlien extends Phaser.GameObjects.Container {
         // Initialize angle toward snail at spawn
         this.angle     = Phaser.Math.Angle.Between(x, y, scene.snail.x, scene.snail.y);
         this.perpAngle = this.angle + Math.PI / 2;
+        this.facing    = 'right';
 
-        // Draw: purple triangle pointing in direction of travel
-        const gfx = scene.add.graphics();
-        const r = this.radius;
-        gfx.fillStyle(0xaa44ff, 1);
-        gfx.fillTriangle(0, -r, -r * 0.75, r * 0.7, r * 0.75, r * 0.7);
-        // Eye dots
-        gfx.fillStyle(0xffffff, 0.8);
-        gfx.fillCircle(-3, -2, 2);
-        gfx.fillCircle(3, -2, 2);
-        this.gfx = gfx;
-        this.add(gfx);
-
-        this.gfx.rotation = this.angle + Math.PI / 2;
+        this.sprite = scene.add.image(0, 0, 'alien-fast-right');
+        this.add(this.sprite);
     }
 
     takeDamage(amount) {
@@ -62,8 +62,12 @@ export default class FastAlien extends Phaser.GameObjects.Container {
         this.x = this.baseX + Math.cos(this.perpAngle) * zigzag;
         this.y = this.baseY + Math.sin(this.perpAngle) * zigzag;
 
-        // Rotate graphic to face movement direction
-        this.gfx.rotation = this.angle + Math.PI / 2;
+        // Swap texture when direction sector changes
+        const dir = angleToDir(this.angle);
+        if (dir !== this.facing) {
+            this.facing = dir;
+            this.sprite.setTexture(`alien-fast-${dir}`);
+        }
 
         const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
         if (dist < this.radius + 20) return 'reached_snail';
