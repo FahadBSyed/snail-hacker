@@ -2,7 +2,6 @@ import Snail from '../entities/Snail.js';
 import Projectile from '../entities/Projectile.js';
 import BasicAlien from '../entities/aliens/BasicAlien.js';
 import HackingStation from '../entities/HackingStation.js';
-import ReloadBuffer from '../systems/ReloadBuffer.js';
 import TeleportSystem from '../systems/TeleportSystem.js';
 import Terminal from '../entities/Terminal.js';
 import SequenceMinigame from '../minigames/SequenceMinigame.js';
@@ -89,10 +88,6 @@ export default class GameScene extends Phaser.Scene {
 
         this.input.on('pointerdown', (pointer) => {
             if (pointer.button !== 0) return; // left-click only
-            if (this.reloadBuffer && this.reloadBuffer.isReloading) {
-                this.logDebug('CLICK — reloading!');
-                return;
-            }
             if (this.ammo <= 0) {
                 this.logDebug('CLICK — no ammo!');
                 return;
@@ -104,34 +99,9 @@ export default class GameScene extends Phaser.Scene {
             this.logDebug(`SHOOT → (${Math.round(pointer.x)}, ${Math.round(pointer.y)}) ammo: ${this.ammo}/${this.ammoMax}`);
         });
 
-        // --- RELOAD system ---
-        this.reloadBuffer = new ReloadBuffer(this, {
-            onReloadStart: () => {
-                this.logDebug('RELOAD detected! Charging...');
-                this.snail.showReloadBar(true);
-            },
-            onReloadComplete: () => {
-                this.ammo = this.ammoMax;
-                this.updateAmmoDisplay();
-                this.snail.showReloadBar(false);
-                this.logDebug('RELOAD complete! Ammo refilled.');
-            },
-            onReloadCancel: () => {
-                this.snail.showReloadBar(false);
-                this.logDebug('RELOAD cancelled!');
-            },
-            onBufferUpdate: (buffer, matchCount) => {
-                // Update snail overhead to show partial progress
-                if (matchCount > 0 && !this.reloadBuffer.isReloading) {
-                    this.snail.showReloadProgress(matchCount, 6);
-                }
-            },
-        });
-
         // --- Teleport system (Player 2 right-click drag) ---
         this.teleportSystem = new TeleportSystem(this, {
             snail: this.snail,
-            reloadBuffer: this.reloadBuffer,
             onTeleport: (x, y) => {
                 this.logDebug(`Teleported Gerald to (${Math.round(x)}, ${Math.round(y)})`);
             },
@@ -168,8 +138,12 @@ export default class GameScene extends Phaser.Scene {
         const terminalDefs = [
             { x: 440, y: 250, label: 'CANNON', cooldown: 20000,
               onSuccess: () => { this.cannon.activate(); this.logDebug('Cannon activated!'); } },
-            { x: 840, y: 250, label: 'TERM-2', cooldown: 10000,
-              onSuccess: () => { this.logDebug('TERM-2 hacked!'); } },
+            { x: 840, y: 250, label: 'RELOAD', cooldown: 8000,
+              onSuccess: () => {
+                  this.ammo = this.ammoMax;
+                  this.updateAmmoDisplay();
+                  this.logDebug('Ammo reloaded!');
+              } },
             { x: 440, y: 470, label: 'TERM-3', cooldown: 10000,
               onSuccess: () => { this.logDebug('TERM-3 hacked!'); } },
             { x: 840, y: 470, label: 'TERM-4', cooldown: 10000,

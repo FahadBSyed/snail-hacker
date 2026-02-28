@@ -31,20 +31,6 @@ export default class Snail extends Phaser.GameObjects.Container {
         }).setOrigin(0.5);
         this.add(this.stateLabel);
 
-        // --- Reload progress bar (hidden by default) ---
-        this.reloadBarBg = scene.add.rectangle(0, 30, 40, 6, 0x333333).setOrigin(0.5).setVisible(false);
-        this.reloadBarFill = scene.add.rectangle(-18, 30, 0, 4, 0x44ddff).setOrigin(0, 0.5).setVisible(false);
-        this.reloadLabel = scene.add.text(0, 22, '', {
-            fontSize: '9px',
-            fontFamily: 'monospace',
-            color: '#44ddff',
-        }).setOrigin(0.5).setVisible(false);
-        this.add(this.reloadBarBg);
-        this.add(this.reloadBarFill);
-        this.add(this.reloadLabel);
-
-        this._reloadTween = null;
-
         // --- WASD keys ---
         this.keys = scene.input.keyboard.addKeys({
             w: Phaser.Input.Keyboard.KeyCodes.W,
@@ -66,57 +52,6 @@ export default class Snail extends Phaser.GameObjects.Container {
             this.state = newState;
             this.stateLabel.setText(newState);
         }
-    }
-
-    /** Show/hide the 2-second reload charging bar */
-    showReloadBar(visible) {
-        this.reloadBarBg.setVisible(visible);
-        this.reloadBarFill.setVisible(visible);
-        this.reloadLabel.setVisible(visible);
-
-        if (visible) {
-            this.reloadLabel.setText('RELOADING...');
-            this.reloadBarFill.width = 0;
-            // Tween the fill bar over 2 seconds
-            if (this._reloadTween) this._reloadTween.destroy();
-            this._reloadTween = this.scene.tweens.add({
-                targets: this.reloadBarFill,
-                width: 36,
-                duration: 2000,
-                ease: 'Linear',
-            });
-        } else {
-            if (this._reloadTween) {
-                this._reloadTween.destroy();
-                this._reloadTween = null;
-            }
-            this.reloadBarFill.width = 0;
-            this.reloadLabel.setText('');
-        }
-    }
-
-    /** Show partial letter progress (e.g. R-E-L typed so far) */
-    showReloadProgress(matchCount, total) {
-        const word = 'RELOAD';
-        const typed = word.slice(0, matchCount);
-        const remaining = word.slice(matchCount).replace(/./g, '·');
-        this.reloadLabel.setText(typed + remaining).setVisible(true);
-
-        this.reloadBarBg.setVisible(true);
-        this.reloadBarFill.setVisible(true);
-        this.reloadBarFill.width = (matchCount / total) * 36;
-
-        // Hide after a short timeout if no more progress
-        if (this._progressTimeout) this.scene.time.removeEvent(this._progressTimeout);
-        this._progressTimeout = this.scene.time.delayedCall(1500, () => {
-            if (!this.reloadBarBg.visible) return;
-            // Only hide if we're showing partial progress, not a full reload
-            if (this.reloadLabel.text !== 'RELOADING...') {
-                this.reloadBarBg.setVisible(false);
-                this.reloadBarFill.setVisible(false);
-                this.reloadLabel.setVisible(false);
-            }
-        });
     }
 
     update(time, delta) {

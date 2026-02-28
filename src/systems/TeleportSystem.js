@@ -3,13 +3,11 @@ export default class TeleportSystem {
      * @param {Phaser.Scene} scene
      * @param {object} opts
      * @param {import('../entities/Snail.js').default} opts.snail
-     * @param {import('./ReloadBuffer.js').default} opts.reloadBuffer
      * @param {function} opts.onTeleport — called after teleport with (x, y)
      */
     constructor(scene, opts) {
         this.scene = scene;
         this.snail = opts.snail;
-        this.reloadBuffer = opts.reloadBuffer;
         this.onTeleport = opts.onTeleport;
         this.activeMinigame = null; // set externally when a minigame is active
 
@@ -68,10 +66,7 @@ export default class TeleportSystem {
         const oldY = this.snail.y;
 
         // Check if a minigame was active
-        const wasMidAction = this.snail.hackingActive || this.reloadBuffer.isReloading;
-
-        // Cancel reload buffer
-        this.reloadBuffer.cancel();
+        const wasMidAction = this.snail.hackingActive;
 
         // Cancel active minigame
         if (this.activeMinigame && typeof this.activeMinigame.cancel === 'function') {
