@@ -11,9 +11,31 @@ export const DEFAULTS = {
         PROJECTILE_RADIUS: 4,    // px
     },
 
+    SNAIL: {
+        MAX_HEALTH:       100,
+        INVINCIBILITY_MS: 1500,  // ms of i-frames after taking damage
+    },
+
     STATION: {
         MAX_HEALTH: 100,
         RADIUS:     50,  // px — collision + visual radius
+    },
+
+    HACK: {
+        BASE_WORDS:   5,  // words required to complete wave 1
+        WORDS_GROWTH: 1,  // additional words required per wave above wave 1
+    },
+
+    HEALTH_DROP: {
+        CHANCE:   0.3,    // probability per alien kill
+        AMOUNT:   25,     // HP restored on pickup
+        RADIUS:   12,     // px — pickup collision radius
+        LIFETIME: 8000,   // ms before auto-despawn
+    },
+
+    STATIONS: {
+        RELOAD_COOLDOWN:   8000,   // ms — cooldown after reload use
+        TELEPORT_COOLDOWN: 12000,  // ms — cooldown after teleport recharge
     },
 
     ALIENS: {
@@ -25,11 +47,13 @@ export const DEFAULTS = {
 
     DAMAGE: {
         ALIEN_HIT_STATION:     10,
+        ALIEN_HIT_SNAIL:       20,
         PROJECTILE_HIT_ALIEN:  10,
         BOMBER_BLAST_RADIUS:   100,
         BOMBER_BLAST_STATION:  25,
+        BOMBER_BLAST_SNAIL:    40,
         BOMBER_BLAST_ALIEN:    10,
-        ALIEN_REACH_DISTANCE:  50,   // px — how close before "hitting" station
+        ALIEN_REACH_DISTANCE:  50,   // px — legacy; snail contact uses alien.radius + 20
         SLOW_SPEED_MULTIPLIER: 0.4,  // fraction of normal speed under SlowField
     },
 
@@ -65,7 +89,7 @@ export const DEFAULTS = {
     },
 
     INTERMISSION: {
-        HEAL_AMOUNT:       20,  // HP restored between intermission waves
+        HEAL_AMOUNT:       20,  // HP restored to snail between waves
         AUTO_ADVANCE_SECS: 5,   // seconds before auto-advancing
     },
 };

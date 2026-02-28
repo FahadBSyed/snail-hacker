@@ -1,8 +1,5 @@
 import { CONFIG } from '../../config.js';
 
-const TARGET_X = 640;
-const TARGET_Y = 360;
-
 export default class TankAlien extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
         super(scene, x, y);
@@ -12,8 +9,6 @@ export default class TankAlien extends Phaser.GameObjects.Container {
         this.speed     = CONFIG.ALIENS.TANK.SPEED;
         this.radius    = CONFIG.ALIENS.TANK.RADIUS;
         this.alienType = 'tank';
-
-        this.angle = Phaser.Math.Angle.Between(x, y, TARGET_X, TARGET_Y);
 
         // Draw: dark grey square with thick armour outline
         const gfx = scene.add.graphics();
@@ -44,11 +39,15 @@ export default class TankAlien extends Phaser.GameObjects.Container {
     update(time, delta) {
         const dt = delta / 1000;
         const speedMult = this.scene.alienSpeedMultiplier || 1.0;
-        this.x += Math.cos(this.angle) * this.speed * speedMult * dt;
-        this.y += Math.sin(this.angle) * this.speed * speedMult * dt;
+        const snail = this.scene.snail;
 
-        const dist = Phaser.Math.Distance.Between(this.x, this.y, TARGET_X, TARGET_Y);
-        if (dist < CONFIG.DAMAGE.ALIEN_REACH_DISTANCE) return 'reached_station';
+        // Steer toward snail each frame
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+        this.x += Math.cos(angle) * this.speed * speedMult * dt;
+        this.y += Math.sin(angle) * this.speed * speedMult * dt;
+
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
+        if (dist < this.radius + 20) return 'reached_snail';
         return 'alive';
     }
 }

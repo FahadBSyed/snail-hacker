@@ -15,11 +15,27 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         this.add(gfx);
         this.drawStation();
 
-        // Health bar (positioned above station)
-        this.healthBarBg = scene.add.rectangle(0, -70, 104, 12, 0x333333).setOrigin(0.5);
-        this.healthBarFill = scene.add.rectangle(-50, -70, 100, 8, 0x44ff44).setOrigin(0, 0.5);
-        this.add(this.healthBarBg);
-        this.add(this.healthBarFill);
+        // Hack progress bar (shown above station)
+        this.hackBarBg    = scene.add.rectangle(0, -70, 104, 12, 0x223333).setOrigin(0.5);
+        this.hackBarFill  = scene.add.rectangle(-50, -70, 0, 8, 0x00ffcc).setOrigin(0, 0.5);
+        this.hackBarLabel = scene.add.text(0, -82, 'HACK PROGRESS', {
+            fontSize: '8px', fontFamily: 'monospace', color: '#00ffcc',
+        }).setOrigin(0.5);
+        this.add(this.hackBarBg);
+        this.add(this.hackBarFill);
+        this.add(this.hackBarLabel);
+
+        // E prompt (hidden until snail is nearby)
+        this.ePrompt = scene.add.text(0, this.radius + 25, '[E] HACK TERMINAL', {
+            fontSize: '11px',
+            fontFamily: 'monospace',
+            color: '#ffffff',
+            backgroundColor: '#00000099',
+            padding: { x: 4, y: 2 },
+        }).setOrigin(0.5).setVisible(false);
+        this.add(this.ePrompt);
+
+        this.isNearby = false;
     }
 
     drawStation() {
@@ -27,47 +43,33 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         const r = this.radius;
         g.clear();
 
-        // Outer glow — alpha based on health
-        const glowAlpha = 0.15 * (this.health / this.maxHealth);
-        g.fillStyle(0x00ffcc, glowAlpha);
+        // Outer glow
+        g.fillStyle(0x00ffcc, 0.15);
         g.fillCircle(0, 0, r + 15);
 
         // Hexagon body
         const points = [];
         for (let i = 0; i < 6; i++) {
             const angle = (Math.PI / 3) * i - Math.PI / 2;
-            points.push({
-                x: Math.cos(angle) * r,
-                y: Math.sin(angle) * r,
-            });
+            points.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
         }
 
         g.fillStyle(0x0a2a2a, 1);
         g.beginPath();
         g.moveTo(points[0].x, points[0].y);
-        for (let i = 1; i < 6; i++) {
-            g.lineTo(points[i].x, points[i].y);
-        }
+        for (let i = 1; i < 6; i++) g.lineTo(points[i].x, points[i].y);
         g.closePath();
         g.fillPath();
 
-        // Hexagon outline — color shifts from cyan to red as health drops
-        const healthPct = this.health / this.maxHealth;
-        const rc = Math.round(255 * (1 - healthPct));
-        const gb = Math.round(255 * healthPct);
-        const outlineColor = (rc << 16) | (gb << 8) | gb;
-        const outlineAlpha = 0.4 + 0.6 * healthPct;
-
-        g.lineStyle(2.5, outlineColor, outlineAlpha);
+        // Cyan outline
+        g.lineStyle(2.5, 0x00ffcc, 0.9);
         g.beginPath();
         g.moveTo(points[0].x, points[0].y);
-        for (let i = 1; i < 6; i++) {
-            g.lineTo(points[i].x, points[i].y);
-        }
+        for (let i = 1; i < 6; i++) g.lineTo(points[i].x, points[i].y);
         g.closePath();
         g.strokePath();
 
-        // Inner detail — small hexagon
+        // Inner detail hexagon
         g.lineStyle(1, 0x00ffcc, 0.2);
         g.beginPath();
         for (let i = 0; i < 6; i++) {
@@ -81,7 +83,23 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         g.strokePath();
     }
 
-    /** Activate a damage shield for `duration` ms. Returns false if already shielded. */
+    /** Update proximity detection — called each frame from GameScene */
+    updateProximity(snail) {
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
+        const near = dist < CONFIG.TERMINALS.PROXIMITY + this.radius && !snail.hackingActive;
+        if (near !== this.isNearby) {
+            this.isNearby = near;
+            this.ePrompt.setVisible(near);
+        }
+    }
+
+    /** Update hack progress bar — fraction 0 to 1 */
+    setHackProgress(fraction) {
+        this.hackBarFill.width = 100 * Math.min(1, Math.max(0, fraction));
+    }
+
+    // ── Legacy methods — kept for potential future use ───────────────────────
+
     shield(duration) {
         if (this.shielded) return false;
         this.shielded = true;
@@ -115,43 +133,10 @@ export default class HackingStation extends Phaser.GameObjects.Container {
 
     takeDamage(amount) {
         this.health = Math.max(0, this.health - amount);
-        this.updateHealthBar();
-        this.drawStation();
         return this.health <= 0;
     }
 
     heal(amount) {
         this.health = Math.min(this.maxHealth, this.health + amount);
-        this.updateHealthBar();
-        this.drawStation();
-    }
-
-    updateHealthBar() {
-        const pct = this.health / this.maxHealth;
-        this.healthBarFill.width = 100 * pct;
-
-        if (pct > 0.5) {
-            this.healthBarFill.fillColor = 0x44ff44;
-        } else if (pct > 0.25) {
-            this.healthBarFill.fillColor = 0xffdd44;
-        } else {
-            this.healthBarFill.fillColor = 0xff4444;
-        }
-
-        // Pulse glow when low health
-        if (pct <= 0.3 && !this._pulseTween) {
-            this._pulseTween = this.scene.tweens.add({
-                targets: this.gfx,
-                alpha: 0.55,
-                duration: 400,
-                ease: 'Sine.easeInOut',
-                yoyo: true,
-                repeat: -1,
-            });
-        } else if (pct > 0.3 && this._pulseTween) {
-            this._pulseTween.stop();
-            this._pulseTween = null;
-            this.gfx.alpha = 1;
-        }
     }
 }

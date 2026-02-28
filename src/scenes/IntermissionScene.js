@@ -12,20 +12,22 @@ export default class IntermissionScene extends Phaser.Scene {
     }
 
     init(data = {}) {
-        this.wave          = data.wave          || 1;
-        this.score         = data.score         || 0;
-        this.stationHealth = data.stationHealth !== undefined ? data.stationHealth : 100;
+        this.wave        = data.wave        || 1;
+        this.score       = data.score       || 0;
+        // Accept snailHealth (new) or stationHealth (legacy) — default to max
+        this.snailHealth = data.snailHealth !== undefined ? data.snailHealth
+                         : data.stationHealth !== undefined ? data.stationHealth
+                         : CONFIG.SNAIL.MAX_HEALTH;
     }
 
     create() {
-        const cx = 640;
-        const restoredHealth = Math.min(CONFIG.STATION.MAX_HEALTH, this.stationHealth + CONFIG.INTERMISSION.HEAL_AMOUNT);
-        const nextWave       = this.wave + 1;
+        const cx            = 640;
+        const healedHealth  = Math.min(CONFIG.SNAIL.MAX_HEALTH, this.snailHealth + CONFIG.INTERMISSION.HEAL_AMOUNT);
+        const nextWave      = this.wave + 1;
 
-        // Background overlay
+        // Background
         this.add.rectangle(640, 360, 1280, 720, 0x000008, 1);
 
-        // Stars (reuse starfield pattern)
         for (let i = 0; i < 120; i++) {
             const sx = Phaser.Math.Between(0, 1280);
             const sy = Phaser.Math.Between(0, 720);
@@ -33,33 +35,32 @@ export default class IntermissionScene extends Phaser.Scene {
             this.add.circle(sx, sy, sz, 0xffffff, Phaser.Math.FloatBetween(0.2, 0.6));
         }
 
-        // Title bar
+        // Title
         this.add.rectangle(cx, 130, 700, 2, 0xffdd44, 0.4);
-        this.add.text(cx, 100, `— WAVE ${this.wave} COMPLETE —`, {
+        this.add.text(cx, 100, `— WAVE ${this.wave} HACKED —`, {
             fontSize: '30px', fontFamily: 'monospace', color: '#ffdd44',
         }).setOrigin(0.5);
         this.add.rectangle(cx, 160, 700, 2, 0xffdd44, 0.4);
 
         // Flavor text
         const flavors = FLAVOR_TEXT[this.wave] || ['The fight continues.', 'Rest while you can.'];
-        const flavor  = Phaser.Utils.Array.GetRandom(flavors);
-        this.add.text(cx, 210, `"${flavor}"`, {
+        this.add.text(cx, 210, `"${Phaser.Utils.Array.GetRandom(flavors)}"`, {
             fontSize: '17px', fontFamily: 'monospace', color: '#999988', fontStyle: 'italic',
         }).setOrigin(0.5);
 
-        // Stats
+        // Score
         this.add.text(cx, 280, `SCORE: ${this.score}`, {
             fontSize: '26px', fontFamily: 'monospace', color: '#ffffff',
         }).setOrigin(0.5);
 
-        // Station repair
-        const gained = restoredHealth - this.stationHealth;
-        const repairColor = gained > 0 ? '#44ff88' : '#666666';
-        const repairMsg   = gained > 0
-            ? `STATION REPAIRED  +${gained} HP  [ ${restoredHealth} / ${CONFIG.STATION.MAX_HEALTH} ]`
-            : `STATION AT FULL INTEGRITY`;
-        this.add.text(cx, 330, repairMsg, {
-            fontSize: '14px', fontFamily: 'monospace', color: repairColor,
+        // Snail heal
+        const gained    = healedHealth - this.snailHealth;
+        const healColor = gained > 0 ? '#44ff88' : '#666666';
+        const healMsg   = gained > 0
+            ? `GERALD PATCHED UP  +${gained} HP  [ ${healedHealth} / ${CONFIG.SNAIL.MAX_HEALTH} ]`
+            : `GERALD AT FULL HEALTH`;
+        this.add.text(cx, 330, healMsg, {
+            fontSize: '14px', fontFamily: 'monospace', color: healColor,
         }).setOrigin(0.5);
 
         // Next wave
@@ -67,12 +68,11 @@ export default class IntermissionScene extends Phaser.Scene {
             fontSize: '22px', fontFamily: 'monospace', color: '#88ccff',
         }).setOrigin(0.5);
 
-        // Skip prompt
+        // Skip prompt + countdown
         this.add.text(cx, 490, '[ PRESS ANY KEY TO CONTINUE ]', {
             fontSize: '13px', fontFamily: 'monospace', color: '#445566',
         }).setOrigin(0.5);
 
-        // Countdown text
         this.remaining     = CONFIG.INTERMISSION.AUTO_ADVANCE_SECS;
         this._advanced     = false;
         this.countdownText = this.add.text(cx, 515, '', {
@@ -102,9 +102,9 @@ export default class IntermissionScene extends Phaser.Scene {
         this._advanced = true;
         if (this.countdownTimer) this.countdownTimer.remove(false);
         this.scene.start('GameScene', {
-            wave:          this.wave + 1,
-            score:         this.score,
-            stationHealth: Math.min(CONFIG.STATION.MAX_HEALTH, this.stationHealth + CONFIG.INTERMISSION.HEAL_AMOUNT),
+            wave:        this.wave + 1,
+            score:       this.score,
+            snailHealth: Math.min(CONFIG.SNAIL.MAX_HEALTH, this.snailHealth + CONFIG.INTERMISSION.HEAL_AMOUNT),
         });
     }
 }

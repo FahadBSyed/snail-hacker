@@ -17,6 +17,10 @@ export default class Snail extends Phaser.GameObjects.Container {
         this.hackingActive = false;
         this.facing = 'right'; // current facing direction
 
+        this.health    = CONFIG.SNAIL.MAX_HEALTH;
+        this.maxHealth = CONFIG.SNAIL.MAX_HEALTH;
+        this.invincible = false;
+
         // --- Sprite (uses preloaded SVG textures) ---
         this.sprite = scene.add.image(0, 0, DIR_TEXTURES.right);
         this.add(this.sprite);
@@ -38,6 +42,37 @@ export default class Snail extends Phaser.GameObjects.Container {
             s: Phaser.Input.Keyboard.KeyCodes.S,
             d: Phaser.Input.Keyboard.KeyCodes.D,
         });
+    }
+
+    /**
+     * Deal damage to the snail. Returns true if snail died.
+     * Triggers invincibility frames + flash effect.
+     */
+    takeDamage(amount) {
+        if (this.invincible) return false;
+        this.health = Math.max(0, this.health - amount);
+        this.invincible = true;
+
+        // Alternating red/white flash during i-frames
+        let flashCount = 0;
+        const flashDelay = CONFIG.SNAIL.INVINCIBILITY_MS / 8;
+        const flashTimer = this.scene.time.addEvent({
+            delay: flashDelay,
+            repeat: 7,
+            callback: () => {
+                flashCount++;
+                if (this.sprite && this.sprite.active) {
+                    this.sprite.setTint(flashCount % 2 === 0 ? 0xffffff : 0xff4444);
+                }
+            },
+        });
+
+        this.scene.time.delayedCall(CONFIG.SNAIL.INVINCIBILITY_MS, () => {
+            this.invincible = false;
+            if (this.sprite && this.sprite.active) this.sprite.clearTint();
+        });
+
+        return this.health <= 0;
     }
 
     setFacing(direction) {

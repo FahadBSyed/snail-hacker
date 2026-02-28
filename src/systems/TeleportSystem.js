@@ -11,48 +11,49 @@ export default class TeleportSystem {
         this.onTeleport = opts.onTeleport;
         this.activeMinigame = null; // set externally when a minigame is active
 
+        this.charges = 1; // P1 must visit the TELEPORT station to recharge
         this.isDragging = false;
         this.dragLine = null;
 
         // Right-click drag start
         scene.input.on('pointerdown', (pointer) => {
-            if (pointer.button !== 2) return; // right button only
+            if (pointer.button !== 2) return;
             this.isDragging = true;
-
-            // Draw a drag indicator line
             if (!this.dragLine) {
                 this.dragLine = scene.add.graphics().setDepth(90);
             }
         });
 
-        // Drag visual
+        // Drag visual — grey if no charge, cyan if charged
         scene.input.on('pointermove', (pointer) => {
             if (!this.isDragging || !pointer.rightButtonDown()) return;
             if (this.dragLine) {
+                const hasCharge = this.charges > 0;
+                const lineColor = hasCharge ? 0x44ddff : 0x886666;
+                const circColor = hasCharge ? 0x44ddff : 0x886666;
+
                 this.dragLine.clear();
-                this.dragLine.lineStyle(1.5, 0x44ddff, 0.5);
+                this.dragLine.lineStyle(1.5, lineColor, 0.5);
                 this.dragLine.beginPath();
                 this.dragLine.moveTo(this.snail.x, this.snail.y);
                 this.dragLine.lineTo(pointer.x, pointer.y);
                 this.dragLine.strokePath();
 
-                // Target circle
-                this.dragLine.lineStyle(1, 0x44ddff, 0.6);
+                this.dragLine.lineStyle(1, circColor, 0.6);
                 this.dragLine.strokeCircle(pointer.x, pointer.y, 12);
             }
         });
 
-        // Right-click release → teleport
+        // Right-click release → teleport (if charged)
         scene.input.on('pointerup', (pointer) => {
             if (pointer.button !== 2) return;
             if (!this.isDragging) return;
             this.isDragging = false;
 
-            if (this.dragLine) {
-                this.dragLine.clear();
-            }
+            if (this.dragLine) this.dragLine.clear();
 
-            // Clamp target to screen bounds
+            if (this.charges <= 0) return; // no charge — silently cancel
+
             const margin = 24;
             const tx = Phaser.Math.Clamp(pointer.x, margin, 1280 - margin);
             const ty = Phaser.Math.Clamp(pointer.y, margin, 720 - margin);
@@ -65,7 +66,6 @@ export default class TeleportSystem {
         const oldX = this.snail.x;
         const oldY = this.snail.y;
 
-        // Check if a minigame was active
         const wasMidAction = this.snail.hackingActive;
 
         // Cancel active minigame
@@ -73,16 +73,15 @@ export default class TeleportSystem {
             this.activeMinigame.cancel();
         }
 
+        this.charges--;
+
         // Move snail instantly
         this.snail.x = x;
         this.snail.y = y;
 
-        // Particle burst at origin
         this.spawnWarpEffect(oldX, oldY);
-        // Particle burst at destination
         this.spawnWarpEffect(x, y);
 
-        // Flash snail red if teleported mid-action (TENSION_2)
         if (wasMidAction) {
             this.flashSnailRed();
         }
@@ -90,8 +89,12 @@ export default class TeleportSystem {
         if (this.onTeleport) this.onTeleport(x, y);
     }
 
+    /** Restore one teleport charge (called by the TELEPORT station on success) */
+    recharge() {
+        this.charges = 1;
+    }
+
     spawnWarpEffect(x, y) {
-        // Create a ring of small circles that expand outward
         const particleCount = 8;
         for (let i = 0; i < particleCount; i++) {
             const angle = (Math.PI * 2 / particleCount) * i;

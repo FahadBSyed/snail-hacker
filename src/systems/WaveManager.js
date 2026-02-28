@@ -85,11 +85,17 @@ export default class WaveManager {
             if (this.onSpawn) this.onSpawn(type);
         }
 
-        // Wave complete
-        if (this.elapsed >= cfg.duration) {
-            this.active = false;
-            if (this.onWaveEnd) this.onWaveEnd(this.wave);
-        }
+        // NOTE: Waves end via completeWave() when the hack is finished, not by timer.
+    }
+
+    /**
+     * End the current wave immediately (called by GameScene when hack succeeds).
+     * Stops spawning and fires onWaveEnd so GameScene can handle intermission/victory.
+     */
+    completeWave() {
+        if (!this.active) return;
+        this.active = false;
+        if (this.onWaveEnd) this.onWaveEnd(this.wave);
     }
 
     /** Advance to next wave (called by GameScene after intermission or directly) */

@@ -1,8 +1,5 @@
 import { CONFIG } from '../../config.js';
 
-const TARGET_X = 640;
-const TARGET_Y = 360;
-
 export default class FastAlien extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
         super(scene, x, y);
@@ -13,19 +10,18 @@ export default class FastAlien extends Phaser.GameObjects.Container {
         this.radius    = CONFIG.ALIENS.FAST.RADIUS;
         this.alienType = 'fast';
 
-        // Base trajectory angle toward station
-        this.angle    = Phaser.Math.Angle.Between(x, y, TARGET_X, TARGET_Y);
-        // Perpendicular direction for zigzag
-        this.perpAngle = this.angle + Math.PI / 2;
-        // Track base (straight-line) position separately
+        // Track base (straight-line) position separately for zigzag
         this.baseX = x;
         this.baseY = y;
         this.t = 0;
 
+        // Initialize angle toward snail at spawn
+        this.angle     = Phaser.Math.Angle.Between(x, y, scene.snail.x, scene.snail.y);
+        this.perpAngle = this.angle + Math.PI / 2;
+
         // Draw: purple triangle pointing in direction of travel
         const gfx = scene.add.graphics();
         const r = this.radius;
-        // Triangle pointing up (rotated by movement angle in update)
         gfx.fillStyle(0xaa44ff, 1);
         gfx.fillTriangle(0, -r, -r * 0.75, r * 0.7, r * 0.75, r * 0.7);
         // Eye dots
@@ -35,7 +31,6 @@ export default class FastAlien extends Phaser.GameObjects.Container {
         this.gfx = gfx;
         this.add(gfx);
 
-        // Rotate graphic to face travel direction
         this.gfx.rotation = this.angle + Math.PI / 2;
     }
 
@@ -51,9 +46,14 @@ export default class FastAlien extends Phaser.GameObjects.Container {
     update(time, delta) {
         const dt = delta / 1000;
         const speedMult = this.scene.alienSpeedMultiplier || 1.0;
+        const snail = this.scene.snail;
         this.t += dt;
 
-        // Advance base position along straight-line trajectory
+        // Re-steer base trajectory toward snail each frame
+        this.angle     = Phaser.Math.Angle.Between(this.baseX, this.baseY, snail.x, snail.y);
+        this.perpAngle = this.angle + Math.PI / 2;
+
+        // Advance base position along steering angle
         this.baseX += Math.cos(this.angle) * this.speed * speedMult * dt;
         this.baseY += Math.sin(this.angle) * this.speed * speedMult * dt;
 
@@ -62,9 +62,11 @@ export default class FastAlien extends Phaser.GameObjects.Container {
         this.x = this.baseX + Math.cos(this.perpAngle) * zigzag;
         this.y = this.baseY + Math.sin(this.perpAngle) * zigzag;
 
-        // Check proximity to station using base position
-        const dist = Phaser.Math.Distance.Between(this.x, this.y, TARGET_X, TARGET_Y);
-        if (dist < CONFIG.DAMAGE.ALIEN_REACH_DISTANCE) return 'reached_station';
+        // Rotate graphic to face movement direction
+        this.gfx.rotation = this.angle + Math.PI / 2;
+
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
+        if (dist < this.radius + 20) return 'reached_snail';
         return 'alive';
     }
 }
