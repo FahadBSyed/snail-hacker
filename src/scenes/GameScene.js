@@ -1,4 +1,5 @@
 import Snail from '../entities/Snail.js';
+import Projectile from '../entities/Projectile.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -78,6 +79,32 @@ export default class GameScene extends Phaser.Scene {
 
         this.logDebug('Gerald the Snail spawned at (300, 400)');
 
+        // --- Shooting system (Player 2) ---
+        this.ammo = 10;
+        this.ammoMax = 10;
+        this.projectiles = [];
+
+        this.input.on('pointerdown', (pointer) => {
+            if (pointer.button !== 0) return; // left-click only
+            if (this.ammo <= 0) {
+                this.logDebug('CLICK — no ammo!');
+                return;
+            }
+            this.ammo--;
+            const proj = new Projectile(this, 640, 360, pointer.x, pointer.y);
+            this.projectiles.push(proj);
+            this.updateAmmoDisplay();
+            this.logDebug(`SHOOT → (${Math.round(pointer.x)}, ${Math.round(pointer.y)}) ammo: ${this.ammo}/${this.ammoMax}`);
+        });
+
+        // --- Ammo HUD (top-right) ---
+        this.ammoLabel = this.add.text(1270, 10, '', {
+            fontSize: '16px',
+            fontFamily: 'monospace',
+            color: '#ffdd44',
+        }).setOrigin(1, 0);
+        this.updateAmmoDisplay();
+
         // Scene label
         this.add.text(640, 20, 'GAME SCENE — Input Debug Mode', {
             fontSize: '18px',
@@ -95,7 +122,17 @@ export default class GameScene extends Phaser.Scene {
         this.debugText.setText(this.debugLines.join('\n'));
     }
 
+    updateAmmoDisplay() {
+        this.ammoLabel.setText(`AMMO: ${this.ammo} / ${this.ammoMax}`);
+    }
+
     update(time, delta) {
         this.snail.update(time, delta);
+
+        // Tick projectiles, remove destroyed ones
+        this.projectiles = this.projectiles.filter(p => {
+            if (!p.active) return false;
+            return p.update(time, delta);
+        });
     }
 }
