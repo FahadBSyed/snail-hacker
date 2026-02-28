@@ -36,15 +36,18 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         this.add(this.ePrompt);
 
         this.isNearby = false;
+        this.powered  = true;
+        this.offlineLabel = null;
     }
 
-    drawStation() {
-        const g = this.gfx;
-        const r = this.radius;
+    drawStation(offline = false) {
+        const g   = this.gfx;
+        const r   = this.radius;
+        const col = offline ? 0xff3311 : 0x00ffcc;
         g.clear();
 
         // Outer glow
-        g.fillStyle(0x00ffcc, 0.15);
+        g.fillStyle(col, offline ? 0.08 : 0.15);
         g.fillCircle(0, 0, r + 15);
 
         // Hexagon body
@@ -54,15 +57,14 @@ export default class HackingStation extends Phaser.GameObjects.Container {
             points.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
         }
 
-        g.fillStyle(0x0a2a2a, 1);
+        g.fillStyle(offline ? 0x1a0505 : 0x0a2a2a, 1);
         g.beginPath();
         g.moveTo(points[0].x, points[0].y);
         for (let i = 1; i < 6; i++) g.lineTo(points[i].x, points[i].y);
         g.closePath();
         g.fillPath();
 
-        // Cyan outline
-        g.lineStyle(2.5, 0x00ffcc, 0.9);
+        g.lineStyle(2.5, col, offline ? 0.5 : 0.9);
         g.beginPath();
         g.moveTo(points[0].x, points[0].y);
         for (let i = 1; i < 6; i++) g.lineTo(points[i].x, points[i].y);
@@ -70,7 +72,7 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         g.strokePath();
 
         // Inner detail hexagon
-        g.lineStyle(1, 0x00ffcc, 0.2);
+        g.lineStyle(1, col, offline ? 0.1 : 0.2);
         g.beginPath();
         for (let i = 0; i < 6; i++) {
             const angle = (Math.PI / 3) * i - Math.PI / 2;
@@ -83,10 +85,36 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         g.strokePath();
     }
 
+    /** Switch the station's powered state — redraws visuals and manages offline label. */
+    setPowered(on) {
+        this.powered = on;
+        this.drawStation(!on);
+        if (!on) {
+            if (!this.offlineLabel) {
+                this.offlineLabel = this.scene.add.text(0, this.radius + 40, 'POWER OUT!\nFIND BATTERY', {
+                    fontSize: '11px', fontFamily: 'monospace', color: '#ff4444',
+                    backgroundColor: '#00000099', padding: { x: 4, y: 2 }, align: 'center',
+                }).setOrigin(0.5, 0).setDepth(201);
+                this.add(this.offlineLabel);
+                this.scene.tweens.add({
+                    targets: this.offlineLabel, alpha: 0.2, yoyo: true, repeat: -1, duration: 400,
+                });
+            }
+        } else {
+            if (this.offlineLabel) {
+                this.offlineLabel.destroy();
+                this.offlineLabel = null;
+            }
+        }
+    }
+
     /** Update proximity detection — called each frame from GameScene */
     updateProximity(snail) {
         const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
-        const near = dist < CONFIG.TERMINALS.PROXIMITY + this.radius && !snail.hackingActive;
+        const near = dist < CONFIG.TERMINALS.PROXIMITY + this.radius
+            && !snail.hackingActive
+            && !snail.carryingBattery
+            && this.powered;
         if (near !== this.isNearby) {
             this.isNearby = near;
             this.ePrompt.setVisible(near);

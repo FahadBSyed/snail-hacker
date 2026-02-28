@@ -13,8 +13,9 @@ export default class Snail extends Phaser.GameObjects.Container {
         super(scene, x, y);
         scene.add.existing(this);
 
-        this.state = 'IDLE'; // IDLE | MOVING | HACKING
-        this.hackingActive = false;
+        this.state = 'IDLE'; // IDLE | MOVING | HACKING | CARRYING | GRABBED
+        this.hackingActive   = false;
+        this.carryingBattery = false;
         this.facing = 'right'; // current facing direction
 
         this.health    = CONFIG.SNAIL.MAX_HEALTH;

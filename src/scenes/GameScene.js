@@ -10,6 +10,7 @@ import GrabHandSystem from '../systems/GrabHandSystem.js';
 import Terminal from '../entities/Terminal.js';
 import HackMinigame from '../minigames/HackMinigame.js';
 import RhythmMinigame from '../minigames/RhythmMinigame.js';
+import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
 
@@ -79,15 +80,25 @@ export default class GameScene extends Phaser.Scene {
             this.updateAmmoDisplay();
         });
 
-        // ── Grab hand system (Player 2 — right-click to pick up / drop snail) ──
+        // ── Battery / power state ─────────────────────────────────────────────
+        this.battery        = null;   // Battery instance or null
+        this.stationPowered = true;
+
+        // ── Grab hand system (Player 2 — right-click to pick up snail or battery) ──
         this.grabSystem = new GrabHandSystem(this, {
-            snail: this.snail,
+            snail:      this.snail,
+            getBattery: () => this.battery,
             onPickup: () => {
-                // Cancel any active hack or terminal minigame when the snail is grabbed
+                // Cancel any active hack or terminal minigame
                 if (this.activeHack) this.activeHack.cancel();
                 if (this.activeTerminalMinigame) {
                     this.activeTerminalMinigame.cancel();
                     this.activeTerminalMinigame = null;
+                }
+                // Drop battery if snail was carrying it
+                if (this.battery && this.battery.state === 'snail') {
+                    this.battery.state = 'ground';
+                    this.snail.carryingBattery = false;
                 }
                 this.logDebug('Snail grabbed!');
             },
@@ -136,7 +147,8 @@ export default class GameScene extends Phaser.Scene {
         // ── E key: open hack OR activate nearby terminal ───────────────────────
         this.eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
         this.eKey.on('down', () => {
-            if (this.snail.hackingActive) return; // already hacking
+            if (this.snail.hackingActive)   return; // already hacking
+            if (this.snail.carryingBattery) return; // must deliver battery first
             if (this.station.isNearby) {
                 this._startHack();
                 return;
@@ -202,6 +214,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     _startHack() {
+        if (!this.stationPowered) return; // station offline — need battery first
         this.snail.hackingActive = true;
         this.snail.setState('HACKING');
 
@@ -212,6 +225,10 @@ export default class GameScene extends Phaser.Scene {
                 this.hackProgress++;
                 this.updateHackDisplay();
                 this.station.setHackProgress(this.hackProgress / this.hackThreshold);
+                // Every N words the station loses power and needs a battery
+                if (this.hackProgress % CONFIG.BATTERY.POWER_LOSS_WORDS === 0) {
+                    this._triggerPowerLoss();
+                }
             },
             onSuccess: () => {
                 this.activeHack = null;
@@ -232,6 +249,34 @@ export default class GameScene extends Phaser.Scene {
             this.activeHack.cancel();
             // onCancel callback above resets state
         }
+    }
+
+    /** Called when hackProgress hits a POWER_LOSS_WORDS multiple. */
+    _triggerPowerLoss() {
+        if (!this.stationPowered) return; // already offline
+        this.stationPowered = false;
+        if (this.activeHack) this.activeHack.cancel();
+
+        // Spawn battery at a random angle around the station
+        const angle = Math.random() * Math.PI * 2;
+        const r     = CONFIG.BATTERY.SPAWN_RADIUS;
+        this.battery = new Battery(this, 640 + Math.cos(angle) * r, 360 + Math.sin(angle) * r);
+
+        this.station.setPowered(false);
+        this.logDebug('Station lost power! Battery spawned.');
+    }
+
+    /** Called when the snail reaches the station while carrying the battery. */
+    _deliverBattery() {
+        if (this.battery) {
+            this.battery.destroy();
+            this.battery = null;
+        }
+        this.snail.carryingBattery = false;
+        this.snail.setState('IDLE');
+        this.stationPowered = true;
+        this.station.setPowered(true);
+        this.logDebug('Battery delivered! Station back online.');
     }
 
     _completeWave() {
@@ -460,6 +505,43 @@ export default class GameScene extends Phaser.Scene {
         this.grabSystem.update(delta);
         this.updateGrabDisplay();
         this.snail.update(time, delta);
+
+        // ── Battery logic ─────────────────────────────────────────────────────
+        if (this.battery && this.battery.active) {
+            if (this.battery.state === 'ground') {
+                // Show pickup hint only when snail is close and not already busy
+                const nearBatt = Phaser.Math.Distance.Between(
+                    this.snail.x, this.snail.y, this.battery.x, this.battery.y,
+                ) <= CONFIG.BATTERY.SNAIL_PICKUP_DIST * 2.5;
+                this.battery.setPromptVisible(nearBatt && !this.snail.hackingActive);
+
+                // Auto-pickup when snail walks into it
+                if (!this.snail.hackingActive) {
+                    const d = Phaser.Math.Distance.Between(
+                        this.snail.x, this.snail.y, this.battery.x, this.battery.y,
+                    );
+                    if (d <= CONFIG.BATTERY.SNAIL_PICKUP_DIST) {
+                        this.battery.state = 'snail';
+                        this.battery.setPromptVisible(false);
+                        this.snail.carryingBattery = true;
+                        this.snail.setState('CARRYING');
+                    }
+                }
+            } else if (this.battery.state === 'snail') {
+                // Battery floats just above-right of snail so both are visible
+                this.battery.x = this.snail.x + 22;
+                this.battery.y = this.snail.y - 22;
+
+                // Auto-deliver when snail reaches the station
+                const d = Phaser.Math.Distance.Between(
+                    this.snail.x, this.snail.y, this.station.x, this.station.y,
+                );
+                if (d <= this.station.radius + CONFIG.BATTERY.DELIVERY_DIST) {
+                    this._deliverBattery();
+                }
+            }
+            // state === 'mouse': position managed by GrabHandSystem.update()
+        }
 
         // Station proximity (shows/hides E prompt)
         this.station.updateProximity(this.snail);

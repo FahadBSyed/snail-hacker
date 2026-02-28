@@ -4,78 +4,122 @@ export default class GrabHandSystem {
     /**
      * @param {Phaser.Scene} scene
      * @param {object} opts
-     * @param {import('../entities/Snail.js').default} opts.snail
-     * @param {function} opts.onPickup  – called immediately when the snail is grabbed,
-     *                                    so GameScene can cancel any active hack/minigame
+     * @param {import('../entities/Snail.js').default}   opts.snail
+     * @param {function}                                 opts.onPickup     – fired when snail is grabbed
+     * @param {function(): import('../entities/Battery.js').default|null} opts.getBattery
      */
     constructor(scene, opts) {
-        this.scene    = scene;
-        this.snail    = opts.snail;
-        this.onPickup = opts.onPickup || (() => {});
-        this.canvas   = scene.game.canvas;
+        this.scene      = scene;
+        this.snail      = opts.snail;
+        this.onPickup   = opts.onPickup   || (() => {});
+        this.getBattery = opts.getBattery || (() => null);
+        this.canvas     = scene.game.canvas;
 
-        this.isHolding         = false;
+        // null | 'snail' | Battery instance
+        this.heldTarget        = null;
+        this.batteryGrabOrigin = null;  // {x,y} where battery was when mouse grabbed it
+
         this.onCooldown        = false;
-        this.cooldownRemaining = 0;  // seconds
+        this.cooldownRemaining = 0;     // seconds
 
-        // Set default cursor (crosshair for P2 aiming)
         this.canvas.style.cursor = 'crosshair';
 
-        // Right-click down → attempt pickup if cursor is close enough to the snail
+        // Right-click down → grab closest grabbable within range
         scene.input.on('pointerdown', (pointer) => {
             if (pointer.button !== 2) return;
-            if (this.isHolding || this.onCooldown) return;
-            const dist = Phaser.Math.Distance.Between(
+            if (this.heldTarget !== null || this.onCooldown) return;
+
+            const battery    = this.getBattery();
+            let candidate    = null;
+            let candidateDist = Infinity;
+
+            // Battery has grab priority if it's on the ground and in range
+            if (battery && battery.state === 'ground') {
+                const d = Phaser.Math.Distance.Between(pointer.x, pointer.y, battery.x, battery.y);
+                if (d <= CONFIG.BATTERY.MOUSE_PICKUP_DIST) {
+                    candidate = battery; candidateDist = d;
+                }
+            }
+
+            // Snail wins on tie (or if battery is not in range)
+            const snailDist = Phaser.Math.Distance.Between(
                 pointer.x, pointer.y, this.snail.x, this.snail.y,
             );
-            if (dist <= CONFIG.GRAB.MAX_PICKUP_DISTANCE) {
-                this._pickup();
+            if (snailDist <= CONFIG.GRAB.MAX_PICKUP_DISTANCE && snailDist < candidateDist) {
+                candidate = 'snail';
             }
+
+            if (candidate === 'snail') this._pickupSnail();
+            else if (candidate)        this._pickupBattery(candidate);
         });
 
-        // Right-click up → drop
+        // Right-click up → release
         scene.input.on('pointerup', (pointer) => {
             if (pointer.button !== 2) return;
-            if (this.isHolding) this._drop();
+            if (this.heldTarget !== null) this._drop();
         });
     }
 
-    _pickup() {
-        this.isHolding = true;
+    // ── Internal helpers ─────────────────────────────────────────────────────
+
+    _pickupSnail() {
+        this.heldTarget = 'snail';
         this.canvas.style.cursor = 'none';
-
-        // Let GameScene cancel any active hack/minigame before taking control of the snail
-        this.onPickup();
-
-        // Suppress P1's WASD movement while grabbed
+        this.onPickup(); // let GameScene cancel hacks and drop battery if snail is carrying one
         this.snail.hackingActive = true;
         this.snail.setState('GRABBED');
     }
 
-    _drop() {
-        this.isHolding = false;
-        this.snail.hackingActive = false;
-        this.snail.setState('IDLE');
+    _pickupBattery(battery) {
+        this.heldTarget        = battery;
+        this.batteryGrabOrigin = { x: battery.x, y: battery.y };
+        battery.state          = 'mouse';
+        this.canvas.style.cursor = 'none';
+    }
 
+    _drop() {
+        if (this.heldTarget === 'snail') {
+            this.snail.hackingActive = false;
+            this.snail.setState('IDLE');
+        } else if (this.heldTarget) {
+            // Battery: stays at its current position on the ground
+            this.heldTarget.state = 'ground';
+        }
+        this.heldTarget        = null;
+        this.batteryGrabOrigin = null;
         this.onCooldown        = true;
         this.cooldownRemaining = CONFIG.GRAB.COOLDOWN;
         this.canvas.style.cursor = 'crosshair';
     }
 
-    /**
-     * Called every frame from GameScene.update().
-     * Moves the snail toward the pointer (capped at max speed) while held.
-     * Updates the hover cursor while not held.
-     */
+    _moveToward(target, pointer, maxSpeed, delta) {
+        const dx      = pointer.x - target.x;
+        const dy      = pointer.y - target.y;
+        const dist    = Math.sqrt(dx * dx + dy * dy);
+        const maxMove = maxSpeed * (delta / 1000);
+        if (dist === 0 || dist <= maxMove) {
+            target.x = pointer.x;
+            target.y = pointer.y;
+        } else {
+            target.x += (dx / dist) * maxMove;
+            target.y += (dy / dist) * maxMove;
+        }
+        const m  = 24;
+        target.x = Phaser.Math.Clamp(target.x, m, 1280 - m);
+        target.y = Phaser.Math.Clamp(target.y, m, 720 - m);
+    }
+
+    // ── Public update ─────────────────────────────────────────────────────────
+
     update(delta) {
         const pointer = this.scene.input.activePointer;
 
-        // Safety: release if right button was released outside the canvas
-        if (this.isHolding && !pointer.rightButtonDown()) {
+        // Safety: if right button was released outside the canvas we still get the drop
+        if (this.heldTarget !== null && !pointer.rightButtonDown()) {
             this._drop();
         }
 
-        // Countdown
+        // Cooldown countdown
         if (this.onCooldown) {
             this.cooldownRemaining -= delta / 1000;
             if (this.cooldownRemaining <= 0) {
@@ -84,48 +128,61 @@ export default class GrabHandSystem {
             }
         }
 
-        if (this.isHolding) {
-            // Move snail toward pointer, capped at max speed
-            const dx      = pointer.x - this.snail.x;
-            const dy      = pointer.y - this.snail.y;
-            const dist    = Math.sqrt(dx * dx + dy * dy);
-            const maxMove = CONFIG.GRAB.MAX_SPEED * (delta / 1000);
+        if (this.heldTarget === 'snail') {
+            this._moveToward(this.snail, pointer, CONFIG.GRAB.MAX_SPEED, delta);
 
-            if (dist === 0 || dist <= maxMove) {
-                this.snail.x = pointer.x;
-                this.snail.y = pointer.y;
-            } else {
-                this.snail.x += (dx / dist) * maxMove;
-                this.snail.y += (dy / dist) * maxMove;
+        } else if (this.heldTarget) {
+            // Battery drag
+            const battery = this.heldTarget;
+            this._moveToward(battery, pointer, CONFIG.GRAB.MAX_SPEED, delta);
+
+            // Auto-release when max drag distance from pickup origin is reached
+            const dragDist = Phaser.Math.Distance.Between(
+                battery.x, battery.y,
+                this.batteryGrabOrigin.x, this.batteryGrabOrigin.y,
+            );
+            if (dragDist >= CONFIG.BATTERY.MOUSE_MAX_DRAG) {
+                this._drop();
             }
 
-            // Keep snail on screen
-            const margin = 24;
-            this.snail.x = Phaser.Math.Clamp(this.snail.x, margin, 1280 - margin);
-            this.snail.y = Phaser.Math.Clamp(this.snail.y, margin, 720 - margin);
-
         } else {
-            // Hover cursor: 'grab' when within pickup range, 'crosshair' otherwise
+            // No hold: update hover cursor
             if (!this.onCooldown) {
-                const dist = Phaser.Math.Distance.Between(
-                    pointer.x, pointer.y, this.snail.x, this.snail.y,
-                );
-                this.canvas.style.cursor = dist <= CONFIG.GRAB.MAX_PICKUP_DISTANCE
-                    ? 'grab'
-                    : 'crosshair';
+                let nearGrabbable = false;
+
+                const battery = this.getBattery();
+                if (battery && battery.state === 'ground') {
+                    const d = Phaser.Math.Distance.Between(
+                        pointer.x, pointer.y, battery.x, battery.y,
+                    );
+                    if (d <= CONFIG.BATTERY.MOUSE_PICKUP_DIST) nearGrabbable = true;
+                }
+
+                if (!nearGrabbable) {
+                    const d = Phaser.Math.Distance.Between(
+                        pointer.x, pointer.y, this.snail.x, this.snail.y,
+                    );
+                    if (d <= CONFIG.GRAB.MAX_PICKUP_DISTANCE) nearGrabbable = true;
+                }
+
+                this.canvas.style.cursor = nearGrabbable ? 'grab' : 'crosshair';
             }
         }
     }
 
+    // ── HUD helpers ───────────────────────────────────────────────────────────
+
     get statusText() {
-        if (this.isHolding)  return 'GRAB: HOLDING';
-        if (this.onCooldown) return `GRAB: ${Math.ceil(this.cooldownRemaining)}s`;
+        if (this.heldTarget === 'snail') return 'GRAB: SNAIL';
+        if (this.heldTarget)             return 'GRAB: BATTERY';
+        if (this.onCooldown)             return `GRAB: ${Math.ceil(this.cooldownRemaining)}s`;
         return 'GRAB: READY';
     }
 
     get statusColor() {
-        if (this.isHolding)  return '#ffcc00';
-        if (this.onCooldown) return '#664466';
+        if (this.heldTarget === 'snail') return '#ffcc00';
+        if (this.heldTarget)             return '#44ff88';
+        if (this.onCooldown)             return '#664466';
         return '#cc66ff';
     }
 }
