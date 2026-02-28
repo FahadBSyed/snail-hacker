@@ -104,8 +104,20 @@ export default class GameScene extends Phaser.Scene {
             this.activeTerminalMinigame = mg;
         };
 
-        // RELOAD — halfway between left edge and station. Rhythm minigame to earn ammo.
-        const reloadTerm = new Terminal(this, 400, 400, {
+        // RELOAD — orbits the hacking station at a fixed radius; relocates on each success.
+        const _placeReloadTerm = () => {
+            const angle = Math.random() * Math.PI * 2;
+            const r     = CONFIG.STATIONS.RELOAD_ORBIT_RADIUS;
+            reloadTerm.x = 640 + Math.cos(angle) * r;
+            reloadTerm.y = 360 + Math.sin(angle) * r;
+            reloadTerm.setScale(0);
+            this.tweens.add({
+                targets: reloadTerm, scaleX: 1, scaleY: 1,
+                duration: 250, ease: 'Back.easeOut',
+            });
+        };
+
+        const reloadTerm = new Terminal(this, 0, 0, {
             label:    'RELOAD',
             cooldown: CONFIG.STATIONS.RELOAD_COOLDOWN,
             color:    0x44ddff,
@@ -113,9 +125,11 @@ export default class GameScene extends Phaser.Scene {
             onSuccess: () => {
                 this.ammo = this.ammoMax;
                 this.updateAmmoDisplay();
-                this.logDebug('Ammo reloaded!');
+                _placeReloadTerm();
+                this.logDebug('Ammo reloaded! Terminal relocated.');
             },
         });
+        _placeReloadTerm(); // random initial placement
 
         this.terminals = [reloadTerm];
 

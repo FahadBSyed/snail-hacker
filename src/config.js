@@ -34,7 +34,8 @@ export const DEFAULTS = {
     },
 
     STATIONS: {
-        RELOAD_COOLDOWN: 8000,   // ms — cooldown after reload use
+        RELOAD_COOLDOWN:     8000,  // ms — cooldown after reload use
+        RELOAD_ORBIT_RADIUS: 260,   // px — terminal orbits the station at this radius
     },
 
     GRAB: {
