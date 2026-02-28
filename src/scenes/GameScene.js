@@ -156,6 +156,26 @@ export default class GameScene extends Phaser.Scene {
         this.aliens.push(alien);
     }
 
+    checkCollisions() {
+        // Projectile vs Alien
+        for (const proj of this.projectiles) {
+            if (!proj.active) continue;
+            for (const alien of this.aliens) {
+                if (!alien.active) continue;
+                const dist = Phaser.Math.Distance.Between(proj.x, proj.y, alien.x, alien.y);
+                if (dist < alien.radius + 4) { // 4 = projectile radius
+                    proj.destroy();
+                    const died = alien.takeDamage(10);
+                    if (died) {
+                        this.score++;
+                        this.logDebug(`Alien destroyed! Score: ${this.score}`);
+                    }
+                    break; // projectile can only hit one alien
+                }
+            }
+        }
+    }
+
     update(time, delta) {
         this.snail.update(time, delta);
 
@@ -170,11 +190,18 @@ export default class GameScene extends Phaser.Scene {
             if (!alien.active) return false;
             const status = alien.update(time, delta);
             if (status === 'reached_station') {
-                this.logDebug('Alien reached station!');
+                this.logDebug('Alien reached station! (placeholder damage)');
                 alien.destroy();
                 return false;
             }
             return true;
         });
+
+        // Collision checks
+        this.checkCollisions();
+
+        // Clean up destroyed objects
+        this.projectiles = this.projectiles.filter(p => p.active);
+        this.aliens = this.aliens.filter(a => a.active);
     }
 }
