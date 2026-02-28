@@ -22,8 +22,8 @@ export const DEFAULTS = {
     },
 
     HACK: {
-        BASE_WORDS:   5,  // words required to complete wave 1
-        WORDS_GROWTH: 1,  // additional words required per wave above wave 1
+        BASE_WORDS:   20,  // words required to complete wave 1
+        WORDS_GROWTH: 20,  // additional words required per wave above wave 1
     },
 
     HEALTH_DROP: {
