@@ -2,6 +2,7 @@ import Snail from '../entities/Snail.js';
 import Projectile from '../entities/Projectile.js';
 import BasicAlien from '../entities/aliens/BasicAlien.js';
 import HackingStation from '../entities/HackingStation.js';
+import ReloadBuffer from '../systems/ReloadBuffer.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -84,6 +85,10 @@ export default class GameScene extends Phaser.Scene {
 
         this.input.on('pointerdown', (pointer) => {
             if (pointer.button !== 0) return; // left-click only
+            if (this.reloadBuffer && this.reloadBuffer.isReloading) {
+                this.logDebug('CLICK — reloading!');
+                return;
+            }
             if (this.ammo <= 0) {
                 this.logDebug('CLICK — no ammo!');
                 return;
@@ -93,6 +98,30 @@ export default class GameScene extends Phaser.Scene {
             this.projectiles.push(proj);
             this.updateAmmoDisplay();
             this.logDebug(`SHOOT → (${Math.round(pointer.x)}, ${Math.round(pointer.y)}) ammo: ${this.ammo}/${this.ammoMax}`);
+        });
+
+        // --- RELOAD system ---
+        this.reloadBuffer = new ReloadBuffer(this, {
+            onReloadStart: () => {
+                this.logDebug('RELOAD detected! Charging...');
+                this.snail.showReloadBar(true);
+            },
+            onReloadComplete: () => {
+                this.ammo = this.ammoMax;
+                this.updateAmmoDisplay();
+                this.snail.showReloadBar(false);
+                this.logDebug('RELOAD complete! Ammo refilled.');
+            },
+            onReloadCancel: () => {
+                this.snail.showReloadBar(false);
+                this.logDebug('RELOAD cancelled!');
+            },
+            onBufferUpdate: (buffer, matchCount) => {
+                // Update snail overhead to show partial progress
+                if (matchCount > 0 && !this.reloadBuffer.isReloading) {
+                    this.snail.showReloadProgress(matchCount, 6);
+                }
+            },
         });
 
         // --- Alien spawning ---
