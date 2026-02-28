@@ -5,6 +5,7 @@ import HackingStation from '../entities/HackingStation.js';
 import TeleportSystem from '../systems/TeleportSystem.js';
 import Terminal from '../entities/Terminal.js';
 import SequenceMinigame from '../minigames/SequenceMinigame.js';
+import RhythmMinigame from '../minigames/RhythmMinigame.js';
 import DefenseStation from '../entities/DefenseStation.js';
 
 export default class GameScene extends Phaser.Scene {
@@ -126,10 +127,11 @@ export default class GameScene extends Phaser.Scene {
         this.terminals = [];
         this.activeMinigame = null;
 
-        // Helper to create a sequence minigame launcher
-        const makeSequenceLauncher = (label) => (term, onSuccess, onFailure) => {
-            this.logDebug(`Sequence minigame at ${label}!`);
-            this.activeMinigame = new SequenceMinigame(this, {
+        // Shared wrapper that registers a minigame with the teleport system
+        const launchMinigame = (MinigameClass, label, opts, onSuccess, onFailure) => {
+            this.logDebug(`${label} minigame started!`);
+            this.activeMinigame = new MinigameClass(this, {
+                ...opts,
                 onSuccess: () => {
                     this.activeMinigame = null;
                     this.teleportSystem.activeMinigame = null;
@@ -144,23 +146,33 @@ export default class GameScene extends Phaser.Scene {
             this.teleportSystem.activeMinigame = this.activeMinigame;
         };
 
+        const makeSequenceLauncher = (label) => (term, onSuccess, onFailure) =>
+            launchMinigame(SequenceMinigame, label, {}, onSuccess, onFailure);
+
+        const makeRhythmLauncher = (label) => (term, onSuccess, onFailure) =>
+            launchMinigame(RhythmMinigame, label, {}, onSuccess, onFailure);
+
         const terminalDefs = [
             { x: 440, y: 250, label: 'CANNON-L', cooldown: 20000, color: 0xff8844,
+              launcher: makeRhythmLauncher('CANNON-L'),
               onSuccess: () => { this.cannon.activate(); this.logDebug('Left cannon activated!'); } },
             { x: 840, y: 250, label: 'RELOAD', cooldown: 8000, color: 0x44ddff,
+              launcher: makeSequenceLauncher('RELOAD'),
               onSuccess: () => {
                   this.ammo = this.ammoMax;
                   this.updateAmmoDisplay();
                   this.logDebug('Ammo reloaded!');
               } },
             { x: 440, y: 470, label: 'REPAIR', cooldown: 12000, color: 0x44ff88,
+              launcher: makeSequenceLauncher('REPAIR'),
               onSuccess: () => {
-                  const healed = Math.min(25, this.station.maxHealth - this.station.health);
-                  this.station.health = Math.min(this.station.maxHealth, this.station.health + 25);
+                  const before = this.station.health;
+                  this.station.heal(25);
                   this.updateHealthDisplay();
-                  this.logDebug(`Station repaired +${healed} HP (${this.station.health}/${this.station.maxHealth})`);
+                  this.logDebug(`Station repaired +${this.station.health - before} HP (${this.station.health}/${this.station.maxHealth})`);
               } },
             { x: 840, y: 470, label: 'CANNON-R', cooldown: 20000, color: 0xff8844,
+              launcher: makeRhythmLauncher('CANNON-R'),
               onSuccess: () => { this.cannon2.activate(); this.logDebug('Right cannon activated!'); } },
         ];
 
@@ -169,7 +181,7 @@ export default class GameScene extends Phaser.Scene {
                 label: def.label,
                 cooldown: def.cooldown,
                 color: def.color,
-                launchMinigame: makeSequenceLauncher(def.label),
+                launchMinigame: def.launcher,
                 onSuccess: def.onSuccess,
             });
             this.terminals.push(terminal);
