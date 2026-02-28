@@ -5,6 +5,7 @@ import HackingStation from '../entities/HackingStation.js';
 import ReloadBuffer from '../systems/ReloadBuffer.js';
 import TeleportSystem from '../systems/TeleportSystem.js';
 import Terminal from '../entities/Terminal.js';
+import SequenceMinigame from '../minigames/SequenceMinigame.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -149,9 +150,20 @@ export default class GameScene extends Phaser.Scene {
                 label: pos.label,
                 cooldown: 10000,
                 launchMinigame: (term, onSuccess, onFailure) => {
-                    // Placeholder — will be replaced with real minigames in Step 12
-                    this.logDebug(`Minigame started at ${pos.label}! (auto-success in 2s)`);
-                    this.time.delayedCall(2000, onSuccess);
+                    this.logDebug(`Sequence minigame at ${pos.label}!`);
+                    this.activeMinigame = new SequenceMinigame(this, {
+                        onSuccess: () => {
+                            this.activeMinigame = null;
+                            this.teleportSystem.activeMinigame = null;
+                            onSuccess();
+                        },
+                        onFailure: () => {
+                            this.activeMinigame = null;
+                            this.teleportSystem.activeMinigame = null;
+                            onFailure();
+                        },
+                    });
+                    this.teleportSystem.activeMinigame = this.activeMinigame;
                 },
                 onSuccess: () => {
                     this.logDebug(`${pos.label} hacked successfully!`);
