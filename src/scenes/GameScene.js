@@ -1,5 +1,6 @@
 import Snail from '../entities/Snail.js';
 import Projectile from '../entities/Projectile.js';
+import BasicAlien from '../entities/aliens/BasicAlien.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -97,6 +98,16 @@ export default class GameScene extends Phaser.Scene {
             this.logDebug(`SHOOT → (${Math.round(pointer.x)}, ${Math.round(pointer.y)}) ammo: ${this.ammo}/${this.ammoMax}`);
         });
 
+        // --- Alien spawning ---
+        this.aliens = [];
+        this.score = 0;
+        this.spawnTimer = this.time.addEvent({
+            delay: 2000, // every 2 seconds
+            callback: this.spawnAlien,
+            callbackScope: this,
+            loop: true,
+        });
+
         // --- Ammo HUD (top-right) ---
         this.ammoLabel = this.add.text(1270, 10, '', {
             fontSize: '16px',
@@ -126,6 +137,25 @@ export default class GameScene extends Phaser.Scene {
         this.ammoLabel.setText(`AMMO: ${this.ammo} / ${this.ammoMax}`);
     }
 
+    spawnAlien() {
+        // Pick a random edge: 0=top, 1=left, 2=right
+        const edge = Phaser.Math.Between(0, 2);
+        let x, y;
+        if (edge === 0) { // top
+            x = Phaser.Math.Between(50, 1230);
+            y = -20;
+        } else if (edge === 1) { // left
+            x = -20;
+            y = Phaser.Math.Between(50, 670);
+        } else { // right
+            x = 1300;
+            y = Phaser.Math.Between(50, 670);
+        }
+
+        const alien = new BasicAlien(this, x, y);
+        this.aliens.push(alien);
+    }
+
     update(time, delta) {
         this.snail.update(time, delta);
 
@@ -133,6 +163,18 @@ export default class GameScene extends Phaser.Scene {
         this.projectiles = this.projectiles.filter(p => {
             if (!p.active) return false;
             return p.update(time, delta);
+        });
+
+        // Tick aliens
+        this.aliens = this.aliens.filter(alien => {
+            if (!alien.active) return false;
+            const status = alien.update(time, delta);
+            if (status === 'reached_station') {
+                this.logDebug('Alien reached station!');
+                alien.destroy();
+                return false;
+            }
+            return true;
         });
     }
 }
