@@ -6,6 +6,7 @@ import ReloadBuffer from '../systems/ReloadBuffer.js';
 import TeleportSystem from '../systems/TeleportSystem.js';
 import Terminal from '../entities/Terminal.js';
 import SequenceMinigame from '../minigames/SequenceMinigame.js';
+import DefenseStation from '../entities/DefenseStation.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -136,38 +137,51 @@ export default class GameScene extends Phaser.Scene {
             },
         });
 
+        // --- Defense stations ---
+        this.cannon = new DefenseStation(this, 200, 150, {
+            type: 'CANNON',
+            getAliens: () => this.aliens,
+        });
+
         // --- Terminals ---
         this.terminals = [];
         this.activeMinigame = null;
-        const terminalPositions = [
-            { x: 440, y: 250, label: 'TERM-1' },
-            { x: 840, y: 250, label: 'TERM-2' },
-            { x: 440, y: 470, label: 'TERM-3' },
-            { x: 840, y: 470, label: 'TERM-4' },
-        ];
-        for (const pos of terminalPositions) {
-            const terminal = new Terminal(this, pos.x, pos.y, {
-                label: pos.label,
-                cooldown: 10000,
-                launchMinigame: (term, onSuccess, onFailure) => {
-                    this.logDebug(`Sequence minigame at ${pos.label}!`);
-                    this.activeMinigame = new SequenceMinigame(this, {
-                        onSuccess: () => {
-                            this.activeMinigame = null;
-                            this.teleportSystem.activeMinigame = null;
-                            onSuccess();
-                        },
-                        onFailure: () => {
-                            this.activeMinigame = null;
-                            this.teleportSystem.activeMinigame = null;
-                            onFailure();
-                        },
-                    });
-                    this.teleportSystem.activeMinigame = this.activeMinigame;
-                },
+
+        // Helper to create a sequence minigame launcher
+        const makeSequenceLauncher = (label) => (term, onSuccess, onFailure) => {
+            this.logDebug(`Sequence minigame at ${label}!`);
+            this.activeMinigame = new SequenceMinigame(this, {
                 onSuccess: () => {
-                    this.logDebug(`${pos.label} hacked successfully!`);
+                    this.activeMinigame = null;
+                    this.teleportSystem.activeMinigame = null;
+                    onSuccess();
                 },
+                onFailure: () => {
+                    this.activeMinigame = null;
+                    this.teleportSystem.activeMinigame = null;
+                    onFailure();
+                },
+            });
+            this.teleportSystem.activeMinigame = this.activeMinigame;
+        };
+
+        const terminalDefs = [
+            { x: 440, y: 250, label: 'CANNON', cooldown: 20000,
+              onSuccess: () => { this.cannon.activate(); this.logDebug('Cannon activated!'); } },
+            { x: 840, y: 250, label: 'TERM-2', cooldown: 10000,
+              onSuccess: () => { this.logDebug('TERM-2 hacked!'); } },
+            { x: 440, y: 470, label: 'TERM-3', cooldown: 10000,
+              onSuccess: () => { this.logDebug('TERM-3 hacked!'); } },
+            { x: 840, y: 470, label: 'TERM-4', cooldown: 10000,
+              onSuccess: () => { this.logDebug('TERM-4 hacked!'); } },
+        ];
+
+        for (const def of terminalDefs) {
+            const terminal = new Terminal(this, def.x, def.y, {
+                label: def.label,
+                cooldown: def.cooldown,
+                launchMinigame: makeSequenceLauncher(def.label),
+                onSuccess: def.onSuccess,
             });
             this.terminals.push(terminal);
         }
