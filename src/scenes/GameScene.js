@@ -6,7 +6,7 @@ import FastAlien from '../entities/aliens/FastAlien.js';
 import TankAlien from '../entities/aliens/TankAlien.js';
 import BomberAlien from '../entities/aliens/BomberAlien.js';
 import HackingStation from '../entities/HackingStation.js';
-import TeleportSystem from '../systems/TeleportSystem.js';
+import GrabHandSystem from '../systems/GrabHandSystem.js';
 import Terminal from '../entities/Terminal.js';
 import HackMinigame from '../minigames/HackMinigame.js';
 import RhythmMinigame from '../minigames/RhythmMinigame.js';
@@ -79,25 +79,29 @@ export default class GameScene extends Phaser.Scene {
             this.updateAmmoDisplay();
         });
 
-        // ── Teleport system (Player 2 — right-click drag) ─────────────────────
-        this.teleportSystem = new TeleportSystem(this, {
+        // ── Grab hand system (Player 2 — right-click to pick up / drop snail) ──
+        this.grabSystem = new GrabHandSystem(this, {
             snail: this.snail,
-            onTeleport: (x, y) => {
-                // Cancels hack if mid-session (handled inside TeleportSystem via activeMinigame ref)
-                this.updateTeleportDisplay();
-                this.logDebug(`Teleported to (${Math.round(x)}, ${Math.round(y)})`);
+            onPickup: () => {
+                // Cancel any active hack or terminal minigame when the snail is grabbed
+                if (this.activeHack) this.activeHack.cancel();
+                if (this.activeTerminalMinigame) {
+                    this.activeTerminalMinigame.cancel();
+                    this.activeTerminalMinigame = null;
+                }
+                this.logDebug('Snail grabbed!');
             },
         });
 
         // ── Service terminals ─────────────────────────────────────────────────
-        // Shared helper: wraps a RhythmMinigame launch and registers it with the
-        // teleport system so teleporting mid-minigame cancels it cleanly.
+        // Shared helper: wraps a RhythmMinigame and tracks it so grab pickup can cancel it.
+        this.activeTerminalMinigame = null;
         const rhythmLauncher = (_term, onSuccess, onFailure) => {
             const mg = new RhythmMinigame(this, {
-                onSuccess: () => { this.teleportSystem.activeMinigame = null; onSuccess(); },
-                onFailure: () => { this.teleportSystem.activeMinigame = null; onFailure(); },
+                onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
+                onFailure: () => { this.activeTerminalMinigame = null; onFailure(); },
             });
-            this.teleportSystem.activeMinigame = mg;
+            this.activeTerminalMinigame = mg;
         };
 
         // RELOAD — halfway between left edge and station. Rhythm minigame to earn ammo.
@@ -113,20 +117,7 @@ export default class GameScene extends Phaser.Scene {
             },
         });
 
-        // TELEPORT — halfway between station and right edge. Rhythm minigame to earn charge.
-        const teleportTerm = new Terminal(this, 880, 400, {
-            label:    'TELEPORT',
-            cooldown: CONFIG.STATIONS.TELEPORT_COOLDOWN,
-            color:    0xcc66ff,
-            launchMinigame: rhythmLauncher,
-            onSuccess: () => {
-                this.teleportSystem.recharge();
-                this.updateTeleportDisplay();
-                this.logDebug('Teleport recharged!');
-            },
-        });
-
-        this.terminals = [reloadTerm, teleportTerm];
+        this.terminals = [reloadTerm];
 
         // ── E key: open hack OR activate nearby terminal ───────────────────────
         this.eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
@@ -210,21 +201,16 @@ export default class GameScene extends Phaser.Scene {
             },
             onSuccess: () => {
                 this.activeHack = null;
-                this.teleportSystem.activeMinigame = null;
                 this.snail.hackingActive = false;
                 this.snail.setState('IDLE');
                 this._completeWave();
             },
             onCancel: () => {
                 this.activeHack = null;
-                this.teleportSystem.activeMinigame = null;
                 this.snail.hackingActive = false;
                 this.snail.setState('IDLE');
             },
         });
-
-        // Register with teleport system so teleport can cancel the hack
-        this.teleportSystem.activeMinigame = this.activeHack;
     }
 
     _cancelHack() {
@@ -293,14 +279,14 @@ export default class GameScene extends Phaser.Scene {
             fontSize: '10px', fontFamily: 'monospace', color: '#ff4444',
         }).setOrigin(1, 0).setDepth(100).setVisible(false);
 
-        // Teleport charge — below ammo
-        this.teleportLabel = this.add.text(1270, 54, 'TELEPORT: READY', {
+        // Grab hand status — below ammo
+        this.grabLabel = this.add.text(1270, 54, 'GRAB: READY', {
             fontSize: '10px', fontFamily: 'monospace', color: '#cc66ff',
         }).setOrigin(1, 0).setDepth(100);
 
         this.updateAmmoDisplay();
         this.updateHealthDisplay();
-        this.updateTeleportDisplay();
+        this.updateGrabDisplay();
     }
 
     updateAmmoDisplay() {
@@ -336,10 +322,10 @@ export default class GameScene extends Phaser.Scene {
         this.hackProgressLabel.setText(`HACK: ${this.hackProgress} / ${this.hackThreshold}`);
     }
 
-    updateTeleportDisplay() {
-        const charged = this.teleportSystem.charges > 0;
-        this.teleportLabel.setText(charged ? 'TELEPORT: READY' : 'TELEPORT: EMPTY');
-        this.teleportLabel.setColor(charged ? '#cc66ff' : '#664466');
+    updateGrabDisplay() {
+        if (!this.grabLabel) return;
+        this.grabLabel.setText(this.grabSystem.statusText);
+        this.grabLabel.setColor(this.grabSystem.statusColor);
     }
 
     // ── Alien spawning ─────────────────────────────────────────────────────────
@@ -457,6 +443,8 @@ export default class GameScene extends Phaser.Scene {
     // ── Main update loop ──────────────────────────────────────────────────────
 
     update(time, delta) {
+        this.grabSystem.update(delta);
+        this.updateGrabDisplay();
         this.snail.update(time, delta);
 
         // Station proximity (shows/hides E prompt)
@@ -465,7 +453,7 @@ export default class GameScene extends Phaser.Scene {
         // Wave manager tick (handles spawning)
         if (this.waveManager) this.waveManager.update(delta);
 
-        // Terminal proximity checks (RELOAD, TELEPORT stations)
+        // Terminal proximity checks
         for (const terminal of this.terminals) {
             terminal.updateProximity(this.snail);
         }

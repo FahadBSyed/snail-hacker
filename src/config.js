@@ -34,8 +34,13 @@ export const DEFAULTS = {
     },
 
     STATIONS: {
-        RELOAD_COOLDOWN:   8000,   // ms — cooldown after reload use
-        TELEPORT_COOLDOWN: 12000,  // ms — cooldown after teleport recharge
+        RELOAD_COOLDOWN: 8000,   // ms — cooldown after reload use
+    },
+
+    GRAB: {
+        MAX_PICKUP_DISTANCE: 60,   // px — cursor must be within this radius of the snail to grab
+        MAX_SPEED:           400,  // px/s — max speed while carrying the snail
+        COOLDOWN:            10,   // s — cooldown after releasing the snail
     },
 
     ALIENS: {
