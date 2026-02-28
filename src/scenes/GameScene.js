@@ -30,10 +30,17 @@ export default class GameScene extends Phaser.Scene {
 
     preload() {
         const svgSize = { width: 48, height: 48 };
+        // Snail directional sprites
         this.load.svg('snail-right', 'assets/snail-right.svg', svgSize);
         this.load.svg('snail-left',  'assets/snail-left.svg',  svgSize);
         this.load.svg('snail-up',    'assets/snail-up.svg',    svgSize);
         this.load.svg('snail-down',  'assets/snail-down.svg',  svgSize);
+        // BasicAlien (alien frog in flying saucer) — 8 directions
+        const dirs = ['right', 'diag-right-down', 'down', 'diag-left-down',
+                      'left',  'diag-left-up',    'up',   'diag-right-up'];
+        for (const dir of dirs) {
+            this.load.svg(`alien-frog-${dir}`, `assets/alien-frog-${dir}.svg`, svgSize);
+        }
     }
 
     create() {
