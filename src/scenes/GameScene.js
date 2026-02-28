@@ -11,10 +11,17 @@ import SequenceMinigame from '../minigames/SequenceMinigame.js';
 import RhythmMinigame from '../minigames/RhythmMinigame.js';
 import TypingMinigame from '../minigames/TypingMinigame.js';
 import DefenseStation from '../entities/DefenseStation.js';
+import WaveManager from '../systems/WaveManager.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
         super('GameScene');
+    }
+
+    init(data = {}) {
+        this.startWave    = data.wave         || 1;
+        this.startScore   = data.score        || 0;
+        this.startHealth  = data.stationHealth !== undefined ? data.stationHealth : 100;
     }
 
     preload() {
@@ -38,6 +45,12 @@ export default class GameScene extends Phaser.Scene {
 
         // --- Hacking Station (center) ---
         this.station = new HackingStation(this, 640, 360);
+        // Apply health carried from intermission (or full health on fresh start)
+        if (this.startHealth < 100) {
+            this.station.health = this.startHealth;
+            this.station.updateHealthBar();
+            this.station.drawStation();
+        }
 
         // Debug text area
         this.debugText = this.add.text(10, 680, '', {
@@ -192,19 +205,53 @@ export default class GameScene extends Phaser.Scene {
             }
         });
 
-        // --- Alien spawning ---
+        // --- Alien state ---
         this.aliens = [];
-        this.score = 0;
-        this.wave = 1;
-        this.spawnTimer = this.time.addEvent({
-            delay: 2000,
-            callback: this.spawnAlien,
-            callbackScope: this,
-            loop: true,
+        this.score  = this.startScore;
+        this.wave   = this.startWave;
+
+        // --- Wave Manager ---
+        this.waveManager = new WaveManager(this, {
+            startWave: this.startWave,
+            onSpawn: (type) => this.spawnAlien(type),
+            onWaveStart: (wave, duration) => {
+                this.wave = wave;
+                this.updateWaveDisplay();
+                this.logDebug(`Wave ${wave} started!`);
+            },
+            onWaveEnd: (wave) => {
+                this.logDebug(`Wave ${wave} complete!`);
+                if (this.waveManager.isLastWave) {
+                    this.scene.start('VictoryScene', { wave, score: this.score });
+                } else if (this.waveManager.isIntermissionWave) {
+                    this.scene.start('IntermissionScene', {
+                        wave,
+                        score: this.score,
+                        stationHealth: this.station.health,
+                    });
+                } else {
+                    // Brief pause then next wave
+                    this.time.delayedCall(2000, () => this.waveManager.nextWave());
+                }
+            },
         });
+        this.waveManager.startWave();
+
+        // --- Wave HUD (top-center-left) ---
+        this.waveLabel = this.add.text(510, 10, 'WAVE 1', {
+            fontSize: '14px',
+            fontFamily: 'monospace',
+            color: '#ffdd44',
+        }).setOrigin(0.5, 0).setDepth(100);
+
+        this.waveTimerLabel = this.add.text(510, 28, '', {
+            fontSize: '11px',
+            fontFamily: 'monospace',
+            color: '#888888',
+        }).setOrigin(0.5, 0).setDepth(100);
 
         // --- Score HUD (top-center) ---
-        this.scoreLabel = this.add.text(640, 10, 'SCORE: 0', {
+        this.scoreLabel = this.add.text(640, 10, `SCORE: ${this.startScore}`, {
             fontSize: '18px',
             fontFamily: 'monospace',
             color: '#ffffff',
@@ -245,6 +292,10 @@ export default class GameScene extends Phaser.Scene {
 
     updateScoreDisplay() {
         this.scoreLabel.setText(`SCORE: ${this.score}`);
+    }
+
+    updateWaveDisplay() {
+        this.waveLabel.setText(`WAVE ${this.wave}`);
     }
 
     updateHealthDisplay() {
@@ -321,21 +372,22 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
-    spawnAlien() {
+    _randomEdgePosition() {
         const edge = Phaser.Math.Between(0, 2);
-        let x, y;
-        if (edge === 0) {
-            x = Phaser.Math.Between(50, 1230);
-            y = -20;
-        } else if (edge === 1) {
-            x = -20;
-            y = Phaser.Math.Between(50, 670);
-        } else {
-            x = 1300;
-            y = Phaser.Math.Between(50, 670);
-        }
+        if (edge === 0) return { x: Phaser.Math.Between(50, 1230), y: -20 };
+        if (edge === 1) return { x: -20,  y: Phaser.Math.Between(50, 670) };
+        return           { x: 1300, y: Phaser.Math.Between(50, 670) };
+    }
 
-        const alien = new BasicAlien(this, x, y);
+    spawnAlien(type = 'basic') {
+        const { x, y } = this._randomEdgePosition();
+        let alien;
+        switch (type) {
+            case 'fast':   alien = new FastAlien(this, x, y);   break;
+            case 'tank':   alien = new TankAlien(this, x, y);   break;
+            case 'bomber': alien = new BomberAlien(this, x, y); break;
+            default:       alien = new BasicAlien(this, x, y);
+        }
         this.aliens.push(alien);
     }
 
@@ -366,6 +418,13 @@ export default class GameScene extends Phaser.Scene {
     update(time, delta) {
         this.snail.update(time, delta);
 
+        // Wave manager tick
+        if (this.waveManager) {
+            this.waveManager.update(delta);
+            const secs = Math.ceil(this.waveManager.timeRemaining / 1000);
+            if (this.waveTimerLabel) this.waveTimerLabel.setText(`${secs}s left`);
+        }
+
         // Update terminal proximity checks
         for (const terminal of this.terminals) {
             terminal.updateProximity(this.snail);
@@ -395,7 +454,7 @@ export default class GameScene extends Phaser.Scene {
                     this.updateHealthDisplay();
                     this.logDebug(`Station hit! HP: ${this.station.health}/${this.station.maxHealth}`);
                     if (destroyed) {
-                        if (this.spawnTimer) this.spawnTimer.remove(false);
+                        if (this.waveManager) this.waveManager.active = false;
                         this.scene.start('GameOverScene', { wave: this.wave, score: this.score });
                     }
                 }
