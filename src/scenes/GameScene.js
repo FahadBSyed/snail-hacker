@@ -5,6 +5,15 @@ export default class GameScene extends Phaser.Scene {
         super('GameScene');
     }
 
+    preload() {
+        // Snail directional SVGs — rasterized at 48×48 to match viewBox
+        const svgSize = { width: 48, height: 48 };
+        this.load.svg('snail-right', 'assets/snail-right.svg', svgSize);
+        this.load.svg('snail-left',  'assets/snail-left.svg',  svgSize);
+        this.load.svg('snail-up',    'assets/snail-up.svg',    svgSize);
+        this.load.svg('snail-down',  'assets/snail-down.svg',  svgSize);
+    }
+
     create() {
         // Dark starfield background
         for (let i = 0; i < 150; i++) {

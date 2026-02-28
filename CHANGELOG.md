@@ -8,7 +8,7 @@
 - **Step 8: GameOverScene** — Displays wave reached and score, PLAY AGAIN button returns to menu.
 - **VictoryScene (Step 21)** — Stub with score display and restart button.
 - **IntermissionScene (Step 20)** — Stub with placeholder text.
-- **Step 3: Snail Entity** — Created `Snail.js` extending `Phaser.GameObjects.Container`. Graphics-drawn snail (oval body, brown spiral shell, antennae with dot tips, eye). WASD movement at 40px/s with diagonal normalization, screen-bounds clamping. State machine (IDLE/MOVING/HACKING) with overhead label. `hackingActive` flag gates WASD (prep for minigames). Integrated into GameScene with per-frame update.
+- **Step 3: Snail Entity** — Created `Snail.js` extending `Phaser.GameObjects.Container`. WASD movement at 40px/s with diagonal normalization, screen-bounds clamping. State machine (IDLE/MOVING/HACKING) with overhead label. `hackingActive` flag gates WASD (prep for minigames). Integrated into GameScene with per-frame update. Directional SVG sprites (right/left/up/down) generated via `scripts/generate-snail-sprites.js`, loaded in preload, swapped based on movement direction (horizontal takes priority over vertical for diagonals).
 
 ### Additional Work
 - Created full project directory structure (`src/scenes/`, `src/entities/`, `src/systems/`, `src/minigames/`, `src/ui/`, `assets/audio/`)

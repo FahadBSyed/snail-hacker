@@ -1,5 +1,13 @@
 const SPEED = 40; // px/s — intentionally very slow
 
+// Texture keys for each direction (loaded in GameScene.preload)
+const DIR_TEXTURES = {
+    right: 'snail-right',
+    left:  'snail-left',
+    up:    'snail-up',
+    down:  'snail-down',
+};
+
 export default class Snail extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
         super(scene, x, y);
@@ -7,12 +15,11 @@ export default class Snail extends Phaser.GameObjects.Container {
 
         this.state = 'IDLE'; // IDLE | MOVING | HACKING
         this.hackingActive = false;
+        this.facing = 'right'; // current facing direction
 
-        // --- Draw the snail with Graphics ---
-        const gfx = scene.add.graphics();
-        this.gfx = gfx;
-        this.add(gfx);
-        this.drawSnail();
+        // --- Sprite (uses preloaded SVG textures) ---
+        this.sprite = scene.add.image(0, 0, DIR_TEXTURES.right);
+        this.add(this.sprite);
 
         // --- Overhead state label ---
         this.stateLabel = scene.add.text(0, -30, 'IDLE', {
@@ -33,41 +40,11 @@ export default class Snail extends Phaser.GameObjects.Container {
         });
     }
 
-    drawSnail() {
-        const g = this.gfx;
-        g.clear();
-
-        // Shell — brown spiral (three concentric circles offset behind body)
-        g.fillStyle(0x8B5E3C, 1);
-        g.fillCircle(-4, -2, 12);
-        g.fillStyle(0xA0714F, 1);
-        g.fillCircle(-3, -2, 8);
-        g.fillStyle(0xBD8C64, 1);
-        g.fillCircle(-2, -2, 4);
-
-        // Body — tan/yellow oval
-        g.fillStyle(0xE8D44D, 1);
-        g.fillEllipse(6, 4, 22, 10);
-
-        // Left antenna
-        g.lineStyle(1.5, 0xE8D44D, 1);
-        g.beginPath();
-        g.moveTo(14, -1);
-        g.lineTo(18, -12);
-        g.strokePath();
-        g.fillStyle(0xE8D44D, 1);
-        g.fillCircle(18, -12, 2);
-
-        // Right antenna
-        g.beginPath();
-        g.moveTo(10, -1);
-        g.lineTo(6, -14);
-        g.strokePath();
-        g.fillCircle(6, -14, 2);
-
-        // Eye
-        g.fillStyle(0x000000, 1);
-        g.fillCircle(14, 2, 1.5);
+    setFacing(direction) {
+        if (this.facing !== direction) {
+            this.facing = direction;
+            this.sprite.setTexture(DIR_TEXTURES[direction]);
+        }
     }
 
     setState(newState) {
@@ -103,12 +80,18 @@ export default class Snail extends Phaser.GameObjects.Container {
             this.x += dx * SPEED * dt;
             this.y += dy * SPEED * dt;
             this.setState('MOVING');
+
+            // Update facing direction — horizontal takes priority over vertical
+            if (dx > 0)      this.setFacing('right');
+            else if (dx < 0) this.setFacing('left');
+            else if (dy < 0) this.setFacing('up');
+            else if (dy > 0) this.setFacing('down');
         } else {
             this.setState('IDLE');
         }
 
         // Clamp to screen bounds (with a small margin for the sprite size)
-        const margin = 15;
+        const margin = 24;
         this.x = Phaser.Math.Clamp(this.x, margin, 1280 - margin);
         this.y = Phaser.Math.Clamp(this.y, margin, 720 - margin);
     }
