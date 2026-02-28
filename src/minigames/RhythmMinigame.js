@@ -116,10 +116,10 @@ export default class RhythmMinigame {
         this.keyHandler = (event) => {
             if (!this.awaitingInput) return;
             const pressed = event.key.toUpperCase();
-            if (pressed.length !== 1) return;
+            if (!VALID_KEYS.includes(pressed)) return;
             this._handleKeyPress(pressed);
         };
-        this.scene.input.keyboard.on('keyup', this.keyHandler);
+        this.scene.input.keyboard.on('keydown', this.keyHandler);
 
         // Auto-miss after timeout
         this.beatTimer = this.scene.time.delayedCall(this.beatTimeout, () => {
@@ -131,7 +131,7 @@ export default class RhythmMinigame {
 
     _endBeatInput() {
         this.awaitingInput = false;
-        this.scene.input.keyboard.off('keyup', this.keyHandler);
+        this.scene.input.keyboard.off('keydown', this.keyHandler);
         if (this.beatTimer) { this.beatTimer.remove(false); this.beatTimer = null; }
     }
 
@@ -182,7 +182,7 @@ export default class RhythmMinigame {
     cancel() {
         if (this.cancelled) return;
         this.cancelled = true;
-        if (this.keyHandler) this.scene.input.keyboard.off('keyup', this.keyHandler);
+        if (this.keyHandler) this.scene.input.keyboard.off('keydown', this.keyHandler);
         if (this.beatTimer) this.beatTimer.remove(false);
         this._cleanup();
     }
