@@ -3,6 +3,7 @@ import Projectile from '../entities/Projectile.js';
 import BasicAlien from '../entities/aliens/BasicAlien.js';
 import HackingStation from '../entities/HackingStation.js';
 import ReloadBuffer from '../systems/ReloadBuffer.js';
+import TeleportSystem from '../systems/TeleportSystem.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -121,6 +122,15 @@ export default class GameScene extends Phaser.Scene {
                 if (matchCount > 0 && !this.reloadBuffer.isReloading) {
                     this.snail.showReloadProgress(matchCount, 6);
                 }
+            },
+        });
+
+        // --- Teleport system (Player 2 right-click drag) ---
+        this.teleportSystem = new TeleportSystem(this, {
+            snail: this.snail,
+            reloadBuffer: this.reloadBuffer,
+            onTeleport: (x, y) => {
+                this.logDebug(`Teleported Gerald to (${Math.round(x)}, ${Math.round(y)})`);
             },
         });
 
