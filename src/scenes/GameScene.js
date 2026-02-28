@@ -200,6 +200,19 @@ export default class GameScene extends Phaser.Scene {
         this.score  = this.startScore;
         this.wave   = this.startWave;
 
+        // --- Wave HUD (top-center-left) — must exist before startWave() fires onWaveStart ---
+        this.waveLabel = this.add.text(510, 10, 'WAVE 1', {
+            fontSize: '14px',
+            fontFamily: 'monospace',
+            color: '#ffdd44',
+        }).setOrigin(0.5, 0).setDepth(100);
+
+        this.waveTimerLabel = this.add.text(510, 28, '', {
+            fontSize: '11px',
+            fontFamily: 'monospace',
+            color: '#888888',
+        }).setOrigin(0.5, 0).setDepth(100);
+
         // --- Wave Manager ---
         this.waveManager = new WaveManager(this, {
             startWave: this.startWave,
@@ -226,19 +239,6 @@ export default class GameScene extends Phaser.Scene {
             },
         });
         this.waveManager.startWave();
-
-        // --- Wave HUD (top-center-left) ---
-        this.waveLabel = this.add.text(510, 10, 'WAVE 1', {
-            fontSize: '14px',
-            fontFamily: 'monospace',
-            color: '#ffdd44',
-        }).setOrigin(0.5, 0).setDepth(100);
-
-        this.waveTimerLabel = this.add.text(510, 28, '', {
-            fontSize: '11px',
-            fontFamily: 'monospace',
-            color: '#888888',
-        }).setOrigin(0.5, 0).setDepth(100);
 
         // --- Score HUD (top-center) ---
         this.scoreLabel = this.add.text(640, 10, `SCORE: ${this.startScore}`, {
