@@ -1,5 +1,6 @@
 import MenuScene from './scenes/MenuScene.js';
 import GameScene from './scenes/GameScene.js';
+import PauseScene from './scenes/PauseScene.js';
 import IntermissionScene from './scenes/IntermissionScene.js';
 import GameOverScene from './scenes/GameOverScene.js';
 import VictoryScene from './scenes/VictoryScene.js';
@@ -16,7 +17,7 @@ const config = {
             debug: false,
         },
     },
-    scene: [MenuScene, GameScene, IntermissionScene, GameOverScene, VictoryScene],
+    scene: [MenuScene, GameScene, PauseScene, IntermissionScene, GameOverScene, VictoryScene],
     input: {
         mouse: {
             target: null,

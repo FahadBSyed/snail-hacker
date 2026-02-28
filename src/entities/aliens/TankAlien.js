@@ -1,27 +1,29 @@
 import { CONFIG } from '../../config.js';
 
-export default class BasicAlien extends Phaser.GameObjects.Container {
+export default class TankAlien extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
         super(scene, x, y);
         scene.add.existing(this);
 
-        this.health = CONFIG.ALIENS.BASIC.HEALTH;
-        this.speed  = CONFIG.ALIENS.BASIC.SPEED;
-        this.radius = CONFIG.ALIENS.BASIC.RADIUS;
-        this.alienType = 'basic';
+        this.health    = CONFIG.ALIENS.TANK.HEALTH;
+        this.speed     = CONFIG.ALIENS.TANK.SPEED;
+        this.radius    = CONFIG.ALIENS.TANK.RADIUS;
+        this.alienType = 'tank';
 
-        // Draw: red circle with eye dots
+        // Draw: dark grey square with thick armour outline
         const gfx = scene.add.graphics();
+        const s = this.radius; // half-size
+
         // Body
-        gfx.fillStyle(0xdd3333, 1);
-        gfx.fillCircle(0, 0, this.radius);
-        // Eyes
-        gfx.fillStyle(0xffffff, 1);
-        gfx.fillCircle(-5, -4, 4);
-        gfx.fillCircle(5, -4, 4);
-        gfx.fillStyle(0x111111, 1);
-        gfx.fillCircle(-4, -4, 2);
-        gfx.fillCircle(6, -4, 2);
+        gfx.fillStyle(0x445566, 1);
+        gfx.fillRect(-s, -s, s * 2, s * 2);
+        // Thick border
+        gfx.lineStyle(3.5, 0x88aacc, 0.85);
+        gfx.strokeRect(-s, -s, s * 2, s * 2);
+        // Visor slit
+        gfx.fillStyle(0xdd4444, 0.9);
+        gfx.fillRect(-s * 0.6, -4, s * 1.2, 6);
+
         this.add(gfx);
     }
 
@@ -29,7 +31,7 @@ export default class BasicAlien extends Phaser.GameObjects.Container {
         this.health -= amount;
         if (this.health <= 0) {
             this.destroy();
-            return true; // died
+            return true;
         }
         return false;
     }
