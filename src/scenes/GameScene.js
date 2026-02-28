@@ -1,3 +1,5 @@
+import Snail from '../entities/Snail.js';
+
 export default class GameScene extends Phaser.Scene {
     constructor() {
         super('GameScene');
@@ -62,6 +64,11 @@ export default class GameScene extends Phaser.Scene {
         // Disable right-click context menu on the canvas
         this.input.mouse.disableContextMenu();
 
+        // --- Snail (Player 1) ---
+        this.snail = new Snail(this, 300, 400);
+
+        this.logDebug('Gerald the Snail spawned at (300, 400)');
+
         // Scene label
         this.add.text(640, 20, 'GAME SCENE — Input Debug Mode', {
             fontSize: '18px',
@@ -79,7 +86,7 @@ export default class GameScene extends Phaser.Scene {
         this.debugText.setText(this.debugLines.join('\n'));
     }
 
-    update() {
-        // Game loop — will be populated in later steps
+    update(time, delta) {
+        this.snail.update(time, delta);
     }
 }
