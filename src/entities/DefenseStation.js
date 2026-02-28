@@ -1,8 +1,5 @@
 import Projectile from './Projectile.js';
-
-const CANNON_FIRE_INTERVAL = 1000; // ms between auto-shots
-const CANNON_DURATION = 5000;      // ms of auto-fire
-const CANNON_COOLDOWN = 20000;     // ms
+import { CONFIG } from '../config.js';
 
 export default class DefenseStation extends Phaser.GameObjects.Container {
     /**
@@ -22,7 +19,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
         this.alienFilter = opts.alienFilter || (() => true);
         this.isActive = false;
         this.isOnCooldown = false;
-        this.cooldownDuration = CANNON_COOLDOWN;
+        this.cooldownDuration = CONFIG.CANNON.COOLDOWN;
 
         // --- Draw based on type ---
         this.gfx = scene.add.graphics();
@@ -80,9 +77,9 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
         this.statusText.setText('FIRING').setColor('#ff4444');
         this.labelText.setColor('#ff4444');
 
-        let shotsRemaining = Math.floor(CANNON_DURATION / CANNON_FIRE_INTERVAL);
+        let shotsRemaining = Math.floor(CONFIG.CANNON.ACTIVE_DURATION / CONFIG.CANNON.FIRE_INTERVAL);
         const fireTimer = this.scene.time.addEvent({
-            delay: CANNON_FIRE_INTERVAL,
+            delay: CONFIG.CANNON.FIRE_INTERVAL,
             repeat: shotsRemaining - 1,
             callback: () => {
                 this.fireAtNearest();
@@ -90,7 +87,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
         });
 
         // After duration, stop and start cooldown
-        this.scene.time.delayedCall(CANNON_DURATION, () => {
+        this.scene.time.delayedCall(CONFIG.CANNON.ACTIVE_DURATION, () => {
             this.isActive = false;
             this.startCooldown();
         });

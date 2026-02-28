@@ -1,3 +1,4 @@
+import { CONFIG } from '../config.js';
 import Snail from '../entities/Snail.js';
 import Projectile from '../entities/Projectile.js';
 import BasicAlien from '../entities/aliens/BasicAlien.js';
@@ -21,7 +22,7 @@ export default class GameScene extends Phaser.Scene {
     init(data = {}) {
         this.startWave    = data.wave         || 1;
         this.startScore   = data.score        || 0;
-        this.startHealth  = data.stationHealth !== undefined ? data.stationHealth : 100;
+        this.startHealth  = data.stationHealth !== undefined ? data.stationHealth : CONFIG.STATION.MAX_HEALTH;
     }
 
     preload() {
@@ -46,7 +47,7 @@ export default class GameScene extends Phaser.Scene {
         // --- Hacking Station (center) ---
         this.station = new HackingStation(this, 640, 360);
         // Apply health carried from intermission (or full health on fresh start)
-        if (this.startHealth < 100) {
+        if (this.startHealth < CONFIG.STATION.MAX_HEALTH) {
             this.station.health = this.startHealth;
             this.station.updateHealthBar();
             this.station.drawStation();
@@ -66,8 +67,8 @@ export default class GameScene extends Phaser.Scene {
         this.alienSpeedMultiplier = 1.0;
 
         // --- Shooting system (Player 2) ---
-        this.ammo = 10;
-        this.ammoMax = 10;
+        this.ammo    = CONFIG.PLAYER.STARTING_AMMO;
+        this.ammoMax = CONFIG.PLAYER.MAX_AMMO;
         this.projectiles = [];
 
         this.input.on('pointerdown', (pointer) => {
@@ -141,36 +142,36 @@ export default class GameScene extends Phaser.Scene {
         // 3×2 grid of terminals around the central station
         // Top row: y=220  Bottom row: y=500  Cols: x=390, 640, 890
         const terminalDefs = [
-            { x: 390, y: 220, label: 'CANNON-L', cooldown: 20000, color: 0xff8844,
+            { x: 390, y: 220, label: 'CANNON-L', cooldown: CONFIG.TERMINALS.CANNON_COOLDOWN, color: 0xff8844,
               launcher: makeRhythmLauncher('CANNON-L'),
               onSuccess: () => { this.cannon.activate(); this.logDebug('Left cannon activated!'); } },
-            { x: 640, y: 220, label: 'RELOAD', cooldown: 8000, color: 0x44ddff,
+            { x: 640, y: 220, label: 'RELOAD', cooldown: CONFIG.TERMINALS.RELOAD_COOLDOWN, color: 0x44ddff,
               launcher: makeSequenceLauncher('RELOAD'),
               onSuccess: () => {
                   this.ammo = this.ammoMax;
                   this.updateAmmoDisplay();
                   this.logDebug('Ammo reloaded!');
               } },
-            { x: 890, y: 220, label: 'CANNON-R', cooldown: 20000, color: 0xff8844,
+            { x: 890, y: 220, label: 'CANNON-R', cooldown: CONFIG.TERMINALS.CANNON_COOLDOWN, color: 0xff8844,
               launcher: makeRhythmLauncher('CANNON-R'),
               onSuccess: () => { this.cannon2.activate(); this.logDebug('Right cannon activated!'); } },
-            { x: 390, y: 500, label: 'REPAIR', cooldown: 12000, color: 0x44ff88,
+            { x: 390, y: 500, label: 'REPAIR', cooldown: CONFIG.TERMINALS.REPAIR_COOLDOWN, color: 0x44ff88,
               launcher: makeSequenceLauncher('REPAIR'),
               onSuccess: () => {
                   const before = this.station.health;
-                  this.station.heal(25);
+                  this.station.heal(CONFIG.TERMINALS.REPAIR_HEAL);
                   this.updateHealthDisplay();
                   this.logDebug(`Station repaired +${this.station.health - before} HP`);
               } },
-            { x: 640, y: 500, label: 'SHIELD', cooldown: 25000, color: 0x8866ff,
+            { x: 640, y: 500, label: 'SHIELD', cooldown: CONFIG.TERMINALS.SHIELD_COOLDOWN, color: 0x8866ff,
               launcher: makeSequenceLauncher('SHIELD'),
               onSuccess: () => {
-                  const ok = this.station.shield(4000);
+                  const ok = this.station.shield(CONFIG.TERMINALS.SHIELD_DURATION);
                   this.logDebug(ok ? 'Shield up for 4s!' : 'Shield already active!');
               } },
-            { x: 890, y: 500, label: 'SLOWFIELD', cooldown: 18000, color: 0x44aaff,
+            { x: 890, y: 500, label: 'SLOWFIELD', cooldown: CONFIG.TERMINALS.SLOW_COOLDOWN, color: 0x44aaff,
               launcher: makeTypingLauncher('SLOWFIELD'),
-              onSuccess: () => { this.activateSlowField(6000); } },
+              onSuccess: () => { this.activateSlowField(CONFIG.TERMINALS.SLOW_DURATION); } },
         ];
 
         for (const def of terminalDefs) {
@@ -325,7 +326,7 @@ export default class GameScene extends Phaser.Scene {
     activateSlowField(duration) {
         if (this.slowFieldActive) return;
         this.slowFieldActive = true;
-        this.alienSpeedMultiplier = 0.4;
+        this.alienSpeedMultiplier = CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER;
         this.logDebug('SlowField active — aliens at 40% speed!');
 
         // Blue screen tint overlay
@@ -363,16 +364,15 @@ export default class GameScene extends Phaser.Scene {
     }
 
     triggerBomberExplosion(bx, by) {
-        const BLAST_RADIUS = 100;
-        const BLAST_DAMAGE = 25;
+        const blastRadius = CONFIG.DAMAGE.BOMBER_BLAST_RADIUS;
 
         // Damage station if in range
         const stDist = Phaser.Math.Distance.Between(bx, by, this.station.x, this.station.y);
-        if (stDist < BLAST_RADIUS) {
+        if (stDist < blastRadius) {
             if (!this.station.shielded) {
-                const destroyed = this.station.takeDamage(BLAST_DAMAGE);
+                const destroyed = this.station.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_STATION);
                 this.updateHealthDisplay();
-                this.logDebug(`Bomber AoE hit station! -${BLAST_DAMAGE} HP`);
+                this.logDebug(`Bomber AoE hit station! -${CONFIG.DAMAGE.BOMBER_BLAST_STATION} HP`);
                 if (destroyed) {
                     this.scene.start('GameOverScene', { wave: this.wave, score: this.score });
                     return;
@@ -386,7 +386,7 @@ export default class GameScene extends Phaser.Scene {
         for (const a of this.aliens) {
             if (!a.active) continue;
             const d = Phaser.Math.Distance.Between(bx, by, a.x, a.y);
-            if (d < BLAST_RADIUS) a.takeDamage(10);
+            if (d < blastRadius) a.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_ALIEN);
         }
 
         // Visual: expanding ring
@@ -394,8 +394,8 @@ export default class GameScene extends Phaser.Scene {
             .setStrokeStyle(3, 0xff8833, 0.9);
         this.tweens.add({
             targets: ring,
-            scaleX: BLAST_RADIUS / 5,
-            scaleY: BLAST_RADIUS / 5,
+            scaleX: blastRadius / 5,
+            scaleY: blastRadius / 5,
             alpha: 0,
             duration: 350,
             ease: 'Power2',
@@ -429,11 +429,11 @@ export default class GameScene extends Phaser.Scene {
             for (const alien of this.aliens) {
                 if (!alien.active) continue;
                 const dist = Phaser.Math.Distance.Between(proj.x, proj.y, alien.x, alien.y);
-                if (dist < alien.radius + 4) {
+                if (dist < alien.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
                     proj.destroy();
                     const isBomber = alien.alienType === 'bomber';
                     const bx = alien.x, by = alien.y;
-                    const died = alien.takeDamage(10);
+                    const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
                     if (died) {
                         this.score++;
                         this.updateScoreDisplay();
@@ -492,7 +492,7 @@ export default class GameScene extends Phaser.Scene {
                 } else if (this.station.shielded) {
                     this.logDebug('Shield absorbed alien hit!');
                 } else {
-                    const destroyed = this.station.takeDamage(10);
+                    const destroyed = this.station.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_STATION);
                     this.updateHealthDisplay();
                     this.logDebug(`Station hit! HP: ${this.station.health}/${this.station.maxHealth}`);
                     if (destroyed) {

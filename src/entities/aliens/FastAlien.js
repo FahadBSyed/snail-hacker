@@ -1,6 +1,5 @@
-const SPEED  = 150;
-const RADIUS = 12;
-const HEALTH = 10;
+import { CONFIG } from '../../config.js';
+
 const TARGET_X = 640;
 const TARGET_Y = 360;
 
@@ -9,9 +8,9 @@ export default class FastAlien extends Phaser.GameObjects.Container {
         super(scene, x, y);
         scene.add.existing(this);
 
-        this.health    = HEALTH;
-        this.speed     = SPEED;
-        this.radius    = RADIUS;
+        this.health    = CONFIG.ALIENS.FAST.HEALTH;
+        this.speed     = CONFIG.ALIENS.FAST.SPEED;
+        this.radius    = CONFIG.ALIENS.FAST.RADIUS;
         this.alienType = 'fast';
 
         // Base trajectory angle toward station
@@ -25,9 +24,10 @@ export default class FastAlien extends Phaser.GameObjects.Container {
 
         // Draw: purple triangle pointing in direction of travel
         const gfx = scene.add.graphics();
+        const r = this.radius;
         // Triangle pointing up (rotated by movement angle in update)
         gfx.fillStyle(0xaa44ff, 1);
-        gfx.fillTriangle(0, -RADIUS, -RADIUS * 0.75, RADIUS * 0.7, RADIUS * 0.75, RADIUS * 0.7);
+        gfx.fillTriangle(0, -r, -r * 0.75, r * 0.7, r * 0.75, r * 0.7);
         // Eye dots
         gfx.fillStyle(0xffffff, 0.8);
         gfx.fillCircle(-3, -2, 2);
@@ -64,7 +64,7 @@ export default class FastAlien extends Phaser.GameObjects.Container {
 
         // Check proximity to station using base position
         const dist = Phaser.Math.Distance.Between(this.x, this.y, TARGET_X, TARGET_Y);
-        if (dist < 50) return 'reached_station';
+        if (dist < CONFIG.DAMAGE.ALIEN_REACH_DISTANCE) return 'reached_station';
         return 'alive';
     }
 }

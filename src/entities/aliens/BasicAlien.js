@@ -1,6 +1,4 @@
-const SPEED = 60; // px/s
-const RADIUS = 16;
-const HEALTH = 10;
+import { CONFIG } from '../../config.js';
 
 // Target: center of screen (station)
 const TARGET_X = 640;
@@ -11,9 +9,9 @@ export default class BasicAlien extends Phaser.GameObjects.Container {
         super(scene, x, y);
         scene.add.existing(this);
 
-        this.health = HEALTH;
-        this.speed = SPEED;
-        this.radius = RADIUS;
+        this.health = CONFIG.ALIENS.BASIC.HEALTH;
+        this.speed  = CONFIG.ALIENS.BASIC.SPEED;
+        this.radius = CONFIG.ALIENS.BASIC.RADIUS;
         this.alienType = 'basic';
 
         // Calculate angle toward station once at spawn
@@ -23,7 +21,7 @@ export default class BasicAlien extends Phaser.GameObjects.Container {
         const gfx = scene.add.graphics();
         // Body
         gfx.fillStyle(0xdd3333, 1);
-        gfx.fillCircle(0, 0, RADIUS);
+        gfx.fillCircle(0, 0, this.radius);
         // Eyes
         gfx.fillStyle(0xffffff, 1);
         gfx.fillCircle(-5, -4, 4);
@@ -51,7 +49,7 @@ export default class BasicAlien extends Phaser.GameObjects.Container {
 
         // Check if reached station vicinity
         const dist = Phaser.Math.Distance.Between(this.x, this.y, TARGET_X, TARGET_Y);
-        if (dist < 50) {
+        if (dist < CONFIG.DAMAGE.ALIEN_REACH_DISTANCE) {
             return 'reached_station';
         }
         return 'alive';

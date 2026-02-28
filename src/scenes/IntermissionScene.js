@@ -4,8 +4,7 @@ const FLAVOR_TEXT = {
     9: ['One final wave.', 'Gerald knows what must be done.', 'The last stand approaches.'],
 };
 
-const HEALTH_RESTORE      = 20;
-const AUTO_ADVANCE_SECS   = 5;
+import { CONFIG } from '../config.js';
 
 export default class IntermissionScene extends Phaser.Scene {
     constructor() {
@@ -20,7 +19,7 @@ export default class IntermissionScene extends Phaser.Scene {
 
     create() {
         const cx = 640;
-        const restoredHealth = Math.min(100, this.stationHealth + HEALTH_RESTORE);
+        const restoredHealth = Math.min(CONFIG.STATION.MAX_HEALTH, this.stationHealth + CONFIG.INTERMISSION.HEAL_AMOUNT);
         const nextWave       = this.wave + 1;
 
         // Background overlay
@@ -57,7 +56,7 @@ export default class IntermissionScene extends Phaser.Scene {
         const gained = restoredHealth - this.stationHealth;
         const repairColor = gained > 0 ? '#44ff88' : '#666666';
         const repairMsg   = gained > 0
-            ? `STATION REPAIRED  +${gained} HP  [ ${restoredHealth} / 100 ]`
+            ? `STATION REPAIRED  +${gained} HP  [ ${restoredHealth} / ${CONFIG.STATION.MAX_HEALTH} ]`
             : `STATION AT FULL INTEGRITY`;
         this.add.text(cx, 330, repairMsg, {
             fontSize: '14px', fontFamily: 'monospace', color: repairColor,
@@ -74,7 +73,7 @@ export default class IntermissionScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Countdown text
-        this.remaining     = AUTO_ADVANCE_SECS;
+        this.remaining     = CONFIG.INTERMISSION.AUTO_ADVANCE_SECS;
         this._advanced     = false;
         this.countdownText = this.add.text(cx, 515, '', {
             fontSize: '12px', fontFamily: 'monospace', color: '#334455',
@@ -83,7 +82,7 @@ export default class IntermissionScene extends Phaser.Scene {
 
         this.countdownTimer = this.time.addEvent({
             delay: 1000,
-            repeat: AUTO_ADVANCE_SECS - 1,
+            repeat: CONFIG.INTERMISSION.AUTO_ADVANCE_SECS - 1,
             callback: () => {
                 this.remaining--;
                 this._updateCountdown();
@@ -105,7 +104,7 @@ export default class IntermissionScene extends Phaser.Scene {
         this.scene.start('GameScene', {
             wave:          this.wave + 1,
             score:         this.score,
-            stationHealth: Math.min(100, this.stationHealth + HEALTH_RESTORE),
+            stationHealth: Math.min(CONFIG.STATION.MAX_HEALTH, this.stationHealth + CONFIG.INTERMISSION.HEAL_AMOUNT),
         });
     }
 }

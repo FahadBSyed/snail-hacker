@@ -1,6 +1,5 @@
-const SPEED  = 38;
-const RADIUS = 18; // used for collision
-const HEALTH = 40;
+import { CONFIG } from '../../config.js';
+
 const TARGET_X = 640;
 const TARGET_Y = 360;
 
@@ -9,16 +8,16 @@ export default class TankAlien extends Phaser.GameObjects.Container {
         super(scene, x, y);
         scene.add.existing(this);
 
-        this.health    = HEALTH;
-        this.speed     = SPEED;
-        this.radius    = RADIUS;
+        this.health    = CONFIG.ALIENS.TANK.HEALTH;
+        this.speed     = CONFIG.ALIENS.TANK.SPEED;
+        this.radius    = CONFIG.ALIENS.TANK.RADIUS;
         this.alienType = 'tank';
 
         this.angle = Phaser.Math.Angle.Between(x, y, TARGET_X, TARGET_Y);
 
         // Draw: dark grey square with thick armour outline
         const gfx = scene.add.graphics();
-        const s = 18; // half-size
+        const s = this.radius; // half-size
 
         // Body
         gfx.fillStyle(0x445566, 1);
@@ -49,7 +48,7 @@ export default class TankAlien extends Phaser.GameObjects.Container {
         this.y += Math.sin(this.angle) * this.speed * speedMult * dt;
 
         const dist = Phaser.Math.Distance.Between(this.x, this.y, TARGET_X, TARGET_Y);
-        if (dist < 50) return 'reached_station';
+        if (dist < CONFIG.DAMAGE.ALIEN_REACH_DISTANCE) return 'reached_station';
         return 'alive';
     }
 }

@@ -1,15 +1,14 @@
-const PROJECTILE_SPEED = 800; // px/s — fast, near-instant feel
-const RADIUS = 4;
+import { CONFIG } from '../config.js';
 
 export default class Projectile extends Phaser.GameObjects.Arc {
     constructor(scene, x, y, targetX, targetY) {
-        super(scene, x, y, RADIUS, 0, 360, false, 0xffffaa, 1);
+        super(scene, x, y, CONFIG.PLAYER.PROJECTILE_RADIUS, 0, 360, false, 0xffffaa, 1);
         scene.add.existing(this);
 
         // Calculate velocity toward target
         const angle = Phaser.Math.Angle.Between(x, y, targetX, targetY);
-        this.vx = Math.cos(angle) * PROJECTILE_SPEED;
-        this.vy = Math.sin(angle) * PROJECTILE_SPEED;
+        this.vx = Math.cos(angle) * CONFIG.PLAYER.PROJECTILE_SPEED;
+        this.vy = Math.sin(angle) * CONFIG.PLAYER.PROJECTILE_SPEED;
     }
 
     update(time, delta) {

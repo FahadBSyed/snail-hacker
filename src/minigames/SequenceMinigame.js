@@ -1,6 +1,7 @@
+import { CONFIG } from '../config.js';
+
 // Keys that won't conflict with WASD movement
 const VALID_KEYS = ['F', 'G', 'H', 'J', 'K', 'L', 'Q', 'X', 'Z', 'B', 'N', 'M'];
-const TIME_LIMIT = 4000; // 4 seconds
 
 export default class SequenceMinigame {
     /**
@@ -15,6 +16,7 @@ export default class SequenceMinigame {
         this.onSuccess = opts.onSuccess;
         this.onFailure = opts.onFailure;
         this.cancelled = false;
+        this.timeLimit = CONFIG.MINIGAMES.SEQUENCE_TIME_LIMIT;
 
         // Generate random sequence
         const len = opts.length || Phaser.Math.Between(4, 6);
@@ -78,7 +80,7 @@ export default class SequenceMinigame {
     updateTimer() {
         if (this.cancelled) return;
         const elapsed = this.scene.time.now - this.startTime;
-        const pct = Math.max(0, 1 - elapsed / TIME_LIMIT);
+        const pct = Math.max(0, 1 - elapsed / this.timeLimit);
         const maxWidth = this.panel.width - 20;
         this.timerFill.width = maxWidth * pct;
 
@@ -89,7 +91,7 @@ export default class SequenceMinigame {
             this.timerFill.fillColor = 0xffdd44;
         }
 
-        if (elapsed >= TIME_LIMIT) {
+        if (elapsed >= this.timeLimit) {
             this.finish(false);
         }
     }

@@ -1,12 +1,11 @@
+import { CONFIG } from '../config.js';
+
 // Keys that won't conflict with WASD movement (same pool as SequenceMinigame)
 const VALID_KEYS = ['F', 'G', 'H', 'J', 'K', 'L', 'Q', 'X', 'Z', 'B', 'N', 'M'];
 
-const BAR_WIDTH   = 360;
-const TARGET_HALF = 45;   // ±45px from center = 90px target zone
-const TOTAL_BEATS = 5;
-const MAX_MISSES  = 1;
-const BEAT_TIMEOUT      = 2500;  // ms before auto-miss
-const INDICATOR_DURATION = 1100; // ms per direction (yoyo bounce)
+const BAR_WIDTH        = 360;
+const TARGET_HALF      = 45;   // ±45px from center = 90px target zone
+const INDICATOR_DURATION = 1100; // ms per direction (yoyo bounce) — visual only, not a balance knob
 
 export default class RhythmMinigame {
     /**
@@ -19,9 +18,12 @@ export default class RhythmMinigame {
         this.scene      = scene;
         this.onSuccess  = opts.onSuccess;
         this.onFailure  = opts.onFailure;
-        this.cancelled  = false;
-        this.misses     = 0;
+        this.cancelled   = false;
+        this.misses      = 0;
         this.currentBeat = 0;
+        this.totalBeats  = CONFIG.MINIGAMES.RHYTHM_BEATS_REQUIRED;
+        this.maxMisses   = CONFIG.MINIGAMES.RHYTHM_MAX_MISSES;
+        this.beatTimeout = CONFIG.MINIGAMES.RHYTHM_BEAT_TIMEOUT;
         this.awaitingInput = false;
         this.beatTimer  = null;
         this.keyHandler = null;
@@ -45,7 +47,7 @@ export default class RhythmMinigame {
         }).setOrigin(0.5).setDepth(201));
 
         // Beat counter (left)
-        this.beatCounter = this._add(this.scene.add.text(cx - 180, by - 73, `BEAT 1 / ${TOTAL_BEATS}`, {
+        this.beatCounter = this._add(this.scene.add.text(cx - 180, by - 73, `BEAT 1 / ${this.totalBeats}`, {
             fontSize: '10px', fontFamily: 'monospace', color: '#888888',
         }).setOrigin(0, 0.5).setDepth(201));
 
@@ -96,7 +98,7 @@ export default class RhythmMinigame {
     _startBeat() {
         if (this.cancelled) return;
         this.currentBeat++;
-        this.beatCounter.setText(`BEAT ${this.currentBeat} / ${TOTAL_BEATS}`);
+        this.beatCounter.setText(`BEAT ${this.currentBeat} / ${this.totalBeats}`);
         this.resultText.setText('');
 
         this.currentKey = Phaser.Utils.Array.GetRandom(VALID_KEYS);
@@ -116,7 +118,7 @@ export default class RhythmMinigame {
         this.scene.input.keyboard.on('keydown', this.keyHandler);
 
         // Auto-miss after timeout
-        this.beatTimer = this.scene.time.delayedCall(BEAT_TIMEOUT, () => {
+        this.beatTimer = this.scene.time.delayedCall(this.beatTimeout, () => {
             if (!this.awaitingInput) return;
             this._endBeatInput();
             this._recordMiss('TOO SLOW!');
@@ -150,7 +152,7 @@ export default class RhythmMinigame {
         this.indicator.setFillStyle(0xff4444);
         this.resultText.setText(label).setColor('#ff4444');
 
-        if (this.misses > MAX_MISSES) {
+        if (this.misses > this.maxMisses) {
             this.scene.time.delayedCall(600, () => this._finish(false));
         } else {
             this.scene.time.delayedCall(450, () => this._advanceBeat());
@@ -159,7 +161,7 @@ export default class RhythmMinigame {
 
     _advanceBeat() {
         if (this.cancelled) return;
-        if (this.currentBeat >= TOTAL_BEATS) {
+        if (this.currentBeat >= this.totalBeats) {
             this._finish(true);
         } else {
             this._startBeat();

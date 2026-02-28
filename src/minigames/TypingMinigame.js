@@ -4,7 +4,7 @@ const PHRASES = [
     'EXECUTE', 'BUFFER', 'PROXY', 'ACCESS',
 ];
 
-const MS_PER_CHAR = 1500; // time limit scales with phrase length
+import { CONFIG } from '../config.js';
 
 export default class TypingMinigame {
     /**
@@ -22,7 +22,7 @@ export default class TypingMinigame {
         this.pointer    = 0;
 
         this.phrase    = opts.phrase || Phaser.Utils.Array.GetRandom(PHRASES);
-        this.timeLimit = this.phrase.length * MS_PER_CHAR;
+        this.timeLimit = this.phrase.length * CONFIG.MINIGAMES.TYPING_MS_PER_CHAR;
 
         this._createUI();
 

@@ -1,14 +1,13 @@
-const MAX_HEALTH = 100;
-const RADIUS = 50;
+import { CONFIG } from '../config.js';
 
 export default class HackingStation extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
         super(scene, x, y);
         scene.add.existing(this);
 
-        this.health = MAX_HEALTH;
-        this.maxHealth = MAX_HEALTH;
-        this.radius = RADIUS;
+        this.health = CONFIG.STATION.MAX_HEALTH;
+        this.maxHealth = CONFIG.STATION.MAX_HEALTH;
+        this.radius = CONFIG.STATION.RADIUS;
 
         // Draw hexagon
         const gfx = scene.add.graphics();
@@ -25,20 +24,21 @@ export default class HackingStation extends Phaser.GameObjects.Container {
 
     drawStation() {
         const g = this.gfx;
+        const r = this.radius;
         g.clear();
 
         // Outer glow — alpha based on health
         const glowAlpha = 0.15 * (this.health / this.maxHealth);
         g.fillStyle(0x00ffcc, glowAlpha);
-        g.fillCircle(0, 0, RADIUS + 15);
+        g.fillCircle(0, 0, r + 15);
 
         // Hexagon body
         const points = [];
         for (let i = 0; i < 6; i++) {
             const angle = (Math.PI / 3) * i - Math.PI / 2;
             points.push({
-                x: Math.cos(angle) * RADIUS,
-                y: Math.sin(angle) * RADIUS,
+                x: Math.cos(angle) * r,
+                y: Math.sin(angle) * r,
             });
         }
 
@@ -72,8 +72,8 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         g.beginPath();
         for (let i = 0; i < 6; i++) {
             const angle = (Math.PI / 3) * i - Math.PI / 2;
-            const px = Math.cos(angle) * (RADIUS * 0.4);
-            const py = Math.sin(angle) * (RADIUS * 0.4);
+            const px = Math.cos(angle) * (r * 0.4);
+            const py = Math.sin(angle) * (r * 0.4);
             if (i === 0) g.moveTo(px, py);
             else g.lineTo(px, py);
         }
@@ -87,10 +87,11 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         this.shielded = true;
 
         this.shieldGfx = this.scene.add.graphics().setDepth(50);
+        const shieldR = this.radius + 35;
         this.shieldGfx.fillStyle(0x4488ff, 0.15);
-        this.shieldGfx.fillCircle(this.x, this.y, 85);
+        this.shieldGfx.fillCircle(this.x, this.y, shieldR);
         this.shieldGfx.lineStyle(2.5, 0x88ccff, 0.8);
-        this.shieldGfx.strokeCircle(this.x, this.y, 85);
+        this.shieldGfx.strokeCircle(this.x, this.y, shieldR);
 
         this.shieldTween = this.scene.tweens.add({
             targets: this.shieldGfx,

@@ -1,5 +1,6 @@
+import { CONFIG } from '../config.js';
+
 const RELOAD_WORD = 'RELOAD';
-const RELOAD_DELAY = 2000; // ms after last letter before ammo refills
 
 export default class ReloadBuffer {
     /**
@@ -62,7 +63,7 @@ export default class ReloadBuffer {
 
             if (this.onReloadStart) this.onReloadStart();
 
-            this.delayTimer = this.scene.time.delayedCall(RELOAD_DELAY, () => {
+            this.delayTimer = this.scene.time.delayedCall(CONFIG.RELOAD.DELAY, () => {
                 this.reloadInProgress = false;
                 this.delayTimer = null;
                 if (this.onReloadComplete) this.onReloadComplete();

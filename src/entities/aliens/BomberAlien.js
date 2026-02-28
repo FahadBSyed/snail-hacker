@@ -1,6 +1,5 @@
-const SPEED  = 50;
-const RADIUS = 18;
-const HEALTH = 10;
+import { CONFIG } from '../../config.js';
+
 const TARGET_X = 640;
 const TARGET_Y = 360;
 
@@ -9,23 +8,24 @@ export default class BomberAlien extends Phaser.GameObjects.Container {
         super(scene, x, y);
         scene.add.existing(this);
 
-        this.health    = HEALTH;
-        this.speed     = SPEED;
-        this.radius    = RADIUS;
+        this.health    = CONFIG.ALIENS.BOMBER.HEALTH;
+        this.speed     = CONFIG.ALIENS.BOMBER.SPEED;
+        this.radius    = CONFIG.ALIENS.BOMBER.RADIUS;
         this.alienType = 'bomber';
 
         this.angle = Phaser.Math.Angle.Between(x, y, TARGET_X, TARGET_Y);
 
         // Draw: orange pentagon
         const gfx = scene.add.graphics();
+        const r = this.radius;
         const pts = [];
         for (let i = 0; i < 5; i++) {
             const a = (Math.PI * 2 / 5) * i - Math.PI / 2;
-            pts.push({ x: Math.cos(a) * RADIUS, y: Math.sin(a) * RADIUS });
+            pts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
         }
         // Outer glow circle
         gfx.fillStyle(0xff6600, 0.25);
-        gfx.fillCircle(0, 0, RADIUS + 8);
+        gfx.fillCircle(0, 0, r + 8);
         // Pentagon body
         gfx.fillStyle(0xff7722, 1);
         gfx.beginPath();
@@ -77,7 +77,7 @@ export default class BomberAlien extends Phaser.GameObjects.Container {
         this.y += Math.sin(this.angle) * this.speed * speedMult * dt;
 
         const dist = Phaser.Math.Distance.Between(this.x, this.y, TARGET_X, TARGET_Y);
-        if (dist < 50) return 'reached_station';
+        if (dist < CONFIG.DAMAGE.ALIEN_REACH_DISTANCE) return 'reached_station';
         return 'alive';
     }
 }

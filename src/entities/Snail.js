@@ -1,4 +1,4 @@
-const SPEED = 40; // px/s — intentionally very slow
+import { CONFIG } from '../config.js';
 
 // Texture keys for each direction (loaded in GameScene.preload)
 const DIR_TEXTURES = {
@@ -77,8 +77,8 @@ export default class Snail extends Phaser.GameObjects.Container {
         }
 
         if (dx !== 0 || dy !== 0) {
-            this.x += dx * SPEED * dt;
-            this.y += dy * SPEED * dt;
+            this.x += dx * CONFIG.PLAYER.SNAIL_SPEED * dt;
+            this.y += dy * CONFIG.PLAYER.SNAIL_SPEED * dt;
             this.setState('MOVING');
 
             // Update facing direction — horizontal takes priority over vertical

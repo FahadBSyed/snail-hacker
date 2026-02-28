@@ -1,7 +1,7 @@
+import { CONFIG } from '../config.js';
+
 const WIDTH = 40;
 const HEIGHT = 30;
-const PROXIMITY = 50; // px — activation range
-const DEFAULT_COOLDOWN = 10000; // ms
 
 export default class Terminal extends Phaser.GameObjects.Container {
     /**
@@ -19,7 +19,7 @@ export default class Terminal extends Phaser.GameObjects.Container {
         scene.add.existing(this);
 
         this.terminalState = 'IDLE'; // IDLE | ACTIVE | COOLING_DOWN
-        this.cooldownDuration = opts.cooldown || DEFAULT_COOLDOWN;
+        this.cooldownDuration = opts.cooldown || 10000;
         this.launchMinigame = opts.launchMinigame;
         this.onSuccess = opts.onSuccess;
         this.label = opts.label || 'TERMINAL';
@@ -88,7 +88,7 @@ export default class Terminal extends Phaser.GameObjects.Container {
      */
     updateProximity(snail) {
         const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
-        const near = dist < PROXIMITY && this.terminalState === 'IDLE';
+        const near = dist < CONFIG.TERMINALS.PROXIMITY && this.terminalState === 'IDLE';
 
         if (near !== this.snailNearby) {
             this.snailNearby = near;
@@ -131,7 +131,7 @@ export default class Terminal extends Phaser.GameObjects.Container {
         }
 
         // Start cooldown
-        const cd = success ? this.cooldownDuration : 3000; // short cooldown on failure
+        const cd = success ? this.cooldownDuration : CONFIG.TERMINALS.FAILURE_COOLDOWN;
         this.startCooldown(cd);
     }
 
@@ -168,7 +168,7 @@ export default class Terminal extends Phaser.GameObjects.Container {
             snail.setState('IDLE');
             this.screenGlow.fillColor = this.color;
             this.screenGlow.fillAlpha = 0.3;
-            this.startCooldown(3000);
+            this.startCooldown(CONFIG.TERMINALS.FAILURE_COOLDOWN);
         }
     }
 }
