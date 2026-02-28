@@ -26,10 +26,15 @@ export default class TypingMinigame {
 
         this._createUI();
 
-        this.startTime  = scene.time.now;
-        this.timerEvent = scene.time.addEvent({ delay: 50, loop: true, callback: () => this._tick() });
-        this.keyHandler = (e) => this._handleKey(e);
-        scene.input.keyboard.on('keydown', this.keyHandler);
+        // Brief grace period — prevents the E keypress that opened this terminal
+        // from being captured, and gives the player a moment to read the phrase.
+        scene.time.delayedCall(300, () => {
+            if (this.cancelled) return;
+            this.startTime  = scene.time.now;
+            this.timerEvent = scene.time.addEvent({ delay: 50, loop: true, callback: () => this._tick() });
+            this.keyHandler = (e) => this._handleKey(e);
+            scene.input.keyboard.on('keydown', this.keyHandler);
+        });
     }
 
     _createUI() {
@@ -127,7 +132,7 @@ export default class TypingMinigame {
     }
 
     _cleanup() {
-        this.scene.input.keyboard.off('keydown', this.keyHandler);
+        if (this.keyHandler) this.scene.input.keyboard.off('keydown', this.keyHandler);
         if (this.timerEvent) this.timerEvent.remove(false);
         if (this.container)  this.container.destroy();
     }

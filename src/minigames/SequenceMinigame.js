@@ -64,17 +64,21 @@ export default class SequenceMinigame {
             this.container.add(txt);
         }
 
-        // Timer countdown
-        this.startTime = scene.time.now;
-        this.timerEvent = scene.time.addEvent({
-            delay: 50,
-            loop: true,
-            callback: () => this.updateTimer(),
+        // Brief grace period — prevents the E keypress that opened this terminal
+        // from being captured, and gives the player a moment to read the sequence.
+        this.ready = false;
+        scene.time.delayedCall(300, () => {
+            if (this.cancelled) return;
+            this.ready = true;
+            this.startTime = scene.time.now;
+            this.timerEvent = scene.time.addEvent({
+                delay: 50,
+                loop: true,
+                callback: () => this.updateTimer(),
+            });
+            this.keyHandler = (event) => this.handleKey(event);
+            scene.input.keyboard.on('keydown', this.keyHandler);
         });
-
-        // Keyboard listener
-        this.keyHandler = (event) => this.handleKey(event);
-        scene.input.keyboard.on('keydown', this.keyHandler);
     }
 
     updateTimer() {
@@ -150,7 +154,7 @@ export default class SequenceMinigame {
     }
 
     cleanup() {
-        this.scene.input.keyboard.off('keydown', this.keyHandler);
+        if (this.keyHandler) this.scene.input.keyboard.off('keydown', this.keyHandler);
         if (this.timerEvent) this.timerEvent.remove(false);
         if (this.container) this.container.destroy();
     }

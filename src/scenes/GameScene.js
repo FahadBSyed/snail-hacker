@@ -56,9 +56,8 @@ export default class GameScene extends Phaser.Scene {
         // Disable right-click context menu on the canvas
         this.input.mouse.disableContextMenu();
 
-        // --- ESC / P to pause ---
+        // --- ESC to pause ---
         this.input.keyboard.on('keydown-ESC', () => this._openPause());
-        this.input.keyboard.on('keydown-P',   () => this._openPause());
 
         // --- Snail (Player 1) ---
         this.snail = new Snail(this, 300, 400);

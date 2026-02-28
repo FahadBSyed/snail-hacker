@@ -30,7 +30,11 @@ export default class RhythmMinigame {
         this.allObjects = [];
 
         this._createUI();
-        this._startBeat();
+        // Brief grace period — prevents the E keypress that opened this terminal
+        // from being captured, and gives the player a moment to see the UI.
+        scene.time.delayedCall(300, () => {
+            if (!this.cancelled) this._startBeat();
+        });
     }
 
     _createUI() {
