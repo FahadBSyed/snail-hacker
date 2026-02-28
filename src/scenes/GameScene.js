@@ -1,11 +1,15 @@
 import Snail from '../entities/Snail.js';
 import Projectile from '../entities/Projectile.js';
 import BasicAlien from '../entities/aliens/BasicAlien.js';
+import FastAlien from '../entities/aliens/FastAlien.js';
+import TankAlien from '../entities/aliens/TankAlien.js';
+import BomberAlien from '../entities/aliens/BomberAlien.js';
 import HackingStation from '../entities/HackingStation.js';
 import TeleportSystem from '../systems/TeleportSystem.js';
 import Terminal from '../entities/Terminal.js';
 import SequenceMinigame from '../minigames/SequenceMinigame.js';
 import RhythmMinigame from '../minigames/RhythmMinigame.js';
+import TypingMinigame from '../minigames/TypingMinigame.js';
 import DefenseStation from '../entities/DefenseStation.js';
 
 export default class GameScene extends Phaser.Scene {
@@ -45,34 +49,7 @@ export default class GameScene extends Phaser.Scene {
         this.debugLines = [];
         this.maxDebugLines = 5;
 
-        this.logDebug('GameScene loaded. Listening for input...');
-
-        // --- Keyboard input logging ---
-        this.input.keyboard.on('keydown', (event) => {
-            this.logDebug(`KEY DOWN: ${event.key} (code: ${event.code})`);
-        });
-
-        this.input.keyboard.on('keyup', (event) => {
-            this.logDebug(`KEY UP:   ${event.key} (code: ${event.code})`);
-        });
-
-        // --- Mouse input logging ---
-        this.input.on('pointerdown', (pointer) => {
-            const btn = pointer.button === 0 ? 'LEFT' : pointer.button === 2 ? 'RIGHT' : `BTN${pointer.button}`;
-            this.logDebug(`MOUSE DOWN: ${btn} at (${Math.round(pointer.x)}, ${Math.round(pointer.y)})`);
-        });
-
-        this.input.on('pointerup', (pointer) => {
-            const btn = pointer.button === 0 ? 'LEFT' : pointer.button === 2 ? 'RIGHT' : `BTN${pointer.button}`;
-            this.logDebug(`MOUSE UP:   ${btn} at (${Math.round(pointer.x)}, ${Math.round(pointer.y)})`);
-        });
-
-        this.input.on('pointermove', (pointer) => {
-            if (pointer.isDown) {
-                const btn = pointer.button === 0 ? 'LEFT' : pointer.button === 2 ? 'RIGHT' : `BTN${pointer.button}`;
-                this.logDebug(`MOUSE DRAG: ${btn} at (${Math.round(pointer.x)}, ${Math.round(pointer.y)})`);
-            }
-        });
+        this.logDebug('GameScene started. P1: WASD+E  P2: click+drag');
 
         // Disable right-click context menu on the canvas
         this.input.mouse.disableContextMenu();
@@ -81,6 +58,9 @@ export default class GameScene extends Phaser.Scene {
         this.snail = new Snail(this, 300, 400);
 
         this.logDebug('Gerald the Snail spawned at (300, 400)');
+
+        // --- Alien speed multiplier (1.0 = normal, 0.4 = SlowField) ---
+        this.alienSpeedMultiplier = 1.0;
 
         // --- Shooting system (Player 2) ---
         this.ammo = 10;
@@ -152,28 +132,42 @@ export default class GameScene extends Phaser.Scene {
         const makeRhythmLauncher = (label) => (term, onSuccess, onFailure) =>
             launchMinigame(RhythmMinigame, label, {}, onSuccess, onFailure);
 
+        const makeTypingLauncher = (label) => (term, onSuccess, onFailure) =>
+            launchMinigame(TypingMinigame, label, {}, onSuccess, onFailure);
+
+        // 3×2 grid of terminals around the central station
+        // Top row: y=220  Bottom row: y=500  Cols: x=390, 640, 890
         const terminalDefs = [
-            { x: 440, y: 250, label: 'CANNON-L', cooldown: 20000, color: 0xff8844,
+            { x: 390, y: 220, label: 'CANNON-L', cooldown: 20000, color: 0xff8844,
               launcher: makeRhythmLauncher('CANNON-L'),
               onSuccess: () => { this.cannon.activate(); this.logDebug('Left cannon activated!'); } },
-            { x: 840, y: 250, label: 'RELOAD', cooldown: 8000, color: 0x44ddff,
+            { x: 640, y: 220, label: 'RELOAD', cooldown: 8000, color: 0x44ddff,
               launcher: makeSequenceLauncher('RELOAD'),
               onSuccess: () => {
                   this.ammo = this.ammoMax;
                   this.updateAmmoDisplay();
                   this.logDebug('Ammo reloaded!');
               } },
-            { x: 440, y: 470, label: 'REPAIR', cooldown: 12000, color: 0x44ff88,
+            { x: 890, y: 220, label: 'CANNON-R', cooldown: 20000, color: 0xff8844,
+              launcher: makeRhythmLauncher('CANNON-R'),
+              onSuccess: () => { this.cannon2.activate(); this.logDebug('Right cannon activated!'); } },
+            { x: 390, y: 500, label: 'REPAIR', cooldown: 12000, color: 0x44ff88,
               launcher: makeSequenceLauncher('REPAIR'),
               onSuccess: () => {
                   const before = this.station.health;
                   this.station.heal(25);
                   this.updateHealthDisplay();
-                  this.logDebug(`Station repaired +${this.station.health - before} HP (${this.station.health}/${this.station.maxHealth})`);
+                  this.logDebug(`Station repaired +${this.station.health - before} HP`);
               } },
-            { x: 840, y: 470, label: 'CANNON-R', cooldown: 20000, color: 0xff8844,
-              launcher: makeRhythmLauncher('CANNON-R'),
-              onSuccess: () => { this.cannon2.activate(); this.logDebug('Right cannon activated!'); } },
+            { x: 640, y: 500, label: 'SHIELD', cooldown: 25000, color: 0x8866ff,
+              launcher: makeSequenceLauncher('SHIELD'),
+              onSuccess: () => {
+                  const ok = this.station.shield(4000);
+                  this.logDebug(ok ? 'Shield up for 4s!' : 'Shield already active!');
+              } },
+            { x: 890, y: 500, label: 'SLOWFIELD', cooldown: 18000, color: 0x44aaff,
+              launcher: makeTypingLauncher('SLOWFIELD'),
+              onSuccess: () => { this.activateSlowField(6000); } },
         ];
 
         for (const def of terminalDefs) {
@@ -266,6 +260,67 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
+    activateSlowField(duration) {
+        if (this.slowFieldActive) return;
+        this.slowFieldActive = true;
+        this.alienSpeedMultiplier = 0.4;
+        this.logDebug('SlowField active — aliens at 40% speed!');
+
+        // Blue screen tint overlay
+        if (!this.slowOverlay) {
+            this.slowOverlay = this.add.rectangle(640, 360, 1280, 720, 0x1144aa, 0.12).setDepth(5);
+        }
+        this.slowOverlay.setVisible(true);
+
+        this.time.delayedCall(duration, () => {
+            this.slowFieldActive = false;
+            this.alienSpeedMultiplier = 1.0;
+            if (this.slowOverlay) this.slowOverlay.setVisible(false);
+            this.logDebug('SlowField expired.');
+        });
+    }
+
+    triggerBomberExplosion(bx, by) {
+        const BLAST_RADIUS = 100;
+        const BLAST_DAMAGE = 25;
+
+        // Damage station if in range
+        const stDist = Phaser.Math.Distance.Between(bx, by, this.station.x, this.station.y);
+        if (stDist < BLAST_RADIUS) {
+            if (!this.station.shielded) {
+                const destroyed = this.station.takeDamage(BLAST_DAMAGE);
+                this.updateHealthDisplay();
+                this.logDebug(`Bomber AoE hit station! -${BLAST_DAMAGE} HP`);
+                if (destroyed) {
+                    this.scene.start('GameOverScene', { wave: this.wave, score: this.score });
+                    return;
+                }
+            } else {
+                this.logDebug('Shield absorbed bomber blast!');
+            }
+        }
+
+        // Damage nearby aliens
+        for (const a of this.aliens) {
+            if (!a.active) continue;
+            const d = Phaser.Math.Distance.Between(bx, by, a.x, a.y);
+            if (d < BLAST_RADIUS) a.takeDamage(10);
+        }
+
+        // Visual: expanding ring
+        const ring = this.add.circle(bx, by, 5, 0xff6600, 0.0).setDepth(60)
+            .setStrokeStyle(3, 0xff8833, 0.9);
+        this.tweens.add({
+            targets: ring,
+            scaleX: BLAST_RADIUS / 5,
+            scaleY: BLAST_RADIUS / 5,
+            alpha: 0,
+            duration: 350,
+            ease: 'Power2',
+            onComplete: () => ring.destroy(),
+        });
+    }
+
     spawnAlien() {
         const edge = Phaser.Math.Between(0, 2);
         let x, y;
@@ -293,11 +348,14 @@ export default class GameScene extends Phaser.Scene {
                 const dist = Phaser.Math.Distance.Between(proj.x, proj.y, alien.x, alien.y);
                 if (dist < alien.radius + 4) {
                     proj.destroy();
+                    const isBomber = alien.alienType === 'bomber';
+                    const bx = alien.x, by = alien.y;
                     const died = alien.takeDamage(10);
                     if (died) {
                         this.score++;
                         this.updateScoreDisplay();
                         this.logDebug(`Alien destroyed! Score: ${this.score}`);
+                        if (isBomber) this.triggerBomberExplosion(bx, by);
                     }
                     break;
                 }
@@ -324,13 +382,22 @@ export default class GameScene extends Phaser.Scene {
             if (!alien.active) return false;
             const status = alien.update(time, delta);
             if (status === 'reached_station') {
-                const destroyed = this.station.takeDamage(10);
-                this.updateHealthDisplay();
-                this.logDebug(`Station hit! Health: ${this.station.health}/${this.station.maxHealth}`);
+                const isBomber = alien.alienType === 'bomber';
+                const bx = alien.x, by = alien.y;
                 alien.destroy();
-                if (destroyed) {
-                    this.spawnTimer.remove(false);
-                    this.scene.start('GameOverScene', { wave: this.wave, score: this.score });
+
+                if (isBomber) {
+                    this.triggerBomberExplosion(bx, by);
+                } else if (this.station.shielded) {
+                    this.logDebug('Shield absorbed alien hit!');
+                } else {
+                    const destroyed = this.station.takeDamage(10);
+                    this.updateHealthDisplay();
+                    this.logDebug(`Station hit! HP: ${this.station.health}/${this.station.maxHealth}`);
+                    if (destroyed) {
+                        if (this.spawnTimer) this.spawnTimer.remove(false);
+                        this.scene.start('GameOverScene', { wave: this.wave, score: this.score });
+                    }
                 }
                 return false;
             }

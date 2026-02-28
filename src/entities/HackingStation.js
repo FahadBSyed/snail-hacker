@@ -81,6 +81,37 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         g.strokePath();
     }
 
+    /** Activate a damage shield for `duration` ms. Returns false if already shielded. */
+    shield(duration) {
+        if (this.shielded) return false;
+        this.shielded = true;
+
+        this.shieldGfx = this.scene.add.graphics().setDepth(50);
+        this.shieldGfx.fillStyle(0x4488ff, 0.15);
+        this.shieldGfx.fillCircle(this.x, this.y, 85);
+        this.shieldGfx.lineStyle(2.5, 0x88ccff, 0.8);
+        this.shieldGfx.strokeCircle(this.x, this.y, 85);
+
+        this.shieldTween = this.scene.tweens.add({
+            targets: this.shieldGfx,
+            alpha: 0.45,
+            duration: 550,
+            ease: 'Sine.easeInOut',
+            yoyo: true,
+            repeat: -1,
+        });
+
+        this.scene.time.delayedCall(duration, () => this.unshield());
+        return true;
+    }
+
+    unshield() {
+        if (!this.shielded) return;
+        this.shielded = false;
+        if (this.shieldTween) { this.shieldTween.stop(); this.shieldTween = null; }
+        if (this.shieldGfx)   { this.shieldGfx.destroy(); this.shieldGfx = null; }
+    }
+
     takeDamage(amount) {
         this.health = Math.max(0, this.health - amount);
         this.updateHealthBar();
