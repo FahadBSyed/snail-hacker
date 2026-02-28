@@ -108,9 +108,18 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // --- Defense stations ---
+        // Left cannon — targets aliens on the left half of the screen
         this.cannon = new DefenseStation(this, 200, 150, {
             type: 'CANNON',
             getAliens: () => this.aliens,
+            alienFilter: (a) => a.x < 640,
+        });
+
+        // Right cannon — targets aliens on the right half of the screen
+        this.cannon2 = new DefenseStation(this, 1080, 150, {
+            type: 'CANNON',
+            getAliens: () => this.aliens,
+            alienFilter: (a) => a.x >= 640,
         });
 
         // --- Terminals ---
@@ -136,24 +145,30 @@ export default class GameScene extends Phaser.Scene {
         };
 
         const terminalDefs = [
-            { x: 440, y: 250, label: 'CANNON', cooldown: 20000,
-              onSuccess: () => { this.cannon.activate(); this.logDebug('Cannon activated!'); } },
-            { x: 840, y: 250, label: 'RELOAD', cooldown: 8000,
+            { x: 440, y: 250, label: 'CANNON-L', cooldown: 20000, color: 0xff8844,
+              onSuccess: () => { this.cannon.activate(); this.logDebug('Left cannon activated!'); } },
+            { x: 840, y: 250, label: 'RELOAD', cooldown: 8000, color: 0x44ddff,
               onSuccess: () => {
                   this.ammo = this.ammoMax;
                   this.updateAmmoDisplay();
                   this.logDebug('Ammo reloaded!');
               } },
-            { x: 440, y: 470, label: 'TERM-3', cooldown: 10000,
-              onSuccess: () => { this.logDebug('TERM-3 hacked!'); } },
-            { x: 840, y: 470, label: 'TERM-4', cooldown: 10000,
-              onSuccess: () => { this.logDebug('TERM-4 hacked!'); } },
+            { x: 440, y: 470, label: 'REPAIR', cooldown: 12000, color: 0x44ff88,
+              onSuccess: () => {
+                  const healed = Math.min(25, this.station.maxHealth - this.station.health);
+                  this.station.health = Math.min(this.station.maxHealth, this.station.health + 25);
+                  this.updateHealthDisplay();
+                  this.logDebug(`Station repaired +${healed} HP (${this.station.health}/${this.station.maxHealth})`);
+              } },
+            { x: 840, y: 470, label: 'CANNON-R', cooldown: 20000, color: 0xff8844,
+              onSuccess: () => { this.cannon2.activate(); this.logDebug('Right cannon activated!'); } },
         ];
 
         for (const def of terminalDefs) {
             const terminal = new Terminal(this, def.x, def.y, {
                 label: def.label,
                 cooldown: def.cooldown,
+                color: def.color,
                 launchMinigame: makeSequenceLauncher(def.label),
                 onSuccess: def.onSuccess,
             });
@@ -182,6 +197,13 @@ export default class GameScene extends Phaser.Scene {
             loop: true,
         });
 
+        // --- Score HUD (top-center) ---
+        this.scoreLabel = this.add.text(640, 10, 'SCORE: 0', {
+            fontSize: '18px',
+            fontFamily: 'monospace',
+            color: '#ffffff',
+        }).setOrigin(0.5, 0).setDepth(100);
+
         // --- Ammo HUD (top-right) ---
         this.ammoLabel = this.add.text(1270, 10, '', {
             fontSize: '16px',
@@ -200,12 +222,6 @@ export default class GameScene extends Phaser.Scene {
         this.healthBarBg = this.add.rectangle(10, 30, 204, 16, 0x333333).setOrigin(0, 0).setDepth(100);
         this.healthBarFill = this.add.rectangle(12, 32, 200, 12, 0x44ff44).setOrigin(0, 0).setDepth(100);
 
-        // Scene label
-        this.add.text(640, 20, 'GAME SCENE', {
-            fontSize: '18px',
-            fontFamily: 'monospace',
-            color: '#888888',
-        }).setOrigin(0.5, 0).setDepth(100);
     }
 
     logDebug(message) {
@@ -219,6 +235,10 @@ export default class GameScene extends Phaser.Scene {
 
     updateAmmoDisplay() {
         this.ammoLabel.setText(`AMMO: ${this.ammo} / ${this.ammoMax}`);
+    }
+
+    updateScoreDisplay() {
+        this.scoreLabel.setText(`SCORE: ${this.score}`);
     }
 
     updateHealthDisplay() {
@@ -264,6 +284,7 @@ export default class GameScene extends Phaser.Scene {
                     const died = alien.takeDamage(10);
                     if (died) {
                         this.score++;
+                        this.updateScoreDisplay();
                         this.logDebug(`Alien destroyed! Score: ${this.score}`);
                     }
                     break;

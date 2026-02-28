@@ -19,6 +19,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
 
         this.stationType = opts.type;
         this.getAliens = opts.getAliens;
+        this.alienFilter = opts.alienFilter || (() => true);
         this.isActive = false;
         this.isOnCooldown = false;
         this.cooldownDuration = CANNON_COOLDOWN;
@@ -96,14 +97,13 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
     }
 
     fireAtNearest() {
-        const aliens = this.getAliens();
+        const aliens = this.getAliens().filter(a => a.active && this.alienFilter(a));
         if (!aliens || aliens.length === 0) return;
 
         // Find nearest alive alien
         let nearest = null;
         let nearestDist = Infinity;
         for (const alien of aliens) {
-            if (!alien.active) continue;
             const dist = Phaser.Math.Distance.Between(this.x, this.y, alien.x, alien.y);
             if (dist < nearestDist) {
                 nearestDist = dist;
@@ -113,7 +113,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
 
         if (!nearest) return;
 
-        // Fire a projectile toward it
+        // Fire a projectile toward it (remove the active check from the loop since filter handles it)
         const proj = new Projectile(this.scene, this.x, this.y, nearest.x, nearest.y);
         // Add to scene's projectiles array so collision detection works
         if (this.scene.projectiles) {

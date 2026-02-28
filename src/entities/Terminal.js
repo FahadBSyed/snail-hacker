@@ -23,20 +23,22 @@ export default class Terminal extends Phaser.GameObjects.Container {
         this.launchMinigame = opts.launchMinigame;
         this.onSuccess = opts.onSuccess;
         this.label = opts.label || 'TERMINAL';
+        this.color = opts.color || 0x44ffcc;
 
         // --- Graphics ---
         this.gfx = scene.add.graphics();
         this.add(this.gfx);
 
         // Screen glow (inner rectangle)
-        this.screenGlow = scene.add.rectangle(0, 0, WIDTH - 8, HEIGHT - 8, 0x44ffcc, 0.3);
+        this.screenGlow = scene.add.rectangle(0, 0, WIDTH - 8, HEIGHT - 8, this.color, 0.3);
         this.add(this.screenGlow);
 
         // Label text
+        const colorHex = '#' + this.color.toString(16).padStart(6, '0');
         this.labelText = scene.add.text(0, -HEIGHT / 2 - 10, this.label, {
             fontSize: '9px',
             fontFamily: 'monospace',
-            color: '#44ffcc',
+            color: colorHex,
         }).setOrigin(0.5);
         this.add(this.labelText);
 
@@ -74,7 +76,7 @@ export default class Terminal extends Phaser.GameObjects.Container {
         g.fillRect(-WIDTH / 2, -HEIGHT / 2, WIDTH, HEIGHT);
 
         // Outline — white if highlighted, teal otherwise
-        const outlineColor = highlighted ? 0xffffff : 0x44ffcc;
+        const outlineColor = highlighted ? 0xffffff : this.color;
         const outlineAlpha = highlighted ? 0.9 : 0.4;
         g.lineStyle(highlighted ? 2 : 1.5, outlineColor, outlineAlpha);
         g.strokeRect(-WIDTH / 2, -HEIGHT / 2, WIDTH, HEIGHT);
@@ -121,7 +123,7 @@ export default class Terminal extends Phaser.GameObjects.Container {
     handleMinigameResult(snail, success) {
         snail.hackingActive = false;
         snail.setState('IDLE');
-        this.screenGlow.fillColor = 0x44ffcc;
+        this.screenGlow.fillColor = this.color;
         this.screenGlow.fillAlpha = 0.3;
 
         if (success && this.onSuccess) {
@@ -164,7 +166,7 @@ export default class Terminal extends Phaser.GameObjects.Container {
         if (this.terminalState === 'ACTIVE') {
             snail.hackingActive = false;
             snail.setState('IDLE');
-            this.screenGlow.fillColor = 0x44ffcc;
+            this.screenGlow.fillColor = this.color;
             this.screenGlow.fillAlpha = 0.3;
             this.startCooldown(3000);
         }
