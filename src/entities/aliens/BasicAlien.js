@@ -45,8 +45,9 @@ export default class BasicAlien extends Phaser.GameObjects.Container {
 
     update(time, delta) {
         const dt = delta / 1000;
-        this.x += Math.cos(this.angle) * this.speed * dt;
-        this.y += Math.sin(this.angle) * this.speed * dt;
+        const speedMult = this.scene.alienSpeedMultiplier || 1.0;
+        this.x += Math.cos(this.angle) * this.speed * speedMult * dt;
+        this.y += Math.sin(this.angle) * this.speed * speedMult * dt;
 
         // Check if reached station vicinity
         const dist = Phaser.Math.Distance.Between(this.x, this.y, TARGET_X, TARGET_Y);
