@@ -37,12 +37,11 @@ export default class BomberAlien extends Phaser.GameObjects.Container {
 
     takeDamage(amount) {
         this.health -= amount;
-        if (this.health <= 0) {
-            if (this.glowTween) this.glowTween.stop();
-            this.destroy();
-            return true;
+        if (this.health <= 0 && this.glowTween) {
+            this.glowTween.stop();
+            this.glowTween = null;
         }
-        return false;
+        return this.health <= 0;
     }
 
     update(time, delta) {

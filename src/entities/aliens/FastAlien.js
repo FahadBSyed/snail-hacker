@@ -36,11 +36,7 @@ export default class FastAlien extends Phaser.GameObjects.Container {
 
     takeDamage(amount) {
         this.health -= amount;
-        if (this.health <= 0) {
-            this.destroy();
-            return true;
-        }
-        return false;
+        return this.health <= 0;
     }
 
     update(time, delta) {

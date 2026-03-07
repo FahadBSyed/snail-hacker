@@ -89,6 +89,7 @@ export default class GameScene extends Phaser.Scene {
             const proj = new Projectile(this, this.station.x, this.station.y, pointer.x, pointer.y);
             this.projectiles.push(proj);
             this.updateAmmoDisplay();
+            this.cameras.main.shake(90, 0.005);
         });
 
         // ── Battery / power state ─────────────────────────────────────────────
@@ -640,18 +641,44 @@ export default class GameScene extends Phaser.Scene {
                     const isBomber = alien.alienType === 'bomber';
                     const bx = alien.x, by = alien.y;
                     const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+
+                    // Red flash on the sprite
+                    if (alien.sprite) alien.sprite.setTint(0xff2222);
+
+                    // Hit-stop wobble: quick horizontal jerk on the container
+                    this.tweens.add({
+                        targets:  alien,
+                        x:        alien.x + 5,
+                        duration: 30,
+                        ease:     'Sine.easeOut',
+                        yoyo:     true,
+                        repeat:   1,
+                    });
+
                     if (died) {
                         this.score++;
                         this.updateScoreDisplay();
                         const burstColor = { basic: 0xdd3333, fast: 0xaa44ff, tank: 0x7799aa, bomber: 0xff7722 }[alien.alienType] || 0xffffff;
-                        this.spawnDeathBurst(bx, by, burstColor);
 
-                        // Random health drop on kill
-                        if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
-                            this.healthDrops.push(new HealthDrop(this, bx, by));
-                        }
+                        // Mark dying so the update loop skips it, then destroy after flash
+                        alien._dying = true;
+                        this.time.delayedCall(100, () => {
+                            if (!alien.active) return;
+                            this.spawnDeathBurst(bx, by, burstColor);
 
-                        if (isBomber) this.triggerBomberExplosion(bx, by);
+                            // Random health drop on kill
+                            if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                                this.healthDrops.push(new HealthDrop(this, bx, by));
+                            }
+
+                            if (isBomber) this.triggerBomberExplosion(bx, by);
+                            alien.destroy();
+                        });
+                    } else {
+                        // Alive after hit — clear tint after flash duration
+                        this.time.delayedCall(100, () => {
+                            if (alien.active && alien.sprite) alien.sprite.clearTint();
+                        });
                     }
                     break;
                 }
@@ -737,7 +764,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Aliens — move and check contact with snail
         this.aliens = this.aliens.filter(alien => {
-            if (!alien.active) return false;
+            if (!alien.active || alien._dying) return false;
             const status = alien.update(time, delta);
             if (status === 'reached_snail' && !this.boardingShip) {
                 const isBomber = alien.alienType === 'bomber';
@@ -783,7 +810,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Cleanup
         this.projectiles = this.projectiles.filter(p => p.active);
-        this.aliens      = this.aliens.filter(a => a.active);
+        this.aliens      = this.aliens.filter(a => a.active && !a._dying);
         this.healthDrops = this.healthDrops.filter(d => d.active);
     }
 
