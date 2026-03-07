@@ -642,8 +642,13 @@ export default class GameScene extends Phaser.Scene {
                     const bx = alien.x, by = alien.y;
                     const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
 
-                    // Red flash on the sprite (setTintFill = flat color replace, not multiply)
-                    if (alien.sprite) alien.sprite.setTintFill(0xff2222);
+                    // Red flash overlay — drawn as a scene-level circle so it works
+                    // in Canvas renderer (setTint/setTintFill are no-ops on Canvas).
+                    const flash = this.add.arc(bx, by, alien.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
+                    this.tweens.add({
+                        targets: flash, alpha: 0, duration: 200,
+                        onComplete: () => flash.destroy(),
+                    });
 
                     // Hit-stop wobble: quick horizontal jerk on the container
                     this.tweens.add({
@@ -673,11 +678,6 @@ export default class GameScene extends Phaser.Scene {
 
                             if (isBomber) this.triggerBomberExplosion(bx, by);
                             alien.destroy();
-                        });
-                    } else {
-                        // Alive after hit — clear tint after flash duration
-                        this.time.delayedCall(180, () => {
-                            if (alien.active && alien.sprite) alien.sprite.clearTint();
                         });
                     }
                     break;
