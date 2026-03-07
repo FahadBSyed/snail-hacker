@@ -1,5 +1,51 @@
 import { CONFIG } from '../config.js';
 
+// ── Custom SVG cursors ────────────────────────────────────────────────────────
+
+function _cur(svg, hx, hy, fallback) {
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${hx} ${hy}, ${fallback}`;
+}
+
+const CURSOR_CROSSHAIR = _cur(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+      <line x1="0"  y1="16" x2="12" y2="16" stroke="#00ffcc" stroke-width="1.5"/>
+      <line x1="20" y1="16" x2="32" y2="16" stroke="#00ffcc" stroke-width="1.5"/>
+      <line x1="16" y1="0"  x2="16" y2="12" stroke="#00ffcc" stroke-width="1.5"/>
+      <line x1="16" y1="20" x2="16" y2="32" stroke="#00ffcc" stroke-width="1.5"/>
+      <circle cx="16" cy="16" r="4"   fill="none" stroke="#00ffcc" stroke-width="1.5"/>
+      <circle cx="16" cy="16" r="1.5" fill="#00ffcc"/>
+    </svg>`,
+    16, 16, 'crosshair',
+);
+
+const CURSOR_GRAB = _cur(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+      <rect x="7"  y="3"  width="4" height="14" rx="2" fill="#00ffcc"/>
+      <rect x="12" y="2"  width="4" height="16" rx="2" fill="#00ffcc"/>
+      <rect x="17" y="3"  width="4" height="14" rx="2" fill="#00ffcc"/>
+      <rect x="22" y="5"  width="4" height="12" rx="2" fill="#00ffcc"/>
+      <rect x="2"  y="12" width="4" height="9"  rx="2" fill="#00ffcc"/>
+      <rect x="2"  y="16" width="24" height="12" rx="3" fill="#00ffcc"/>
+    </svg>`,
+    14, 2, 'grab',
+);
+
+const CURSOR_CANCEL = _cur(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+      <rect x="7"  y="3"  width="4" height="14" rx="2" fill="#445544" opacity="0.7"/>
+      <rect x="12" y="2"  width="4" height="16" rx="2" fill="#445544" opacity="0.7"/>
+      <rect x="17" y="3"  width="4" height="14" rx="2" fill="#445544" opacity="0.7"/>
+      <rect x="22" y="5"  width="4" height="12" rx="2" fill="#445544" opacity="0.7"/>
+      <rect x="2"  y="12" width="4" height="9"  rx="2" fill="#445544" opacity="0.7"/>
+      <rect x="2"  y="16" width="24" height="12" rx="3" fill="#445544" opacity="0.7"/>
+      <circle cx="24" cy="8" r="7" fill="black" fill-opacity="0.45"
+              stroke="#ff4444" stroke-width="2"/>
+      <line x1="18.5" y1="2.5" x2="29.5" y2="13.5"
+            stroke="#ff4444" stroke-width="2"/>
+    </svg>`,
+    14, 2, 'not-allowed',
+);
+
 export default class GrabHandSystem {
     /**
      * @param {Phaser.Scene} scene
@@ -28,7 +74,7 @@ export default class GrabHandSystem {
         this._dangVel      = 0;     // angular velocity (rad/s)
         this._dangleTween  = null;  // return-to-zero tween
 
-        this.canvas.style.cursor = 'crosshair';
+        this.canvas.style.cursor = CURSOR_CROSSHAIR;
 
         // Right-click down → grab closest grabbable within range
         scene.input.on('pointerdown', (pointer) => {
@@ -121,7 +167,7 @@ export default class GrabHandSystem {
         this.batteryGrabOrigin = null;
         this.onCooldown        = true;
         this.cooldownRemaining = CONFIG.GRAB.COOLDOWN;
-        this.canvas.style.cursor = 'crosshair';
+        this.canvas.style.cursor = CURSOR_CROSSHAIR;
     }
 
     _moveToward(target, pointer, maxSpeed, delta) {
@@ -203,25 +249,27 @@ export default class GrabHandSystem {
 
         } else {
             // No hold: update hover cursor
-            if (!this.onCooldown) {
-                let nearGrabbable = false;
+            let nearGrabbable = false;
 
-                const battery = this.getBattery();
-                if (battery && battery.state === 'ground') {
-                    const d = Phaser.Math.Distance.Between(
-                        pointer.x, pointer.y, battery.x, battery.y,
-                    );
-                    if (d <= CONFIG.BATTERY.MOUSE_PICKUP_DIST) nearGrabbable = true;
-                }
+            const battery = this.getBattery();
+            if (battery && battery.state === 'ground') {
+                const d = Phaser.Math.Distance.Between(
+                    pointer.x, pointer.y, battery.x, battery.y,
+                );
+                if (d <= CONFIG.BATTERY.MOUSE_PICKUP_DIST) nearGrabbable = true;
+            }
 
-                if (!nearGrabbable) {
-                    const d = Phaser.Math.Distance.Between(
-                        pointer.x, pointer.y, this.snail.x, this.snail.y,
-                    );
-                    if (d <= CONFIG.GRAB.MAX_PICKUP_DISTANCE) nearGrabbable = true;
-                }
+            if (!nearGrabbable) {
+                const d = Phaser.Math.Distance.Between(
+                    pointer.x, pointer.y, this.snail.x, this.snail.y,
+                );
+                if (d <= CONFIG.GRAB.MAX_PICKUP_DISTANCE) nearGrabbable = true;
+            }
 
-                this.canvas.style.cursor = nearGrabbable ? 'grab' : 'crosshair';
+            if (nearGrabbable) {
+                this.canvas.style.cursor = this.onCooldown ? CURSOR_CANCEL : CURSOR_GRAB;
+            } else {
+                this.canvas.style.cursor = CURSOR_CROSSHAIR;
             }
         }
     }
