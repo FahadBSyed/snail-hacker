@@ -169,11 +169,21 @@ snail-hacker/
 - Wave 5+: + bomber, 1000ms, 60s
 - Every 3 waves: intermission (5s), +20 station health (capped 100)
 - HUD: wave number + countdown timer
+- **3-second spawn grace period** at the start of each wave (`CONFIG.WAVES.SPAWN_GRACE_MS`)
+
+### Step 18b: Escape Ship Wave-End Flow *(added Session 3)*
+- On hack completion, an `EscapeShip` spawns at a random inset edge instead of immediately ending the wave
+- Enemies continue spawning until the snail boards the ship (proximity trigger, `CONFIG.ESCAPE.BOARD_RADIUS`)
+- Boarding: remaining aliens burst and despawn, snail + ship tween off the top of the screen with exhaust particles (`CONFIG.ESCAPE.ASCENT_DURATION`)
+- "WAVE X COMPLETE" splash shown after ascent; any key/click advances
+- Snail HP and gun ammo are **fully restored** at the start of each new wave
+- Works correctly across normal waves, intermission waves (3/6/9), and the final wave (10)
 
 ### Step 19: Remaining Alien Types
 - `FastAlien.js`: purple triangle, ~150px/s, sinusoidal zigzag
 - `TankAlien.js`: dark grey square, thick outline, ~40px/s, health 40
 - `BomberAlien.js`: orange pentagon, pulsing glow, ~50px/s, AoE 25 damage within 100px on death
+- **Directional sprites** for all four alien types (8 directions each, palette-swapped saucer + frog art)
 
 ### Step 20: IntermissionScene
 - Flavor text array keyed by wave number
@@ -205,6 +215,17 @@ snail-hacker/
 - Teleport warp rings (expanding at origin, contracting at destination, 0.3s)
 - Station glow driven by health/100, pulse tween when health < 30
 - Bomber pulse tween on outer glow (alpha 0.3 ↔ 1.0)
+
+### Step 25: Game-Feel Polish *(added Session 4)*
+- **Custom cursors** — Game-rendered Phaser Graphics objects (depth 1000) replace browser cursors: cyan crosshair (default), cyan grab hand (near grabbable + ready), dimmed hand + red prohibition circle (near grabbable + on cooldown). Real cursor hidden with `canvas.style.cursor = 'none'`.
+- **Screen shake on gunfire** — `cameras.main.shake(90, 0.005)` on every shot.
+- **Hit flash** — Scene-level red `Arc` overlaid at alien position on hit, fades out over 200ms. Canvas-renderer safe (no `setTintFill`).
+- **Hit-stop wobble** — ±5px horizontal jerk tween (50ms/leg) on alien container on hit.
+- **Delayed alien death** — 200ms delay between killing hit and destroy/burst; `_dying` flag prevents contact damage during the window.
+- **Layered bullet glow trail** — Three-circle trail (outer halo, mid glow, bright core) emitted every 25ms for a light-emission look.
+- **Alien death light pulse** — Two expanding circles (warm-red + orange) added to death burst before debris dots, simulating a radiant explosion flash.
+- **Opaque wave-complete overlay** — Black background fully covers the game level during the wave complete splash.
+- **Double-advance fix** — `advance()` on the wave complete splash guards against being called by both keyboard and pointer events; uses `advanced` flag + explicit `.off()` cleanup.
 
 ---
 

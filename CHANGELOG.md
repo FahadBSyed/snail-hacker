@@ -46,3 +46,62 @@
 
 ### Steps Remaining
 - **Step 22:** Audio integration (no assets bundled yet)
+
+---
+
+## Session 3 — 2026-03-07
+
+### Alien Sprites
+- **Directional sprites for all enemy types** — Added `scripts/generate-alien-enemy-sprites.js` which produces 8-directional SVG saucers for FastAlien (purple disc), TankAlien (steel-blue disc), and BomberAlien (orange/fire disc). Same geometry and frog passenger as BasicAlien; only the disc/dome/glow palette changes per type.
+- Replaced procedural `scene.add.graphics()` drawing in `FastAlien.js`, `TankAlien.js`, and `BomberAlien.js` with sprite-swap logic identical to `BasicAlien`. BomberAlien retains its alpha-pulse tween on the sprite.
+- `GameScene.preload()` now loads all four alien sprite sets (32 SVGs total) in a single loop.
+
+### Wave-End Escape Ship Flow
+- **EscapeShip entity** — New `src/entities/EscapeShip.js`: large blue/cyan rescue saucer (procedural graphics), hover-bob tween, rim-light pulse, pop-in scale animation, and a `[ BOARD SHIP ]` proximity prompt. `boardRadius` reads from `CONFIG.ESCAPE.BOARD_RADIUS`.
+- **Escape phase** — After a hack completes, `_completeWave()` now calls `_startEscapePhase()` instead of immediately ending the wave. Enemies continue spawning. The escape ship appears at a random inset edge position (top/left/right) with a "HACK COMPLETE — REACH THE ESCAPE SHIP!" flash.
+- **Boarding animation** — When the snail walks into the escape ship's `boardRadius`, `_boardEscapeShip()` fires: active hack/minigames are cancelled, remaining aliens burst and despawn, spawning stops, snail is moved onto the ship, and both tween off the top of the screen with cyan exhaust particles.
+- **Wave Complete splash** — After the ship flies away, `_showWaveCompleteSplash()` shows a dimmed overlay with "WAVE X COMPLETE", score, and a blinking "PRESS ANY KEY TO CONTINUE" prompt. Input is gated behind a 700ms grace window to avoid accidental skips.
+- Snail HP and gun ammo are **restored to full** at splash-show time, before the next wave starts.
+- Transition from the splash correctly handles intermission waves (→ `IntermissionScene`), last wave (→ `VictoryScene`), and normal waves (→ `waveManager.nextWave()`).
+
+### Wave Start Grace Period
+- `WaveManager` now tracks `graceElapsed` and suppresses all spawning for `CONFIG.WAVES.SPAWN_GRACE_MS` (3000ms) at the start of each wave, giving players time to position after the wave-complete flow.
+
+### Config Additions
+Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
+- `WAVES.SPAWN_GRACE_MS: 3000` — no-spawn buffer at wave start
+- `ESCAPE.BOARD_RADIUS: 40` — px proximity to trigger boarding
+- `ESCAPE.ASCENT_DURATION: 1200` — ms for the ship's off-screen ascent
+
+### Bug Fixes
+- **Escape ship ghost on next wave** — `onWaveStart` now calls `escapeShip.destroy()` before nulling the reference; the lingering hover tween was snapping the old ship back into view.
+- **Escape ship never spawning (power-loss race condition)** — `onWordComplete` called `_triggerPowerLoss()` which cancelled the active `HackMinigame` *before* `_finish()` could invoke `onSuccess`. On waves where `hackThreshold` is a multiple of `POWER_LOSS_WORDS` (waves 3 and 6 with defaults; wave 1 with small DEV-mode word counts), this blocked the escape phase entirely. Fixed by guarding: power loss only fires when `hackProgress < hackThreshold`.
+- **`import` placement in WaveManager.js** — Moved `import { CONFIG }` to the top of the file.
+
+---
+
+## Session 4 — 2026-03-07
+
+### Custom Cursors
+- **Game-rendered cursors** — Replaced CSS `cursor:` string approach (unreliable with Phaser's input system) with three `Phaser.GameObjects.Graphics` objects drawn at depth 1000 and repositioned to the pointer every frame. `canvas.style.cursor = 'none'` hides the real cursor permanently.
+- **Crosshair** — Cyan (#00ffcc) gap-cross with center ring and dot; shown by default and after releasing a grab.
+- **Grab hand** — Cyan open-hand shape; shown when the pointer is within pickup range of the snail or a grounded battery and the grab is ready.
+- **Cancel hand** — Same hand dimmed (#334433) with a red prohibition circle overlay; shown when hovering over a grabbable target while the grab is on cooldown.
+- Holding the snail or battery hides all cursor graphics (the held object acts as the visual anchor).
+
+### Combat Game-Feel
+- **Screen shake on gunfire** — `cameras.main.shake(90, 0.005)` fires on every left-click shot.
+- **Red hit flash** — Scene-level `Arc` object drawn at the alien's position on hit, alpha-tweened to 0 over 200ms. Uses a plain Canvas circle rather than `setTintFill` (which is a no-op in `Phaser.CANVAS` renderer).
+- **Hit-stop wobble** — A quick ±5px horizontal jerk tween (50ms per leg, yoyo+repeat:1) plays on the alien container on every projectile hit.
+- **Delayed death** — Alien destruction is deferred 200ms after a killing hit so the flash and wobble are visible before the burst spawns. A `_dying` flag is set immediately to prevent the alien from moving or triggering contact damage during that window.
+- **Refactored `takeDamage`** — Removed `this.destroy()` from all four alien classes; `GameScene.checkCollisions()` now owns destruction timing for all types.
+
+### Bullet & Death Visual Effects
+- **Layered bullet glow trail** — Three overlapping circles emitted every 25ms: outer soft halo (r=9, amber, α=0.10), mid glow (r=5, yellow, α=0.25, shrinks), bright white core (r=2, α=0.80). Simulates a light-emitting projectile without post-processing.
+- **Alien death light pulse** — Two expanding scale-tweened circles added to `spawnDeathBurst`: large warm-red pulse (r=6 → ×9, 480ms) and bright orange inner flash (r=4 → ×5, 260ms), fired before the debris dots.
+
+### Wave Complete Screen
+- **Opaque overlay** — Background alpha raised from 0.72 to 1 so the game level is fully hidden while the splash is active.
+
+### Bug Fixes
+- **Double wave increment on splash dismiss** — `keyboard.once` and `input.once` are on separate Phaser emitters; pressing a key then clicking (or vice versa) called `advance()` twice and ran `nextWave()` twice. Fixed with an `advanced` guard flag and explicit `.off()` calls to remove the sibling listener at the start of `advance()`.

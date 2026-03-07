@@ -14,6 +14,7 @@ import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
+import SoundSynth from '../systems/SoundSynth.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -59,6 +60,9 @@ export default class GameScene extends Phaser.Scene {
 
         this.input.mouse.disableContextMenu();
 
+        // ── Sound synthesizer ─────────────────────────────────────────────────
+        this.soundSynth = new SoundSynth();
+
         // ── Hacking Station (center — objective to hack) ──────────────────────
         this.station = new HackingStation(this, 640, 360);
 
@@ -89,6 +93,8 @@ export default class GameScene extends Phaser.Scene {
             const proj = new Projectile(this, this.station.x, this.station.y, pointer.x, pointer.y);
             this.projectiles.push(proj);
             this.updateAmmoDisplay();
+            this.cameras.main.shake(90, 0.005);
+            this.soundSynth.play('shoot');
         });
 
         // ── Battery / power state ─────────────────────────────────────────────
@@ -212,6 +218,7 @@ export default class GameScene extends Phaser.Scene {
                 this.station.setHackProgress(0);
                 this.updateWaveDisplay();
                 this.updateHackDisplay();
+                this.soundSynth.play('waveStart');
                 this.logDebug(`Wave ${wave} started — need ${this.hackThreshold} words`);
             },
             onWaveEnd: (wave) => {
@@ -250,8 +257,9 @@ export default class GameScene extends Phaser.Scene {
                 this.hackProgress++;
                 this.updateHackDisplay();
                 this.station.setHackProgress(this.hackProgress / this.hackThreshold);
-                // Every N words the station loses power and needs a battery
-                if (this.hackProgress % CONFIG.BATTERY.POWER_LOSS_WORDS === 0) {
+                // Every N words the station loses power — but not if the hack just finished
+                if (this.hackProgress < this.hackThreshold &&
+                    this.hackProgress % CONFIG.BATTERY.POWER_LOSS_WORDS === 0) {
                     this._triggerPowerLoss();
                 }
             },
@@ -288,6 +296,7 @@ export default class GameScene extends Phaser.Scene {
         this.battery = new Battery(this, 640 + Math.cos(angle) * r, 360 + Math.sin(angle) * r);
 
         this.station.setPowered(false);
+        this.soundSynth.play('powerLoss');
         this.logDebug('Station lost power! Battery spawned.');
     }
 
@@ -301,6 +310,7 @@ export default class GameScene extends Phaser.Scene {
         this.snail.setState('IDLE');
         this.stationPowered = true;
         this.station.setPowered(true);
+        this.soundSynth.play('powerRegain');
         this.logDebug('Battery delivered! Station back online.');
     }
 
@@ -346,6 +356,7 @@ export default class GameScene extends Phaser.Scene {
         this.snail.hackingActive = false;
 
         // Stop alien spawning and clear remaining aliens
+        this.soundSynth.play('escape');
         if (this.waveManager) this.waveManager.active = false;
         for (const alien of this.aliens) {
             if (!alien.active) continue;
@@ -392,6 +403,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     _showWaveCompleteSplash() {
+        this.soundSynth.play('waveComplete');
         // Restore snail HP and gun ammo for the next wave
         this.snail.health = this.snail.maxHealth;
         this.ammo         = this.ammoMax;
@@ -399,7 +411,7 @@ export default class GameScene extends Phaser.Scene {
         this.updateAmmoDisplay();
 
         // Dim overlay
-        const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.72).setDepth(300);
+        const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 1).setDepth(300);
 
         const waveText = this.add.text(640, 290, `WAVE ${this.wave} COMPLETE`, {
             fontSize: '54px', fontFamily: 'monospace', color: '#00ffcc',
@@ -429,7 +441,14 @@ export default class GameScene extends Phaser.Scene {
 
         // Accept input after a short grace period
         this.time.delayedCall(700, () => {
+            let advanced = false;
             const advance = () => {
+                if (advanced) return;
+                advanced = true;
+                // Remove the sibling listener so only one path fires
+                this.input.keyboard.off('keydown', advance);
+                this.input.off('pointerdown', advance);
+
                 overlay.destroy();
                 waveText.destroy();
                 scoreText.destroy();
@@ -570,6 +589,21 @@ export default class GameScene extends Phaser.Scene {
     // ── Visual effects ────────────────────────────────────────────────────────
 
     spawnDeathBurst(x, y, color = 0xff4444) {
+        this.soundSynth.play('explosion');
+        // Expanding light pulse — large soft outer glow
+        const pulse = this.add.circle(x, y, 6, 0xff3300, 0.45).setDepth(53);
+        this.tweens.add({
+            targets: pulse, scaleX: 9, scaleY: 9, alpha: 0,
+            duration: 480, ease: 'Power2.easeOut', onComplete: () => pulse.destroy(),
+        });
+        // Bright inner flash
+        const flash = this.add.circle(x, y, 4, 0xff8833, 0.80).setDepth(54);
+        this.tweens.add({
+            targets: flash, scaleX: 5, scaleY: 5, alpha: 0,
+            duration: 260, ease: 'Power1.easeOut', onComplete: () => flash.destroy(),
+        });
+
+        // Debris dots
         const count = 7;
         for (let i = 0; i < count; i++) {
             const angle = (Math.PI * 2 / count) * i;
@@ -597,6 +631,7 @@ export default class GameScene extends Phaser.Scene {
         if (snailDist < blastRadius) {
             const died = this.snail.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_SNAIL);
             this.updateHealthDisplay();
+            this.soundSynth.play('damage');
             if (died) {
                 if (this.waveManager) this.waveManager.active = false;
                 if (this.activeHack)  { this.activeHack.cancel(); this.activeHack = null; }
@@ -639,18 +674,44 @@ export default class GameScene extends Phaser.Scene {
                     const isBomber = alien.alienType === 'bomber';
                     const bx = alien.x, by = alien.y;
                     const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+
+                    // Red flash overlay — drawn as a scene-level circle so it works
+                    // in Canvas renderer (setTint/setTintFill are no-ops on Canvas).
+                    const flash = this.add.arc(bx, by, alien.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
+                    this.tweens.add({
+                        targets: flash, alpha: 0, duration: 200,
+                        onComplete: () => flash.destroy(),
+                    });
+
+                    // Hit-stop wobble: quick horizontal jerk on the container
+                    this.tweens.add({
+                        targets:  alien,
+                        x:        alien.x + 5,
+                        duration: 50,
+                        ease:     'Sine.easeOut',
+                        yoyo:     true,
+                        repeat:   1,
+                    });
+
                     if (died) {
                         this.score++;
                         this.updateScoreDisplay();
                         const burstColor = { basic: 0xdd3333, fast: 0xaa44ff, tank: 0x7799aa, bomber: 0xff7722 }[alien.alienType] || 0xffffff;
-                        this.spawnDeathBurst(bx, by, burstColor);
 
-                        // Random health drop on kill
-                        if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
-                            this.healthDrops.push(new HealthDrop(this, bx, by));
-                        }
+                        // Mark dying so the update loop skips it, then destroy after flash
+                        alien._dying = true;
+                        this.time.delayedCall(200, () => {
+                            if (!alien.active) return;
+                            this.spawnDeathBurst(bx, by, burstColor);
 
-                        if (isBomber) this.triggerBomberExplosion(bx, by);
+                            // Random health drop on kill
+                            if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                                this.healthDrops.push(new HealthDrop(this, bx, by));
+                            }
+
+                            if (isBomber) this.triggerBomberExplosion(bx, by);
+                            alien.destroy();
+                        });
                     }
                     break;
                 }
@@ -684,6 +745,7 @@ export default class GameScene extends Phaser.Scene {
                         this.battery.setPromptVisible(false);
                         this.snail.carryingBattery = true;
                         this.snail.setState('CARRYING');
+                        this.soundSynth.play('batteryPickup');
                     }
                 }
             } else if (this.battery.state === 'snail') {
@@ -723,20 +785,24 @@ export default class GameScene extends Phaser.Scene {
         // Projectiles + trail particles
         this.projectiles = this.projectiles.filter(p => {
             if (!p.active) return false;
-            if (time - (p._lastTrail || 0) > 40) {
+            if (time - (p._lastTrail || 0) > 25) {
                 p._lastTrail = time;
-                const trail = this.add.circle(p.x, p.y, 2, 0xffffaa, 0.5).setDepth(30);
-                this.tweens.add({
-                    targets: trail, alpha: 0, scaleX: 0.3, scaleY: 0.3,
-                    duration: 150, onComplete: () => trail.destroy(),
-                });
+                // Outer soft glow
+                const g1 = this.add.circle(p.x, p.y, 9, 0xffaa00, 0.10).setDepth(29);
+                this.tweens.add({ targets: g1, alpha: 0, duration: 200, onComplete: () => g1.destroy() });
+                // Mid glow
+                const g2 = this.add.circle(p.x, p.y, 5, 0xffdd44, 0.25).setDepth(30);
+                this.tweens.add({ targets: g2, alpha: 0, scaleX: 0.3, scaleY: 0.3, duration: 160, onComplete: () => g2.destroy() });
+                // Bright core
+                const g3 = this.add.circle(p.x, p.y, 2, 0xffffff, 0.80).setDepth(31);
+                this.tweens.add({ targets: g3, alpha: 0, duration: 110, onComplete: () => g3.destroy() });
             }
             return p.update(time, delta);
         });
 
         // Aliens — move and check contact with snail
         this.aliens = this.aliens.filter(alien => {
-            if (!alien.active) return false;
+            if (!alien.active || alien._dying) return false;
             const status = alien.update(time, delta);
             if (status === 'reached_snail' && !this.boardingShip) {
                 const isBomber = alien.alienType === 'bomber';
@@ -748,6 +814,7 @@ export default class GameScene extends Phaser.Scene {
                 } else {
                     const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                     this.updateHealthDisplay();
+                    this.soundSynth.play('damage');
                     if (died) {
                         if (this.waveManager) this.waveManager.active = false;
                         if (this.activeHack)  { this.activeHack.cancel(); this.activeHack = null; }
@@ -773,7 +840,7 @@ export default class GameScene extends Phaser.Scene {
                 );
                 this.snail.health += healed;
                 this.updateHealthDisplay();
-                if (healed > 0) this.logDebug(`Health pickup! +${healed} HP`);
+                if (healed > 0) { this.soundSynth.play('healthPickup'); this.logDebug(`Health pickup! +${healed} HP`); }
                 drop.destroy();
                 return false;
             }
@@ -782,7 +849,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Cleanup
         this.projectiles = this.projectiles.filter(p => p.active);
-        this.aliens      = this.aliens.filter(a => a.active);
+        this.aliens      = this.aliens.filter(a => a.active && !a._dying);
         this.healthDrops = this.healthDrops.filter(d => d.active);
     }
 

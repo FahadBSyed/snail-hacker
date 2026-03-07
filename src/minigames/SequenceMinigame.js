@@ -117,6 +117,7 @@ export default class SequenceMinigame {
             }
         } else {
             // Wrong — flash red and reset
+            this.scene.soundSynth?.play('error');
             this.flashWrong();
         }
     }
