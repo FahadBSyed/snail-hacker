@@ -77,3 +77,21 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 - **Escape ship ghost on next wave** — `onWaveStart` now calls `escapeShip.destroy()` before nulling the reference; the lingering hover tween was snapping the old ship back into view.
 - **Escape ship never spawning (power-loss race condition)** — `onWordComplete` called `_triggerPowerLoss()` which cancelled the active `HackMinigame` *before* `_finish()` could invoke `onSuccess`. On waves where `hackThreshold` is a multiple of `POWER_LOSS_WORDS` (waves 3 and 6 with defaults; wave 1 with small DEV-mode word counts), this blocked the escape phase entirely. Fixed by guarding: power loss only fires when `hackProgress < hackThreshold`.
 - **`import` placement in WaveManager.js** — Moved `import { CONFIG }` to the top of the file.
+
+---
+
+## Session 4 — 2026-03-07
+
+### Custom Cursors
+- **Game-rendered cursors** — Replaced CSS `cursor:` string approach (unreliable with Phaser's input system) with three `Phaser.GameObjects.Graphics` objects drawn at depth 1000 and repositioned to the pointer every frame. `canvas.style.cursor = 'none'` hides the real cursor permanently.
+- **Crosshair** — Cyan (#00ffcc) gap-cross with center ring and dot; shown by default and after releasing a grab.
+- **Grab hand** — Cyan open-hand shape; shown when the pointer is within pickup range of the snail or a grounded battery and the grab is ready.
+- **Cancel hand** — Same hand dimmed (#334433) with a red prohibition circle overlay; shown when hovering over a grabbable target while the grab is on cooldown.
+- Holding the snail or battery hides all cursor graphics (the held object acts as the visual anchor).
+
+### Combat Game-Feel
+- **Screen shake on gunfire** — `cameras.main.shake(90, 0.005)` fires on every left-click shot.
+- **Red hit flash** — Projectile impact sets `alien.sprite.setTint(0xff2222)` immediately. Tint clears after 100ms for aliens that survive; for dying aliens it persists until the death burst fires.
+- **Hit-stop wobble** — A quick ±5px horizontal jerk tween plays on the alien container on every projectile hit, giving a physical impact stagger.
+- **Delayed death** — Alien destruction is now deferred 100ms after a killing hit so the flash is visible before the burst spawns. A `_dying` flag is set immediately to prevent the alien from moving or triggering contact damage during that window.
+- **Refactored `takeDamage`** — Removed `this.destroy()` from all four alien classes; `GameScene.checkCollisions()` now owns destruction timing for all types.

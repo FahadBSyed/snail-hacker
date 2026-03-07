@@ -216,6 +216,13 @@ snail-hacker/
 - Station glow driven by health/100, pulse tween when health < 30
 - Bomber pulse tween on outer glow (alpha 0.3 ↔ 1.0)
 
+### Step 25: Game-Feel Polish *(added Session 4)*
+- **Custom cursors** — Game-rendered Phaser Graphics objects (depth 1000) replace browser cursors: cyan crosshair (default), cyan grab hand (near grabbable + ready), dimmed hand + red prohibition circle (near grabbable + on cooldown). Real cursor hidden with `canvas.style.cursor = 'none'`.
+- **Screen shake on gunfire** — `cameras.main.shake(90, 0.005)` on every shot.
+- **Hit flash** — Red tint on alien sprite for 100ms on projectile impact.
+- **Hit-stop wobble** — ±5px horizontal jerk tween on alien container on hit.
+- **Delayed alien death** — 100ms delay between killing hit and destroy/burst so the flash is visible; `_dying` flag prevents contact damage during the window.
+
 ---
 
 ## Key Tension Resolutions
