@@ -1,3 +1,5 @@
+import { CONFIG } from '../config.js';
+
 /**
  * EscapeShip — spawns after a wave hack completes.
  * The snail must reach it to officially end the wave.
@@ -9,7 +11,7 @@ export default class EscapeShip extends Phaser.GameObjects.Container {
         scene.add.existing(this);
         this.setDepth(50);
 
-        this.boardRadius = 40; // proximity threshold for boarding
+        this.boardRadius = CONFIG.ESCAPE.BOARD_RADIUS;
 
         // ── Graphics ──────────────────────────────────────────────────────────
         const gfx = scene.add.graphics();

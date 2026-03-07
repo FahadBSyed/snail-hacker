@@ -107,6 +107,15 @@ export const DEFAULTS = {
         HEAL_AMOUNT:       20,  // HP restored to snail between waves
         AUTO_ADVANCE_SECS: 5,   // seconds before auto-advancing
     },
+
+    WAVES: {
+        SPAWN_GRACE_MS: 3000,  // ms of no-spawn buffer at the start of each wave
+    },
+
+    ESCAPE: {
+        BOARD_RADIUS:    40,   // px — snail must be within this distance to board the ship
+        ASCENT_DURATION: 1200, // ms for the ship to fly off the top of the screen
+    },
 };
 
 // ─── Persistence ────────────────────────────────────────────────────────────

@@ -381,7 +381,7 @@ export default class GameScene extends Phaser.Scene {
         this.tweens.add({
             targets: [this.snail, this.escapeShip],
             y: -200,
-            duration: 1200,
+            duration: CONFIG.ESCAPE.ASCENT_DURATION,
             ease: 'Power2.easeIn',
             onComplete: () => {
                 exhaustTimer.remove(false);

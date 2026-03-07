@@ -20,8 +20,9 @@ const WAVE_CONFIGS = [
     { wave: 10, spawnInterval:  700, duration: 65000, types: ['basic', 'fast', 'tank', 'bomber'] },
 ];
 
+import { CONFIG } from '../config.js';
+
 const INTERMISSION_AFTER = new Set([3, 6, 9]);
-const SPAWN_GRACE_MS     = 3000; // delay before first alien spawns each wave
 const MAX_WAVE = 10;
 
 export default class WaveManager {
@@ -80,8 +81,8 @@ export default class WaveManager {
         this.elapsed      += delta;
         this.graceElapsed += delta;
 
-        // Grace period — no spawning for the first 3 seconds of each wave
-        if (this.graceElapsed < SPAWN_GRACE_MS) return;
+        // Grace period — no spawning for the first N ms of each wave
+        if (this.graceElapsed < CONFIG.WAVES.SPAWN_GRACE_MS) return;
 
         // Spawn tick
         this.spawnAccumulator += delta;
