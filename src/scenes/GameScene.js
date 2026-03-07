@@ -223,17 +223,6 @@ export default class GameScene extends Phaser.Scene {
             },
             onWaveEnd: (wave) => {
                 this.logDebug(`Wave ${wave} complete!`);
-                if (this.waveManager.isLastWave) {
-                    this.scene.start('VictoryScene', { wave, score: this.score });
-                } else if (this.waveManager.isIntermissionWave) {
-                    this.scene.start('IntermissionScene', {
-                        wave,
-                        score:       this.score,
-                        snailHealth: this.snail.health,
-                    });
-                } else {
-                    this.time.delayedCall(2000, () => this.waveManager.nextWave());
-                }
             },
         });
         this.waveManager.startWave();
@@ -404,72 +393,16 @@ export default class GameScene extends Phaser.Scene {
 
     _showWaveCompleteSplash() {
         this.soundSynth.play('waveComplete');
-        // Restore snail HP and gun ammo for the next wave
-        this.snail.health = this.snail.maxHealth;
-        this.ammo         = this.ammoMax;
-        this.updateHealthDisplay();
-        this.updateAmmoDisplay();
-
-        // Dim overlay
-        const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 1).setDepth(300);
-
-        const waveText = this.add.text(640, 290, `WAVE ${this.wave} COMPLETE`, {
-            fontSize: '54px', fontFamily: 'monospace', color: '#00ffcc',
-            stroke: '#003322', strokeThickness: 8,
-        }).setOrigin(0.5).setDepth(310).setAlpha(0).setY(310);
-
-        const scoreText = this.add.text(640, 380, `SCORE: ${this.score}`, {
-            fontSize: '24px', fontFamily: 'monospace', color: '#ffffff',
-        }).setOrigin(0.5).setDepth(310).setAlpha(0);
-
-        const promptText = this.add.text(640, 450, 'PRESS ANY KEY TO CONTINUE', {
-            fontSize: '18px', fontFamily: 'monospace', color: '#ffdd44',
-        }).setOrigin(0.5).setDepth(310).setAlpha(0);
-
-        this.tweens.add({
-            targets: waveText, alpha: 1, y: 290,
-            duration: 500, ease: 'Back.easeOut', delay: 100,
-        });
-        this.tweens.add({
-            targets: [scoreText, promptText], alpha: 1, duration: 400, delay: 600,
-        });
-        // Blink the prompt
-        this.tweens.add({
-            targets: promptText, alpha: 0.2, duration: 600,
-            yoyo: true, repeat: -1, delay: 900,
-        });
-
-        // Accept input after a short grace period
-        this.time.delayedCall(700, () => {
-            let advanced = false;
-            const advance = () => {
-                if (advanced) return;
-                advanced = true;
-                // Remove the sibling listener so only one path fires
-                this.input.keyboard.off('keydown', advance);
-                this.input.off('pointerdown', advance);
-
-                overlay.destroy();
-                waveText.destroy();
-                scoreText.destroy();
-                promptText.destroy();
-
-                const wave = this.waveManager.wave;
-                if (this.waveManager.isLastWave) {
-                    this.scene.start('VictoryScene', { wave, score: this.score });
-                } else if (this.waveManager.isIntermissionWave) {
-                    this.scene.start('IntermissionScene', {
-                        wave,
-                        score:       this.score,
-                        snailHealth: this.snail.health, // already restored to max
-                    });
-                } else {
-                    this.waveManager.nextWave();
-                }
-            };
-            this.input.keyboard.once('keydown', advance);
-            this.input.once('pointerdown', advance);
-        });
+        const wave = this.waveManager.wave;
+        if (this.waveManager.isLastWave) {
+            this.scene.start('VictoryScene', { wave, score: this.score });
+        } else {
+            this.scene.start('IntermissionScene', {
+                wave,
+                score:       this.score,
+                snailHealth: this.snail.health,
+            });
+        }
     }
 
     _openPause() {

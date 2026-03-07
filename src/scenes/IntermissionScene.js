@@ -1,8 +1,14 @@
 import { CONFIG } from '../config.js';
 
 const FLAVOR_TEXT = {
+    1: ['Not bad for a snail.', 'Gerald flexes his antenna.', 'They keep coming.'],
+    2: ['The swarm thickens.', 'No time for slime trails.', 'The station creaks.'],
     3: ['The station holds... for now.', 'Gerald catches his breath.', 'Systems nominal. Barely.'],
+    4: ['Four down. Six to go.', 'The aliens are regrouping.', 'Gerald checks his shell for dents.'],
+    5: ['Halfway there.', 'The hum of the station steadies you.', 'Push through.'],
     6: ['Halfway through the assault.', 'The aliens are adapting.', 'More systems failing.'],
+    7: ['Three waves left.', 'The air smells of burnt circuits.', 'Gerald will not yield.'],
+    8: ['Almost there.', 'The station is barely holding.', 'One more push.'],
     9: ['One final wave.', 'Gerald knows what must be done.', 'The last stand approaches.'],
 };
 
