@@ -431,7 +431,14 @@ export default class GameScene extends Phaser.Scene {
 
         // Accept input after a short grace period
         this.time.delayedCall(700, () => {
+            let advanced = false;
             const advance = () => {
+                if (advanced) return;
+                advanced = true;
+                // Remove the sibling listener so only one path fires
+                this.input.keyboard.off('keydown', advance);
+                this.input.off('pointerdown', advance);
+
                 overlay.destroy();
                 waveText.destroy();
                 scoreText.destroy();
