@@ -642,8 +642,8 @@ export default class GameScene extends Phaser.Scene {
                     const bx = alien.x, by = alien.y;
                     const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
 
-                    // Red flash on the sprite
-                    if (alien.sprite) alien.sprite.setTint(0xff2222);
+                    // Red flash on the sprite (setTintFill = flat color replace, not multiply)
+                    if (alien.sprite) alien.sprite.setTintFill(0xff2222);
 
                     // Hit-stop wobble: quick horizontal jerk on the container
                     this.tweens.add({
