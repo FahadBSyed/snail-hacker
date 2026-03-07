@@ -105,3 +105,8 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 
 ### Bug Fixes
 - **Double wave increment on splash dismiss** — `keyboard.once` and `input.once` are on separate Phaser emitters; pressing a key then clicking (or vice versa) called `advance()` twice and ran `nextWave()` twice. Fixed with an `advanced` guard flag and explicit `.off()` calls to remove the sibling listener at the start of `advance()`.
+
+## Session 5 — 2026-03-07
+
+### Audio Polish
+- **Gunfire pitch variation** — `SoundSynth._shoot()` now multiplies both the start (220 Hz) and end (50 Hz) frequencies by a random factor in [0.9, 1.1] on every call, giving each shot a slightly different pitch and preventing the firing sound from feeling monotonous during sustained fire.

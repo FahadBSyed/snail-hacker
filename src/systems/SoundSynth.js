@@ -73,8 +73,9 @@ export default class SoundSynth {
     /** Gun shot — short sawtooth pitch-drop + highpass noise punch. */
     _shoot() {
         const ctx = this._ctx_get(), t = ctx.currentTime;
+        const pitch = 0.9 + Math.random() * 0.2;   // ±10% pitch variation
         const g = this._gain(ctx, 0.55, t, 0.11);
-        this._osc(ctx, 'sawtooth', 220, 50, t, 0.09, g);
+        this._osc(ctx, 'sawtooth', 220 * pitch, 50 * pitch, t, 0.09, g);
         const ng  = this._gain(ctx, 0.22, t, 0.07);
         const hpf = this._filter(ctx, 'highpass', 1200, ng);
         this._noise(ctx, 0.08, hpf);
