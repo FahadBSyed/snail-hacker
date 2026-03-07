@@ -20,6 +20,8 @@ const WAVE_CONFIGS = [
     { wave: 10, spawnInterval:  700, duration: 65000, types: ['basic', 'fast', 'tank', 'bomber'] },
 ];
 
+import { CONFIG } from '../config.js';
+
 const INTERMISSION_AFTER = new Set([3, 6, 9]);
 const MAX_WAVE = 10;
 
@@ -64,8 +66,9 @@ export default class WaveManager {
 
     startWave() {
         const cfg = this.getConfig();
-        this.elapsed = 0;
-        this.spawnAccumulator = cfg.spawnInterval; // spawn immediately on first tick
+        this.elapsed          = 0;
+        this.graceElapsed     = 0;
+        this.spawnAccumulator = 0;
         this.active = true;
         if (this.onWaveStart) this.onWaveStart(this.wave, cfg.duration);
     }
@@ -75,7 +78,11 @@ export default class WaveManager {
         if (!this.active) return;
 
         const cfg = this.getConfig();
-        this.elapsed += delta;
+        this.elapsed      += delta;
+        this.graceElapsed += delta;
+
+        // Grace period — no spawning for the first N ms of each wave
+        if (this.graceElapsed < CONFIG.WAVES.SPAWN_GRACE_MS) return;
 
         // Spawn tick
         this.spawnAccumulator += delta;

@@ -1,5 +1,15 @@
 import { CONFIG } from '../../config.js';
 
+const DIRS = [
+    'right', 'diag-right-down', 'down', 'diag-left-down',
+    'left',  'diag-left-up',    'up',   'diag-right-up',
+];
+
+function angleToDir(rad) {
+    const a = ((rad % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    return DIRS[Math.round(a / (Math.PI / 4)) % 8];
+}
+
 export default class BomberAlien extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
         super(scene, x, y);
@@ -9,49 +19,19 @@ export default class BomberAlien extends Phaser.GameObjects.Container {
         this.speed     = CONFIG.ALIENS.BOMBER.SPEED;
         this.radius    = CONFIG.ALIENS.BOMBER.RADIUS;
         this.alienType = 'bomber';
+        this.facing    = 'right';
 
-        // Draw: orange pentagon
-        const gfx = scene.add.graphics();
-        const r = this.radius;
-        const pts = [];
-        for (let i = 0; i < 5; i++) {
-            const a = (Math.PI * 2 / 5) * i - Math.PI / 2;
-            pts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
-        }
-        // Outer glow circle
-        gfx.fillStyle(0xff6600, 0.25);
-        gfx.fillCircle(0, 0, r + 8);
-        // Pentagon body
-        gfx.fillStyle(0xff7722, 1);
-        gfx.beginPath();
-        gfx.moveTo(pts[0].x, pts[0].y);
-        for (let i = 1; i < 5; i++) gfx.lineTo(pts[i].x, pts[i].y);
-        gfx.closePath();
-        gfx.fillPath();
-        // Border
-        gfx.lineStyle(2, 0xffaa44, 0.8);
-        gfx.beginPath();
-        gfx.moveTo(pts[0].x, pts[0].y);
-        for (let i = 1; i < 5; i++) gfx.lineTo(pts[i].x, pts[i].y);
-        gfx.closePath();
-        gfx.strokePath();
-        // Warning symbol (X)
-        gfx.lineStyle(1.5, 0xffffff, 0.7);
-        gfx.beginPath();
-        gfx.moveTo(-5, -5); gfx.lineTo(5, 5);
-        gfx.moveTo(5, -5);  gfx.lineTo(-5, 5);
-        gfx.strokePath();
-
-        this.add(gfx);
+        this.sprite = scene.add.image(0, 0, 'alien-bomber-right');
+        this.add(this.sprite);
 
         // Pulsing glow tween
         this.glowTween = scene.tweens.add({
-            targets: gfx,
-            alpha: 0.6,
+            targets:  this.sprite,
+            alpha:    0.6,
             duration: 400,
-            ease: 'Sine.easeInOut',
-            yoyo: true,
-            repeat: -1,
+            ease:     'Sine.easeInOut',
+            yoyo:     true,
+            repeat:   -1,
         });
     }
 
@@ -70,10 +50,15 @@ export default class BomberAlien extends Phaser.GameObjects.Container {
         const speedMult = this.scene.alienSpeedMultiplier || 1.0;
         const snail = this.scene.snail;
 
-        // Steer toward snail each frame
         const angle = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
         this.x += Math.cos(angle) * this.speed * speedMult * dt;
         this.y += Math.sin(angle) * this.speed * speedMult * dt;
+
+        const dir = angleToDir(angle);
+        if (dir !== this.facing) {
+            this.facing = dir;
+            this.sprite.setTexture(`alien-bomber-${dir}`);
+        }
 
         const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
         if (dist < this.radius + 20) return 'reached_snail';

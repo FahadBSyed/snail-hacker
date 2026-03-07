@@ -1,5 +1,15 @@
 import { CONFIG } from '../../config.js';
 
+const DIRS = [
+    'right', 'diag-right-down', 'down', 'diag-left-down',
+    'left',  'diag-left-up',    'up',   'diag-right-up',
+];
+
+function angleToDir(rad) {
+    const a = ((rad % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    return DIRS[Math.round(a / (Math.PI / 4)) % 8];
+}
+
 export default class TankAlien extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
         super(scene, x, y);
@@ -9,22 +19,10 @@ export default class TankAlien extends Phaser.GameObjects.Container {
         this.speed     = CONFIG.ALIENS.TANK.SPEED;
         this.radius    = CONFIG.ALIENS.TANK.RADIUS;
         this.alienType = 'tank';
+        this.facing    = 'right';
 
-        // Draw: dark grey square with thick armour outline
-        const gfx = scene.add.graphics();
-        const s = this.radius; // half-size
-
-        // Body
-        gfx.fillStyle(0x445566, 1);
-        gfx.fillRect(-s, -s, s * 2, s * 2);
-        // Thick border
-        gfx.lineStyle(3.5, 0x88aacc, 0.85);
-        gfx.strokeRect(-s, -s, s * 2, s * 2);
-        // Visor slit
-        gfx.fillStyle(0xdd4444, 0.9);
-        gfx.fillRect(-s * 0.6, -4, s * 1.2, 6);
-
-        this.add(gfx);
+        this.sprite = scene.add.image(0, 0, 'alien-tank-right');
+        this.add(this.sprite);
     }
 
     takeDamage(amount) {
@@ -41,10 +39,15 @@ export default class TankAlien extends Phaser.GameObjects.Container {
         const speedMult = this.scene.alienSpeedMultiplier || 1.0;
         const snail = this.scene.snail;
 
-        // Steer toward snail each frame
         const angle = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
         this.x += Math.cos(angle) * this.speed * speedMult * dt;
         this.y += Math.sin(angle) * this.speed * speedMult * dt;
+
+        const dir = angleToDir(angle);
+        if (dir !== this.facing) {
+            this.facing = dir;
+            this.sprite.setTexture(`alien-tank-${dir}`);
+        }
 
         const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
         if (dist < this.radius + 20) return 'reached_snail';

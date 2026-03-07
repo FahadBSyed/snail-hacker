@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 48 48" width="48" height="48">
+
+  <!-- Engine glow (trailing side of disc) -->
+  <ellipse cx="35.78" cy="30" rx="5" ry="3.5" fill="#4499cc" opacity="0.85"/>
+  <ellipse cx="35.78" cy="30" rx="9" ry="5.5" fill="#4499cc" opacity="0.20"/>
+
+  <!-- Disc shadow -->
+  <ellipse cx="24" cy="33" rx="18" ry="5" fill="black" opacity="0.22"/>
+
+  <!-- Saucer disc (three layers for a rim-depth illusion) -->
+  <ellipse cx="24" cy="30"   rx="19"   ry="6"   fill="#1e2a33"/>
+  <ellipse cx="24" cy="29" rx="15" ry="4.5" fill="#445566"/>
+  <ellipse cx="24" cy="28" rx="10" ry="3.5" fill="#7a9aaa"/>
+
+  <!-- Rim accent lights -->
+  <circle cx="40.72" cy="30" r="1.8" fill="#4499cc" opacity="0.95"/>
+  <circle cx="32.36" cy="34.57" r="1.8" fill="#6699aa" opacity="0.95"/>
+  <circle cx="15.64" cy="34.57" r="1.8" fill="#88aacc" opacity="0.95"/>
+  <circle cx="7.28" cy="30" r="1.8" fill="#336688" opacity="0.95"/>
+  <circle cx="15.64" cy="25.43" r="1.8" fill="#55aadd" opacity="0.95"/>
+  <circle cx="32.36" cy="25.43" r="1.8" fill="#7799bb" opacity="0.95"/>
+
+  <!-- Dome interior -->
+  <circle cx="24" cy="21" r="11" fill="#001018" opacity="0.78"/>
+
+  <!-- Frog (rotated to face travel direction) -->
+  <g transform="rotate(180, 24, 21)">
+    <circle cx="24"   cy="21"   r="8"   fill="#3cb83c"/>
+    <circle cx="28" cy="21"   r="6"   fill="#3cb83c"/>
+    <circle cx="30" cy="15" r="4"   fill="#dde840"/>
+    <circle cx="30.7" cy="15.5" r="1.8" fill="#111100"/>
+    <circle cx="29.2" cy="13.8" r="0.7" fill="white"/>
+    <circle cx="30" cy="27" r="4"   fill="#dde840"/>
+    <circle cx="30.7" cy="27.5" r="1.8" fill="#111100"/>
+    <circle cx="29.2" cy="25.8" r="0.7" fill="white"/>
+    <circle cx="27" cy="19.6" r="1" fill="#1d6b1d"/>
+    <circle cx="27" cy="22.4" r="1" fill="#1d6b1d"/>
+    <path d="M 28 23 Q 32 24.5 28 26.5"
+          stroke="#1d6b1d" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- Dome glass ring + shine -->
+  <circle cx="24" cy="21" r="11"
+          fill="none" stroke="#88aacc" stroke-width="1.8" opacity="0.75"/>
+  <ellipse cx="21" cy="17" rx="3.5" ry="2.2"
+           fill="white" opacity="0.13"/>
+
+</svg>

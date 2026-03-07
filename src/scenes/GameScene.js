@@ -13,6 +13,7 @@ import RhythmMinigame from '../minigames/RhythmMinigame.js';
 import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
+import EscapeShip from '../entities/EscapeShip.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -30,10 +31,20 @@ export default class GameScene extends Phaser.Scene {
 
     preload() {
         const svgSize = { width: 48, height: 48 };
+        // Snail directional sprites
         this.load.svg('snail-right', 'assets/snail-right.svg', svgSize);
         this.load.svg('snail-left',  'assets/snail-left.svg',  svgSize);
         this.load.svg('snail-up',    'assets/snail-up.svg',    svgSize);
         this.load.svg('snail-down',  'assets/snail-down.svg',  svgSize);
+        // Alien sprites — 8 directions each
+        const dirs = ['right', 'diag-right-down', 'down', 'diag-left-down',
+                      'left',  'diag-left-up',    'up',   'diag-right-up'];
+        for (const dir of dirs) {
+            this.load.svg(`alien-frog-${dir}`,    `assets/alien-frog-${dir}.svg`,    svgSize);
+            this.load.svg(`alien-fast-${dir}`,    `assets/alien-fast-${dir}.svg`,    svgSize);
+            this.load.svg(`alien-tank-${dir}`,    `assets/alien-tank-${dir}.svg`,    svgSize);
+            this.load.svg(`alien-bomber-${dir}`,  `assets/alien-bomber-${dir}.svg`,  svgSize);
+        }
     }
 
     create() {
@@ -173,6 +184,11 @@ export default class GameScene extends Phaser.Scene {
         this.score       = this.startScore;
         this.wave        = this.startWave;
 
+        // ── Escape phase state ────────────────────────────────────────────────
+        this.escapePhase  = false;  // hack done, ship spawned
+        this.boardingShip = false;  // snail reached ship, animation playing
+        this.escapeShip   = null;
+
         // ── HUD ───────────────────────────────────────────────────────────────
         this._createHUD();
 
@@ -184,6 +200,15 @@ export default class GameScene extends Phaser.Scene {
                 this.wave          = wave;
                 this.hackProgress  = 0;
                 this.hackThreshold = this._wordsForWave(wave);
+                this.escapePhase  = false;
+                this.boardingShip = false;
+                if (this.escapeShip) { this.escapeShip.destroy(); this.escapeShip = null; }
+                // Restore snail for the new wave
+                this.snail.setVisible(true);
+                this.snail.x = 300;
+                this.snail.y = 400;
+                this.snail.hackingActive = false;
+                this.snail.setState('IDLE');
                 this.station.setHackProgress(0);
                 this.updateWaveDisplay();
                 this.updateHackDisplay();
@@ -280,9 +305,48 @@ export default class GameScene extends Phaser.Scene {
     }
 
     _completeWave() {
-        this.logDebug(`Hack complete! Wave ${this.wave} done.`);
+        this.logDebug(`Hack complete! Wave ${this.wave} — escape ship spawning.`);
+        this._startEscapePhase();
+    }
 
-        // Clear remaining aliens with a satisfying burst
+    _startEscapePhase() {
+        this.escapePhase = true;
+
+        // Spawn ship at a random inset edge position (fully on-screen)
+        const sides = [
+            { x: Phaser.Math.Between(150, 1130), y: 90  },
+            { x: 110, y: Phaser.Math.Between(120, 600) },
+            { x: 1170, y: Phaser.Math.Between(120, 600) },
+        ];
+        const pos = Phaser.Utils.Array.GetRandom(sides);
+        this.escapeShip = new EscapeShip(this, pos.x, pos.y);
+
+        // Instruction flash
+        const msg = this.add.text(640, 180, 'HACK COMPLETE — REACH THE ESCAPE SHIP!', {
+            fontSize: '20px', fontFamily: 'monospace', color: '#00ffcc',
+            stroke: '#000000', strokeThickness: 5,
+        }).setOrigin(0.5).setDepth(200).setAlpha(0);
+        this.tweens.add({
+            targets: msg, alpha: 1, duration: 300,
+            yoyo: true, hold: 2500,
+            onComplete: () => msg.destroy(),
+        });
+    }
+
+    _boardEscapeShip() {
+        if (this.boardingShip) return;
+        this.boardingShip = true;
+
+        // Cancel any active minigame/hack
+        if (this.activeHack) { this.activeHack.cancel(); this.activeHack = null; }
+        if (this.activeTerminalMinigame) {
+            this.activeTerminalMinigame.cancel();
+            this.activeTerminalMinigame = null;
+        }
+        this.snail.hackingActive = false;
+
+        // Stop alien spawning and clear remaining aliens
+        if (this.waveManager) this.waveManager.active = false;
         for (const alien of this.aliens) {
             if (!alien.active) continue;
             const burstColor = { basic: 0xdd3333, fast: 0xaa44ff, tank: 0x7799aa, bomber: 0xff7722 }[alien.alienType] || 0xffffff;
@@ -291,7 +355,102 @@ export default class GameScene extends Phaser.Scene {
         }
         this.aliens = [];
 
-        this.waveManager.completeWave();
+        // Move snail onto the ship
+        this.escapeShip.setPromptVisible(false);
+        this.snail.x = this.escapeShip.x;
+        this.snail.y = this.escapeShip.y;
+
+        // Exhaust particles during ascent
+        const exhaustTimer = this.time.addEvent({
+            delay: 55, loop: true,
+            callback: () => {
+                if (!this.escapeShip || !this.escapeShip.active) return;
+                const ex = this.add.circle(
+                    this.escapeShip.x + Phaser.Math.Between(-22, 22),
+                    this.escapeShip.y + 18,
+                    Phaser.Math.Between(3, 7), 0x00ccff, 0.75,
+                ).setDepth(48);
+                this.tweens.add({
+                    targets: ex, y: ex.y + 35, alpha: 0, scaleX: 0.2, scaleY: 0.2,
+                    duration: 320, onComplete: () => ex.destroy(),
+                });
+            },
+        });
+
+        // Tween ship + snail off the top of the screen
+        this.tweens.add({
+            targets: [this.snail, this.escapeShip],
+            y: -200,
+            duration: CONFIG.ESCAPE.ASCENT_DURATION,
+            ease: 'Power2.easeIn',
+            onComplete: () => {
+                exhaustTimer.remove(false);
+                this.snail.setVisible(false);
+                this._showWaveCompleteSplash();
+            },
+        });
+    }
+
+    _showWaveCompleteSplash() {
+        // Restore snail HP and gun ammo for the next wave
+        this.snail.health = this.snail.maxHealth;
+        this.ammo         = this.ammoMax;
+        this.updateHealthDisplay();
+        this.updateAmmoDisplay();
+
+        // Dim overlay
+        const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.72).setDepth(300);
+
+        const waveText = this.add.text(640, 290, `WAVE ${this.wave} COMPLETE`, {
+            fontSize: '54px', fontFamily: 'monospace', color: '#00ffcc',
+            stroke: '#003322', strokeThickness: 8,
+        }).setOrigin(0.5).setDepth(310).setAlpha(0).setY(310);
+
+        const scoreText = this.add.text(640, 380, `SCORE: ${this.score}`, {
+            fontSize: '24px', fontFamily: 'monospace', color: '#ffffff',
+        }).setOrigin(0.5).setDepth(310).setAlpha(0);
+
+        const promptText = this.add.text(640, 450, 'PRESS ANY KEY TO CONTINUE', {
+            fontSize: '18px', fontFamily: 'monospace', color: '#ffdd44',
+        }).setOrigin(0.5).setDepth(310).setAlpha(0);
+
+        this.tweens.add({
+            targets: waveText, alpha: 1, y: 290,
+            duration: 500, ease: 'Back.easeOut', delay: 100,
+        });
+        this.tweens.add({
+            targets: [scoreText, promptText], alpha: 1, duration: 400, delay: 600,
+        });
+        // Blink the prompt
+        this.tweens.add({
+            targets: promptText, alpha: 0.2, duration: 600,
+            yoyo: true, repeat: -1, delay: 900,
+        });
+
+        // Accept input after a short grace period
+        this.time.delayedCall(700, () => {
+            const advance = () => {
+                overlay.destroy();
+                waveText.destroy();
+                scoreText.destroy();
+                promptText.destroy();
+
+                const wave = this.waveManager.wave;
+                if (this.waveManager.isLastWave) {
+                    this.scene.start('VictoryScene', { wave, score: this.score });
+                } else if (this.waveManager.isIntermissionWave) {
+                    this.scene.start('IntermissionScene', {
+                        wave,
+                        score:       this.score,
+                        snailHealth: this.snail.health, // already restored to max
+                    });
+                } else {
+                    this.waveManager.nextWave();
+                }
+            };
+            this.input.keyboard.once('keydown', advance);
+            this.input.once('pointerdown', advance);
+        });
     }
 
     _openPause() {
@@ -504,7 +663,7 @@ export default class GameScene extends Phaser.Scene {
     update(time, delta) {
         this.grabSystem.update(delta);
         this.updateGrabDisplay();
-        this.snail.update(time, delta);
+        if (!this.boardingShip) this.snail.update(time, delta);
 
         // ── Battery logic ─────────────────────────────────────────────────────
         if (this.battery && this.battery.active) {
@@ -543,8 +702,15 @@ export default class GameScene extends Phaser.Scene {
             // state === 'mouse': position managed by GrabHandSystem.update()
         }
 
-        // Station proximity (shows/hides E prompt)
-        this.station.updateProximity(this.snail);
+        // Station proximity (shows/hides E prompt) — suppress during escape phase
+        if (!this.escapePhase) this.station.updateProximity(this.snail);
+
+        // Escape ship proximity — snail must reach it to end the wave
+        if (this.escapePhase && !this.boardingShip && this.escapeShip && this.escapeShip.active) {
+            const near = this.escapeShip.checkProximity(this.snail.x, this.snail.y);
+            this.escapeShip.setPromptVisible(near);
+            if (near) this._boardEscapeShip();
+        }
 
         // Wave manager tick (handles spawning)
         if (this.waveManager) this.waveManager.update(delta);
@@ -572,7 +738,7 @@ export default class GameScene extends Phaser.Scene {
         this.aliens = this.aliens.filter(alien => {
             if (!alien.active) return false;
             const status = alien.update(time, delta);
-            if (status === 'reached_snail') {
+            if (status === 'reached_snail' && !this.boardingShip) {
                 const isBomber = alien.alienType === 'bomber';
                 const bx = alien.x, by = alien.y;
                 alien.destroy();
