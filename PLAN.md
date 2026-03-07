@@ -169,11 +169,21 @@ snail-hacker/
 - Wave 5+: + bomber, 1000ms, 60s
 - Every 3 waves: intermission (5s), +20 station health (capped 100)
 - HUD: wave number + countdown timer
+- **3-second spawn grace period** at the start of each wave (`CONFIG.WAVES.SPAWN_GRACE_MS`)
+
+### Step 18b: Escape Ship Wave-End Flow *(added Session 3)*
+- On hack completion, an `EscapeShip` spawns at a random inset edge instead of immediately ending the wave
+- Enemies continue spawning until the snail boards the ship (proximity trigger, `CONFIG.ESCAPE.BOARD_RADIUS`)
+- Boarding: remaining aliens burst and despawn, snail + ship tween off the top of the screen with exhaust particles (`CONFIG.ESCAPE.ASCENT_DURATION`)
+- "WAVE X COMPLETE" splash shown after ascent; any key/click advances
+- Snail HP and gun ammo are **fully restored** at the start of each new wave
+- Works correctly across normal waves, intermission waves (3/6/9), and the final wave (10)
 
 ### Step 19: Remaining Alien Types
 - `FastAlien.js`: purple triangle, ~150px/s, sinusoidal zigzag
 - `TankAlien.js`: dark grey square, thick outline, ~40px/s, health 40
 - `BomberAlien.js`: orange pentagon, pulsing glow, ~50px/s, AoE 25 damage within 100px on death
+- **Directional sprites** for all four alien types (8 directions each, palette-swapped saucer + frog art)
 
 ### Step 20: IntermissionScene
 - Flavor text array keyed by wave number

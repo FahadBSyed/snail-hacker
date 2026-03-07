@@ -46,3 +46,34 @@
 
 ### Steps Remaining
 - **Step 22:** Audio integration (no assets bundled yet)
+
+---
+
+## Session 3 — 2026-03-07
+
+### Alien Sprites
+- **Directional sprites for all enemy types** — Added `scripts/generate-alien-enemy-sprites.js` which produces 8-directional SVG saucers for FastAlien (purple disc), TankAlien (steel-blue disc), and BomberAlien (orange/fire disc). Same geometry and frog passenger as BasicAlien; only the disc/dome/glow palette changes per type.
+- Replaced procedural `scene.add.graphics()` drawing in `FastAlien.js`, `TankAlien.js`, and `BomberAlien.js` with sprite-swap logic identical to `BasicAlien`. BomberAlien retains its alpha-pulse tween on the sprite.
+- `GameScene.preload()` now loads all four alien sprite sets (32 SVGs total) in a single loop.
+
+### Wave-End Escape Ship Flow
+- **EscapeShip entity** — New `src/entities/EscapeShip.js`: large blue/cyan rescue saucer (procedural graphics), hover-bob tween, rim-light pulse, pop-in scale animation, and a `[ BOARD SHIP ]` proximity prompt. `boardRadius` reads from `CONFIG.ESCAPE.BOARD_RADIUS`.
+- **Escape phase** — After a hack completes, `_completeWave()` now calls `_startEscapePhase()` instead of immediately ending the wave. Enemies continue spawning. The escape ship appears at a random inset edge position (top/left/right) with a "HACK COMPLETE — REACH THE ESCAPE SHIP!" flash.
+- **Boarding animation** — When the snail walks into the escape ship's `boardRadius`, `_boardEscapeShip()` fires: active hack/minigames are cancelled, remaining aliens burst and despawn, spawning stops, snail is moved onto the ship, and both tween off the top of the screen with cyan exhaust particles.
+- **Wave Complete splash** — After the ship flies away, `_showWaveCompleteSplash()` shows a dimmed overlay with "WAVE X COMPLETE", score, and a blinking "PRESS ANY KEY TO CONTINUE" prompt. Input is gated behind a 700ms grace window to avoid accidental skips.
+- Snail HP and gun ammo are **restored to full** at splash-show time, before the next wave starts.
+- Transition from the splash correctly handles intermission waves (→ `IntermissionScene`), last wave (→ `VictoryScene`), and normal waves (→ `waveManager.nextWave()`).
+
+### Wave Start Grace Period
+- `WaveManager` now tracks `graceElapsed` and suppresses all spawning for `CONFIG.WAVES.SPAWN_GRACE_MS` (3000ms) at the start of each wave, giving players time to position after the wave-complete flow.
+
+### Config Additions
+Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
+- `WAVES.SPAWN_GRACE_MS: 3000` — no-spawn buffer at wave start
+- `ESCAPE.BOARD_RADIUS: 40` — px proximity to trigger boarding
+- `ESCAPE.ASCENT_DURATION: 1200` — ms for the ship's off-screen ascent
+
+### Bug Fixes
+- **Escape ship ghost on next wave** — `onWaveStart` now calls `escapeShip.destroy()` before nulling the reference; the lingering hover tween was snapping the old ship back into view.
+- **Escape ship never spawning (power-loss race condition)** — `onWordComplete` called `_triggerPowerLoss()` which cancelled the active `HackMinigame` *before* `_finish()` could invoke `onSuccess`. On waves where `hackThreshold` is a multiple of `POWER_LOSS_WORDS` (waves 3 and 6 with defaults; wave 1 with small DEV-mode word counts), this blocked the escape phase entirely. Fixed by guarding: power loss only fires when `hackProgress < hackThreshold`.
+- **`import` placement in WaveManager.js** — Moved `import { CONFIG }` to the top of the file.
