@@ -401,7 +401,7 @@ export default class GameScene extends Phaser.Scene {
         this.updateAmmoDisplay();
 
         // Dim overlay
-        const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.72).setDepth(300);
+        const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 1).setDepth(300);
 
         const waveText = this.add.text(640, 290, `WAVE ${this.wave} COMPLETE`, {
             fontSize: '54px', fontFamily: 'monospace', color: '#00ffcc',
