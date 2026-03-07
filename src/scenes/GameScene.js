@@ -572,6 +572,20 @@ export default class GameScene extends Phaser.Scene {
     // ── Visual effects ────────────────────────────────────────────────────────
 
     spawnDeathBurst(x, y, color = 0xff4444) {
+        // Expanding light pulse — large soft outer glow
+        const pulse = this.add.circle(x, y, 6, 0xff3300, 0.45).setDepth(53);
+        this.tweens.add({
+            targets: pulse, scaleX: 9, scaleY: 9, alpha: 0,
+            duration: 480, ease: 'Power2.easeOut', onComplete: () => pulse.destroy(),
+        });
+        // Bright inner flash
+        const flash = this.add.circle(x, y, 4, 0xff8833, 0.80).setDepth(54);
+        this.tweens.add({
+            targets: flash, scaleX: 5, scaleY: 5, alpha: 0,
+            duration: 260, ease: 'Power1.easeOut', onComplete: () => flash.destroy(),
+        });
+
+        // Debris dots
         const count = 7;
         for (let i = 0; i < count; i++) {
             const angle = (Math.PI * 2 / count) * i;
@@ -751,13 +765,17 @@ export default class GameScene extends Phaser.Scene {
         // Projectiles + trail particles
         this.projectiles = this.projectiles.filter(p => {
             if (!p.active) return false;
-            if (time - (p._lastTrail || 0) > 40) {
+            if (time - (p._lastTrail || 0) > 25) {
                 p._lastTrail = time;
-                const trail = this.add.circle(p.x, p.y, 2, 0xffffaa, 0.5).setDepth(30);
-                this.tweens.add({
-                    targets: trail, alpha: 0, scaleX: 0.3, scaleY: 0.3,
-                    duration: 150, onComplete: () => trail.destroy(),
-                });
+                // Outer soft glow
+                const g1 = this.add.circle(p.x, p.y, 9, 0xffaa00, 0.10).setDepth(29);
+                this.tweens.add({ targets: g1, alpha: 0, duration: 200, onComplete: () => g1.destroy() });
+                // Mid glow
+                const g2 = this.add.circle(p.x, p.y, 5, 0xffdd44, 0.25).setDepth(30);
+                this.tweens.add({ targets: g2, alpha: 0, scaleX: 0.3, scaleY: 0.3, duration: 160, onComplete: () => g2.destroy() });
+                // Bright core
+                const g3 = this.add.circle(p.x, p.y, 2, 0xffffff, 0.80).setDepth(31);
+                this.tweens.add({ targets: g3, alpha: 0, duration: 110, onComplete: () => g3.destroy() });
             }
             return p.update(time, delta);
         });
