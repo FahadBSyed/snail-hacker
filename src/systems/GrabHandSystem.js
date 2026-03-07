@@ -1,50 +1,56 @@
 import { CONFIG } from '../config.js';
 
-// ── Custom SVG cursors ────────────────────────────────────────────────────────
+// ── Cursor rendering helpers ───────────────────────────────────────────────────
 
-function _cur(svg, hx, hy, fallback) {
-    return `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${hx} ${hy}, ${fallback}`;
+/** Draw the cyan crosshair (origin = hotspot center) */
+function _drawCrosshair(g) {
+    g.clear();
+    g.lineStyle(1.5, 0x00ffcc, 1);
+    // horizontal arms with gap
+    g.beginPath(); g.moveTo(-16, 0); g.lineTo(-5, 0); g.strokePath();
+    g.beginPath(); g.moveTo(5,   0); g.lineTo(16, 0); g.strokePath();
+    // vertical arms with gap
+    g.beginPath(); g.moveTo(0, -16); g.lineTo(0, -5); g.strokePath();
+    g.beginPath(); g.moveTo(0,   5); g.lineTo(0, 16); g.strokePath();
+    // ring
+    g.strokeCircle(0, 0, 4);
+    // center dot
+    g.fillStyle(0x00ffcc, 1);
+    g.fillCircle(0, 0, 1.5);
 }
 
-const CURSOR_CROSSHAIR = _cur(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
-      <line x1="0"  y1="16" x2="12" y2="16" stroke="#00ffcc" stroke-width="1.5"/>
-      <line x1="20" y1="16" x2="32" y2="16" stroke="#00ffcc" stroke-width="1.5"/>
-      <line x1="16" y1="0"  x2="16" y2="12" stroke="#00ffcc" stroke-width="1.5"/>
-      <line x1="16" y1="20" x2="16" y2="32" stroke="#00ffcc" stroke-width="1.5"/>
-      <circle cx="16" cy="16" r="4"   fill="none" stroke="#00ffcc" stroke-width="1.5"/>
-      <circle cx="16" cy="16" r="1.5" fill="#00ffcc"/>
-    </svg>`,
-    16, 16, 'crosshair',
-);
+/**
+ * Draw the grab hand.
+ * Hotspot is tip of index finger → SVG coord (14,2), so all rects offset by (-14, -2).
+ * @param {Phaser.GameObjects.Graphics} g
+ * @param {boolean} cancel  — true = dimmed hand + red prohibition overlay
+ */
+function _drawHand(g, cancel) {
+    g.clear();
+    const col   = cancel ? 0x334433 : 0x00ffcc;
+    const alpha = cancel ? 0.7 : 1;
 
-const CURSOR_GRAB = _cur(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
-      <rect x="7"  y="3"  width="4" height="14" rx="2" fill="#00ffcc"/>
-      <rect x="12" y="2"  width="4" height="16" rx="2" fill="#00ffcc"/>
-      <rect x="17" y="3"  width="4" height="14" rx="2" fill="#00ffcc"/>
-      <rect x="22" y="5"  width="4" height="12" rx="2" fill="#00ffcc"/>
-      <rect x="2"  y="12" width="4" height="9"  rx="2" fill="#00ffcc"/>
-      <rect x="2"  y="16" width="24" height="12" rx="3" fill="#00ffcc"/>
-    </svg>`,
-    14, 2, 'grab',
-);
+    g.fillStyle(col, alpha);
+    // fingers (index, middle, ring, pinky) and thumb — offset by (-14,-2)
+    g.fillRoundedRect(-7,   1,  4, 14, 2);   // index
+    g.fillRoundedRect(-2,   0,  4, 16, 2);   // middle
+    g.fillRoundedRect( 3,   1,  4, 14, 2);   // ring
+    g.fillRoundedRect( 8,   3,  4, 12, 2);   // pinky
+    g.fillRoundedRect(-12, 10,  4,  9, 2);   // thumb
+    // palm
+    g.fillRoundedRect(-12, 14, 24, 12, 3);
 
-const CURSOR_CANCEL = _cur(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">
-      <rect x="7"  y="3"  width="4" height="14" rx="2" fill="#445544" opacity="0.7"/>
-      <rect x="12" y="2"  width="4" height="16" rx="2" fill="#445544" opacity="0.7"/>
-      <rect x="17" y="3"  width="4" height="14" rx="2" fill="#445544" opacity="0.7"/>
-      <rect x="22" y="5"  width="4" height="12" rx="2" fill="#445544" opacity="0.7"/>
-      <rect x="2"  y="12" width="4" height="9"  rx="2" fill="#445544" opacity="0.7"/>
-      <rect x="2"  y="16" width="24" height="12" rx="3" fill="#445544" opacity="0.7"/>
-      <circle cx="24" cy="8" r="7" fill="black" fill-opacity="0.45"
-              stroke="#ff4444" stroke-width="2"/>
-      <line x1="18.5" y1="2.5" x2="29.5" y2="13.5"
-            stroke="#ff4444" stroke-width="2"/>
-    </svg>`,
-    14, 2, 'not-allowed',
-);
+    if (cancel) {
+        // prohibition circle (top-right of the 32×32 SVG → offset by (-14,-2) = (10, 6))
+        g.lineStyle(2, 0xff4444, 1);
+        g.strokeCircle(10, 6, 7);
+        g.fillStyle(0x000000, 0.45);
+        g.fillCircle(10, 6, 7);
+        // diagonal slash across circle
+        g.lineStyle(2, 0xff4444, 1);
+        g.beginPath(); g.moveTo(4.5, 0.5); g.lineTo(15.5, 11.5); g.strokePath();
+    }
+}
 
 export default class GrabHandSystem {
     /**
@@ -74,7 +80,20 @@ export default class GrabHandSystem {
         this._dangVel      = 0;     // angular velocity (rad/s)
         this._dangleTween  = null;  // return-to-zero tween
 
-        this.canvas.style.cursor = CURSOR_CROSSHAIR;
+        // ── Custom cursor sprites (Phaser graphics, depth 1000) ─────────────
+        this.canvas.style.cursor = 'none';
+
+        this._gCrosshair = scene.add.graphics().setDepth(1000);
+        this._gGrab      = scene.add.graphics().setDepth(1000);
+        this._gCancel    = scene.add.graphics().setDepth(1000);
+
+        _drawCrosshair(this._gCrosshair);
+        _drawHand(this._gGrab,    false);
+        _drawHand(this._gCancel,  true);
+
+        this._gGrab.setVisible(false);
+        this._gCancel.setVisible(false);
+        // crosshair visible by default
 
         // Right-click down → grab closest grabbable within range
         scene.input.on('pointerdown', (pointer) => {
@@ -112,6 +131,20 @@ export default class GrabHandSystem {
         });
     }
 
+    // ── Cursor helpers ────────────────────────────────────────────────────────
+
+    _showCursor(which) {
+        this._gCrosshair.setVisible(which === 'crosshair');
+        this._gGrab.setVisible(which === 'grab');
+        this._gCancel.setVisible(which === 'cancel');
+    }
+
+    _positionCursor(x, y) {
+        this._gCrosshair.setPosition(x, y);
+        this._gGrab.setPosition(x, y);
+        this._gCancel.setPosition(x, y);
+    }
+
     // ── Internal helpers ─────────────────────────────────────────────────────
 
     /** Cancel any in-flight return-tween and reset spring state so a fresh pickup starts clean. */
@@ -126,7 +159,7 @@ export default class GrabHandSystem {
     _pickupSnail() {
         this._resetDangle(this.snail);
         this.heldTarget = 'snail';
-        this.canvas.style.cursor = 'none';
+        this._showCursor(null);   // hide all — snail is the cursor
         this.onPickup(); // let GameScene cancel hacks and drop battery if snail is carrying one
         this.snail.hackingActive = true;
         this.snail.setState('GRABBED');
@@ -137,7 +170,7 @@ export default class GrabHandSystem {
         this.heldTarget        = battery;
         this.batteryGrabOrigin = { x: battery.x, y: battery.y };
         battery.state          = 'mouse';
-        this.canvas.style.cursor = 'none';
+        this._showCursor(null);   // hide all — battery acts as the cursor
     }
 
     _drop() {
@@ -167,7 +200,7 @@ export default class GrabHandSystem {
         this.batteryGrabOrigin = null;
         this.onCooldown        = true;
         this.cooldownRemaining = CONFIG.GRAB.COOLDOWN;
-        this.canvas.style.cursor = CURSOR_CROSSHAIR;
+        this._showCursor('crosshair');
     }
 
     _moveToward(target, pointer, maxSpeed, delta) {
@@ -214,6 +247,9 @@ export default class GrabHandSystem {
     update(delta) {
         const pointer = this.scene.input.activePointer;
 
+        // Keep all cursor graphics tracking the pointer
+        this._positionCursor(pointer.x, pointer.y);
+
         // Safety: if right button was released outside the canvas we still get the drop
         if (this.heldTarget !== null && !pointer.rightButtonDown()) {
             this._drop();
@@ -248,7 +284,7 @@ export default class GrabHandSystem {
             }
 
         } else {
-            // No hold: update hover cursor
+            // No hold: pick cursor based on proximity + cooldown state
             let nearGrabbable = false;
 
             const battery = this.getBattery();
@@ -267,9 +303,9 @@ export default class GrabHandSystem {
             }
 
             if (nearGrabbable) {
-                this.canvas.style.cursor = this.onCooldown ? CURSOR_CANCEL : CURSOR_GRAB;
+                this._showCursor(this.onCooldown ? 'cancel' : 'grab');
             } else {
-                this.canvas.style.cursor = CURSOR_CROSSHAIR;
+                this._showCursor('crosshair');
             }
         }
     }
