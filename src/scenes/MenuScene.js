@@ -8,44 +8,70 @@ export default class MenuScene extends Phaser.Scene {
     create() {
         const centerX = this.cameras.main.width / 2;
 
-        this.add.text(centerX, 120, 'SNAIL HACKER', {
+        this.add.text(centerX, 100, 'SNAIL HACKER', {
             fontSize: '64px',
             fontFamily: 'monospace',
             color: '#00ffcc',
         }).setOrigin(0.5);
 
-        this.add.text(centerX, 220, 'A co-op arcade survival game', {
+        this.add.text(centerX, 185, 'A co-op arcade survival game', {
             fontSize: '20px',
             fontFamily: 'monospace',
             color: '#aaaaaa',
         }).setOrigin(0.5);
 
-        // Controls summary
-        this.add.text(centerX - 200, 300, [
-            'PLAYER 1 — THE SNAIL (Keyboard)',
-            '  WASD: Move',
-            '  E: Activate terminal',
-            '  Type: Hack minigames + RELOAD',
-        ].join('\n'), {
-            fontSize: '16px',
+        // Divider
+        const divider = this.add.graphics();
+        divider.lineStyle(1, 0x224444, 0.8);
+        divider.lineBetween(120, 218, 1160, 218);
+
+        // Two-column controls summary
+        // Left column: x=120, width=480  |  Right column: x=680, width=480
+        const colStyle = (color) => ({
+            fontSize: '15px',
             fontFamily: 'monospace',
-            color: '#ffdd44',
-            lineSpacing: 6,
+            color,
+            lineSpacing: 8,
+            wordWrap: { width: 480, useAdvancedWrap: false },
         });
 
-        this.add.text(centerX + 40, 300, [
-            'PLAYER 2 — THE SHOOTER (Mouse)',
-            '  Left Click: Shoot',
-            '  Right Drag: Teleport snail',
-        ].join('\n'), {
-            fontSize: '16px',
-            fontFamily: 'monospace',
-            color: '#44ddff',
-            lineSpacing: 6,
+        this.add.text(120, 240, 'PLAYER 1 — THE SNAIL', {
+            fontSize: '15px', fontFamily: 'monospace',
+            color: '#ffdd44', fontStyle: 'bold',
         });
+        this.add.text(120, 264, [
+            'WASD          Move Gerald',
+            'E (terminal)  Activate hack / minigame',
+            'E (station)   Start hacking the station',
+            'ESC           Cancel hack / pause',
+        ].join('\n'), colStyle('#ccbb66'));
+
+        this.add.text(680, 240, 'PLAYER 2 — THE SHOOTER', {
+            fontSize: '15px', fontFamily: 'monospace',
+            color: '#44ddff', fontStyle: 'bold',
+        });
+        this.add.text(680, 264, [
+            'Left click     Fire toward cursor',
+            'Right drag     Grab & relocate snail',
+            '               (cancels active hack)',
+        ].join('\n'), colStyle('#66bbcc'));
+
+        // Objective blurb
+        this.add.graphics()
+            .lineStyle(1, 0x224444, 0.8)
+            .lineBetween(120, 390, 1160, 390);
+
+        this.add.text(centerX, 410, [
+            'Survive 10 waves of alien invaders.',
+            'Protect the Hacking Station — complete the hack bar, then reach the Escape Ship to end each wave.',
+        ].join('  '), {
+            fontSize: '13px', fontFamily: 'monospace', color: '#778877',
+            wordWrap: { width: 1020, useAdvancedWrap: false },
+            lineSpacing: 5, align: 'center',
+        }).setOrigin(0.5, 0);
 
         // Start button
-        const startText = this.add.text(centerX, 500, '[ START GAME ]', {
+        const startText = this.add.text(centerX, 530, '[ START GAME ]', {
             fontSize: '32px',
             fontFamily: 'monospace',
             color: '#ffffff',
@@ -57,7 +83,7 @@ export default class MenuScene extends Phaser.Scene {
 
         // Balance config editor button — only shown in DEV_MODE
         if (CONFIG.DEV_MODE) {
-            const cfgBtn = this.add.text(centerX, 560, '[ BALANCE CONFIG ]', {
+            const cfgBtn = this.add.text(centerX, 590, '[ BALANCE CONFIG ]', {
                 fontSize: '15px',
                 fontFamily: 'monospace',
                 color: '#446666',
