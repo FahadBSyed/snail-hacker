@@ -649,7 +649,7 @@ export default class GameScene extends Phaser.Scene {
                     this.tweens.add({
                         targets:  alien,
                         x:        alien.x + 5,
-                        duration: 30,
+                        duration: 50,
                         ease:     'Sine.easeOut',
                         yoyo:     true,
                         repeat:   1,
@@ -662,7 +662,7 @@ export default class GameScene extends Phaser.Scene {
 
                         // Mark dying so the update loop skips it, then destroy after flash
                         alien._dying = true;
-                        this.time.delayedCall(100, () => {
+                        this.time.delayedCall(200, () => {
                             if (!alien.active) return;
                             this.spawnDeathBurst(bx, by, burstColor);
 
@@ -676,7 +676,7 @@ export default class GameScene extends Phaser.Scene {
                         });
                     } else {
                         // Alive after hit — clear tint after flash duration
-                        this.time.delayedCall(100, () => {
+                        this.time.delayedCall(180, () => {
                             if (alien.active && alien.sprite) alien.sprite.clearTint();
                         });
                     }
