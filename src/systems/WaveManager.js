@@ -7,6 +7,8 @@
  * Intermission after waves 3, 6, 9. Victory after wave 10.
  */
 
+import { CONFIG } from '../config.js';
+
 const WAVE_CONFIGS = [
     { wave: 1,  spawnInterval: 2000, duration: 30000, types: ['basic'] },
     { wave: 2,  spawnInterval: 1800, duration: 35000, types: ['basic', 'fast'] },
@@ -19,8 +21,6 @@ const WAVE_CONFIGS = [
     { wave: 9,  spawnInterval:  800, duration: 55000, types: ['fast', 'tank', 'bomber'] },
     { wave: 10, spawnInterval:  700, duration: 65000, types: ['basic', 'fast', 'tank', 'bomber'] },
 ];
-
-import { CONFIG } from '../config.js';
 
 const INTERMISSION_AFTER = new Set([3, 6, 9]);
 const MAX_WAVE = 10;

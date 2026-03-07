@@ -250,8 +250,9 @@ export default class GameScene extends Phaser.Scene {
                 this.hackProgress++;
                 this.updateHackDisplay();
                 this.station.setHackProgress(this.hackProgress / this.hackThreshold);
-                // Every N words the station loses power and needs a battery
-                if (this.hackProgress % CONFIG.BATTERY.POWER_LOSS_WORDS === 0) {
+                // Every N words the station loses power — but not if the hack just finished
+                if (this.hackProgress < this.hackThreshold &&
+                    this.hackProgress % CONFIG.BATTERY.POWER_LOSS_WORDS === 0) {
                     this._triggerPowerLoss();
                 }
             },
