@@ -91,7 +91,17 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 
 ### Combat Game-Feel
 - **Screen shake on gunfire** — `cameras.main.shake(90, 0.005)` fires on every left-click shot.
-- **Red hit flash** — Projectile impact sets `alien.sprite.setTint(0xff2222)` immediately. Tint clears after 100ms for aliens that survive; for dying aliens it persists until the death burst fires.
-- **Hit-stop wobble** — A quick ±5px horizontal jerk tween plays on the alien container on every projectile hit, giving a physical impact stagger.
-- **Delayed death** — Alien destruction is now deferred 100ms after a killing hit so the flash is visible before the burst spawns. A `_dying` flag is set immediately to prevent the alien from moving or triggering contact damage during that window.
+- **Red hit flash** — Scene-level `Arc` object drawn at the alien's position on hit, alpha-tweened to 0 over 200ms. Uses a plain Canvas circle rather than `setTintFill` (which is a no-op in `Phaser.CANVAS` renderer).
+- **Hit-stop wobble** — A quick ±5px horizontal jerk tween (50ms per leg, yoyo+repeat:1) plays on the alien container on every projectile hit.
+- **Delayed death** — Alien destruction is deferred 200ms after a killing hit so the flash and wobble are visible before the burst spawns. A `_dying` flag is set immediately to prevent the alien from moving or triggering contact damage during that window.
 - **Refactored `takeDamage`** — Removed `this.destroy()` from all four alien classes; `GameScene.checkCollisions()` now owns destruction timing for all types.
+
+### Bullet & Death Visual Effects
+- **Layered bullet glow trail** — Three overlapping circles emitted every 25ms: outer soft halo (r=9, amber, α=0.10), mid glow (r=5, yellow, α=0.25, shrinks), bright white core (r=2, α=0.80). Simulates a light-emitting projectile without post-processing.
+- **Alien death light pulse** — Two expanding scale-tweened circles added to `spawnDeathBurst`: large warm-red pulse (r=6 → ×9, 480ms) and bright orange inner flash (r=4 → ×5, 260ms), fired before the debris dots.
+
+### Wave Complete Screen
+- **Opaque overlay** — Background alpha raised from 0.72 to 1 so the game level is fully hidden while the splash is active.
+
+### Bug Fixes
+- **Double wave increment on splash dismiss** — `keyboard.once` and `input.once` are on separate Phaser emitters; pressing a key then clicking (or vice versa) called `advance()` twice and ran `nextWave()` twice. Fixed with an `advanced` guard flag and explicit `.off()` calls to remove the sibling listener at the start of `advance()`.

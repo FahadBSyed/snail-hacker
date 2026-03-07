@@ -219,9 +219,13 @@ snail-hacker/
 ### Step 25: Game-Feel Polish *(added Session 4)*
 - **Custom cursors** — Game-rendered Phaser Graphics objects (depth 1000) replace browser cursors: cyan crosshair (default), cyan grab hand (near grabbable + ready), dimmed hand + red prohibition circle (near grabbable + on cooldown). Real cursor hidden with `canvas.style.cursor = 'none'`.
 - **Screen shake on gunfire** — `cameras.main.shake(90, 0.005)` on every shot.
-- **Hit flash** — Red tint on alien sprite for 100ms on projectile impact.
-- **Hit-stop wobble** — ±5px horizontal jerk tween on alien container on hit.
-- **Delayed alien death** — 100ms delay between killing hit and destroy/burst so the flash is visible; `_dying` flag prevents contact damage during the window.
+- **Hit flash** — Scene-level red `Arc` overlaid at alien position on hit, fades out over 200ms. Canvas-renderer safe (no `setTintFill`).
+- **Hit-stop wobble** — ±5px horizontal jerk tween (50ms/leg) on alien container on hit.
+- **Delayed alien death** — 200ms delay between killing hit and destroy/burst; `_dying` flag prevents contact damage during the window.
+- **Layered bullet glow trail** — Three-circle trail (outer halo, mid glow, bright core) emitted every 25ms for a light-emission look.
+- **Alien death light pulse** — Two expanding circles (warm-red + orange) added to death burst before debris dots, simulating a radiant explosion flash.
+- **Opaque wave-complete overlay** — Black background fully covers the game level during the wave complete splash.
+- **Double-advance fix** — `advance()` on the wave complete splash guards against being called by both keyboard and pointer events; uses `advanced` flag + explicit `.off()` cleanup.
 
 ---
 
