@@ -160,6 +160,7 @@ export default class GrabHandSystem {
         this._resetDangle(this.snail);
         this.heldTarget = 'snail';
         this._showCursor(null);   // hide all — snail is the cursor
+        this.scene.soundSynth?.play('grab');
         this.onPickup(); // let GameScene cancel hacks and drop battery if snail is carrying one
         this.snail.hackingActive = true;
         this.snail.setState('GRABBED');

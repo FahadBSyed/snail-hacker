@@ -110,6 +110,7 @@ export default class TypingMinigame {
             if (this.pointer >= this.phrase.length) this._finish(true);
         } else {
             // Flash current char red, then back to default
+            this.scene.soundSynth?.play('error');
             const cur = this.charTexts[this.pointer];
             cur.setColor('#ff4444');
             this.scene.time.delayedCall(160, () => {

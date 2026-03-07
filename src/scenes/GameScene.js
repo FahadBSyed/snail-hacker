@@ -14,6 +14,7 @@ import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
+import SoundSynth from '../systems/SoundSynth.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -59,6 +60,9 @@ export default class GameScene extends Phaser.Scene {
 
         this.input.mouse.disableContextMenu();
 
+        // ── Sound synthesizer ─────────────────────────────────────────────────
+        this.soundSynth = new SoundSynth();
+
         // ── Hacking Station (center — objective to hack) ──────────────────────
         this.station = new HackingStation(this, 640, 360);
 
@@ -90,6 +94,7 @@ export default class GameScene extends Phaser.Scene {
             this.projectiles.push(proj);
             this.updateAmmoDisplay();
             this.cameras.main.shake(90, 0.005);
+            this.soundSynth.play('shoot');
         });
 
         // ── Battery / power state ─────────────────────────────────────────────
@@ -213,6 +218,7 @@ export default class GameScene extends Phaser.Scene {
                 this.station.setHackProgress(0);
                 this.updateWaveDisplay();
                 this.updateHackDisplay();
+                this.soundSynth.play('waveStart');
                 this.logDebug(`Wave ${wave} started — need ${this.hackThreshold} words`);
             },
             onWaveEnd: (wave) => {
@@ -290,6 +296,7 @@ export default class GameScene extends Phaser.Scene {
         this.battery = new Battery(this, 640 + Math.cos(angle) * r, 360 + Math.sin(angle) * r);
 
         this.station.setPowered(false);
+        this.soundSynth.play('powerLoss');
         this.logDebug('Station lost power! Battery spawned.');
     }
 
@@ -303,6 +310,7 @@ export default class GameScene extends Phaser.Scene {
         this.snail.setState('IDLE');
         this.stationPowered = true;
         this.station.setPowered(true);
+        this.soundSynth.play('powerRegain');
         this.logDebug('Battery delivered! Station back online.');
     }
 
@@ -348,6 +356,7 @@ export default class GameScene extends Phaser.Scene {
         this.snail.hackingActive = false;
 
         // Stop alien spawning and clear remaining aliens
+        this.soundSynth.play('escape');
         if (this.waveManager) this.waveManager.active = false;
         for (const alien of this.aliens) {
             if (!alien.active) continue;
@@ -394,6 +403,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     _showWaveCompleteSplash() {
+        this.soundSynth.play('waveComplete');
         // Restore snail HP and gun ammo for the next wave
         this.snail.health = this.snail.maxHealth;
         this.ammo         = this.ammoMax;
@@ -579,6 +589,7 @@ export default class GameScene extends Phaser.Scene {
     // ── Visual effects ────────────────────────────────────────────────────────
 
     spawnDeathBurst(x, y, color = 0xff4444) {
+        this.soundSynth.play('explosion');
         // Expanding light pulse — large soft outer glow
         const pulse = this.add.circle(x, y, 6, 0xff3300, 0.45).setDepth(53);
         this.tweens.add({
@@ -620,6 +631,7 @@ export default class GameScene extends Phaser.Scene {
         if (snailDist < blastRadius) {
             const died = this.snail.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_SNAIL);
             this.updateHealthDisplay();
+            this.soundSynth.play('damage');
             if (died) {
                 if (this.waveManager) this.waveManager.active = false;
                 if (this.activeHack)  { this.activeHack.cancel(); this.activeHack = null; }
@@ -733,6 +745,7 @@ export default class GameScene extends Phaser.Scene {
                         this.battery.setPromptVisible(false);
                         this.snail.carryingBattery = true;
                         this.snail.setState('CARRYING');
+                        this.soundSynth.play('batteryPickup');
                     }
                 }
             } else if (this.battery.state === 'snail') {
@@ -801,6 +814,7 @@ export default class GameScene extends Phaser.Scene {
                 } else {
                     const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                     this.updateHealthDisplay();
+                    this.soundSynth.play('damage');
                     if (died) {
                         if (this.waveManager) this.waveManager.active = false;
                         if (this.activeHack)  { this.activeHack.cancel(); this.activeHack = null; }
@@ -826,7 +840,7 @@ export default class GameScene extends Phaser.Scene {
                 );
                 this.snail.health += healed;
                 this.updateHealthDisplay();
-                if (healed > 0) this.logDebug(`Health pickup! +${healed} HP`);
+                if (healed > 0) { this.soundSynth.play('healthPickup'); this.logDebug(`Health pickup! +${healed} HP`); }
                 drop.destroy();
                 return false;
             }

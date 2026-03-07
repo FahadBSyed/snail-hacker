@@ -140,12 +140,14 @@ export default class RhythmMinigame {
         const inZone = Math.abs(this.indicator.x - 640) <= TARGET_HALF;
 
         if (key === this.currentKey && inZone) {
+            this.scene.soundSynth?.play('rhythmHit');
             this.indicator.setFillStyle(0x44ff88);
             this.targetZone.fillColor = 0x44ff88;
             this.targetZone.fillAlpha = 0.7;
             this.resultText.setText('HIT!').setColor('#44ff88');
             this.scene.time.delayedCall(450, () => this._advanceBeat());
         } else {
+            this.scene.soundSynth?.play('error');
             this._recordMiss(key !== this.currentKey ? 'WRONG KEY!' : 'OFF BEAT!');
         }
     }

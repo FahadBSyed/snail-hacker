@@ -143,6 +143,7 @@ export default class HackMinigame {
                 // Word complete
                 this.wordsCompleted++;
                 this._updateProgressUI();
+                this.scene.soundSynth?.play('wordSuccess');
 
                 if (this.onWordComplete) this.onWordComplete(this.wordsCompleted);
 
@@ -160,6 +161,7 @@ export default class HackMinigame {
             }
         } else {
             // Wrong key — just a delay (flash red, no score penalty)
+            this.scene.soundSynth?.play('error');
             const cur = this.charTexts[this.pointer];
             cur.setColor('#ff4444');
             this.scene.time.delayedCall(160, () => {
