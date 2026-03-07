@@ -21,6 +21,7 @@ const WAVE_CONFIGS = [
 ];
 
 const INTERMISSION_AFTER = new Set([3, 6, 9]);
+const SPAWN_GRACE_MS     = 3000; // delay before first alien spawns each wave
 const MAX_WAVE = 10;
 
 export default class WaveManager {
@@ -64,8 +65,9 @@ export default class WaveManager {
 
     startWave() {
         const cfg = this.getConfig();
-        this.elapsed = 0;
-        this.spawnAccumulator = cfg.spawnInterval; // spawn immediately on first tick
+        this.elapsed          = 0;
+        this.graceElapsed     = 0;
+        this.spawnAccumulator = 0;
         this.active = true;
         if (this.onWaveStart) this.onWaveStart(this.wave, cfg.duration);
     }
@@ -75,7 +77,11 @@ export default class WaveManager {
         if (!this.active) return;
 
         const cfg = this.getConfig();
-        this.elapsed += delta;
+        this.elapsed      += delta;
+        this.graceElapsed += delta;
+
+        // Grace period — no spawning for the first 3 seconds of each wave
+        if (this.graceElapsed < SPAWN_GRACE_MS) return;
 
         // Spawn tick
         this.spawnAccumulator += delta;

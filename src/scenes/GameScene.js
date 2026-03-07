@@ -200,9 +200,9 @@ export default class GameScene extends Phaser.Scene {
                 this.wave          = wave;
                 this.hackProgress  = 0;
                 this.hackThreshold = this._wordsForWave(wave);
-                this.escapePhase   = false;
-                this.boardingShip  = false;
-                this.escapeShip    = null;
+                this.escapePhase  = false;
+                this.boardingShip = false;
+                if (this.escapeShip) { this.escapeShip.destroy(); this.escapeShip = null; }
                 // Restore snail for the new wave
                 this.snail.setVisible(true);
                 this.snail.x = 300;
