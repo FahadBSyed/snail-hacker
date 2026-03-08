@@ -80,14 +80,14 @@ export const DEFAULTS = {
         REPAIR_COOLDOWN:  12000,
         REPAIR_HEAL:      25,     // HP restored per repair
         SHIELD_COOLDOWN:  25000,
-        SHIELD_DURATION:  4000,   // ms — how long the shield lasts
+        SHIELD_DURATION:  25000,  // ms — how long the shield lasts
         SLOW_COOLDOWN:    18000,
-        SLOW_DURATION:    6000,   // ms — how long SlowField lasts
+        SLOW_DURATION:    25000,  // ms — how long SlowField lasts
     },
 
     CANNON: {
         FIRE_INTERVAL:   1000,   // ms between auto-shots while active
-        ACTIVE_DURATION: 5000,   // ms of continuous firing
+        ACTIVE_DURATION: 25000,  // ms of continuous firing
         COOLDOWN:        20000,  // ms — cannon's own recharge after activation
     },
 

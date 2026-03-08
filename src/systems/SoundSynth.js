@@ -70,6 +70,18 @@ export default class SoundSynth {
 
     // ── Sound definitions ──────────────────────────────────────────────────────
 
+    /** Auto-turret cannon shot — deeper thump + sharp crack. */
+    _cannonFire() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Low thump
+        const bg = this._gain(ctx, 0.55, t, 0.14);
+        this._osc(ctx, 'sawtooth', 160, 40, t, 0.12, bg);
+        // Sharp crack noise
+        const ng  = this._gain(ctx, 0.30, t, 0.08);
+        const hpf = this._filter(ctx, 'highpass', 2000, ng);
+        this._noise(ctx, 0.07, hpf);
+    }
+
     /** Gun shot — short sawtooth pitch-drop + highpass noise punch. */
     _shoot() {
         const ctx = this._ctx_get(), t = ctx.currentTime;
