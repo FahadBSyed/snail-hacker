@@ -82,26 +82,7 @@ export default class GameScene extends Phaser.Scene {
         this.station = new HackingStation(this, 640, 360);
 
         // ── Snail (Player 1) ──────────────────────────────────────────────────
-        // Register per-direction damage animations (withdraw → shell pulse → extend).
-        // 24 frames total: f00–f07 withdraw, f08–f15 shell, f07–f00 extend (reverse).
-        for (const dir of ['right', 'left', 'up', 'down']) {
-            if (!this.anims.exists(`snail-hit-${dir}`)) {
-                const frameKeys = [];
-                for (let i = 0; i <= 15; i++) {
-                    frameKeys.push({ key: `snail-hit-${dir}-f${String(i).padStart(2, '0')}` });
-                }
-                for (let i = 7; i >= 0; i--) {
-                    frameKeys.push({ key: `snail-hit-${dir}-f${String(i).padStart(2, '0')}` });
-                }
-                this.anims.create({
-                    key:      `snail-hit-${dir}`,
-                    frames:   frameKeys,
-                    duration: CONFIG.SNAIL.INVINCIBILITY_MS,
-                    repeat:   0,
-                });
-            }
-        }
-
+        Snail.registerAnims(this);
         this.snail = new Snail(this, 300, 400);
         if (this.startSnailHp < CONFIG.SNAIL.MAX_HEALTH) {
             this.snail.health = this.startSnailHp;

@@ -9,6 +9,32 @@ const DIR_TEXTURES = {
 };
 
 export default class Snail extends Phaser.GameObjects.Container {
+    /**
+     * Register the directional hit animations with the scene's animation manager.
+     * Must be called after the hit-frame textures are loaded (GameScene.preload).
+     * Safe to call multiple times — skips any animation that already exists.
+     */
+    static registerAnims(scene) {
+        // Per-direction withdraw → shell pulse → extend (reverse).
+        // 24 frames total: f00–f07 withdraw, f08–f15 shell, f07–f00 extend.
+        for (const dir of ['right', 'left', 'up', 'down']) {
+            if (scene.anims.exists(`snail-hit-${dir}`)) continue;
+            const frameKeys = [];
+            for (let i = 0; i <= 15; i++) {
+                frameKeys.push({ key: `snail-hit-${dir}-f${String(i).padStart(2, '0')}` });
+            }
+            for (let i = 7; i >= 0; i--) {
+                frameKeys.push({ key: `snail-hit-${dir}-f${String(i).padStart(2, '0')}` });
+            }
+            scene.anims.create({
+                key:      `snail-hit-${dir}`,
+                frames:   frameKeys,
+                duration: CONFIG.SNAIL.INVINCIBILITY_MS,
+                repeat:   0,
+            });
+        }
+    }
+
     constructor(scene, x, y) {
         super(scene, x, y);
         scene.add.existing(this);
