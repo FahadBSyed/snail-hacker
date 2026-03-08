@@ -7,8 +7,8 @@ export const DEFAULTS = {
 
     PLAYER: {
         SNAIL_SPEED:       40,    // px/s
-        STARTING_AMMO:     20,
-        MAX_AMMO:          20,
+        STARTING_AMMO:     35,
+        MAX_AMMO:          35,
         PROJECTILE_SPEED:  3200,  // px/s
         PROJECTILE_RADIUS: 4,     // px
     },
@@ -58,7 +58,7 @@ export const DEFAULTS = {
     ALIENS: {
         BASIC:  { SPEED: 60,  RADIUS: 16, HEALTH: 10 },
         FAST:   { SPEED: 150, RADIUS: 12, HEALTH: 10 },
-        TANK:   { SPEED: 38,  RADIUS: 18, HEALTH: 40 },
+        TANK:   { SPEED: 38,  RADIUS: 18, HEALTH: 30 },
         BOMBER: { SPEED: 50,  RADIUS: 18, HEALTH: 10 },
     },
 
@@ -95,7 +95,7 @@ export const DEFAULTS = {
 
     MINIGAMES: {
         SEQUENCE_TIME_LIMIT:   4000,  // ms to complete key sequence
-        RHYTHM_BEATS_REQUIRED: 5,     // beats to win rhythm minigame
+        RHYTHM_BEATS_REQUIRED: 1,     // beats to win rhythm minigame
         RHYTHM_MAX_MISSES:     1,     // allowed misses before failure
         RHYTHM_BEAT_TIMEOUT:   2500,  // ms before auto-miss per beat
         TYPING_MS_PER_CHAR:    1500,  // ms per character in typing minigame
