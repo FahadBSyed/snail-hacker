@@ -75,18 +75,18 @@ snail-hacker/
 ### Step 6: Collision Detection
 - `aliens` Group + `projectiles` Group
 - Projectile vs Alien: destroy both, increment score
-- Alien vs Station (within ~50px of center): `station.takeDamage(10)`, destroy alien
+- Alien vs Gerald (contact): `snail.takeDamage(amount)`, alien destroyed
+- Game over when Gerald's health reaches 0
 
 ### Step 7: Hacking Station
 - `HackingStation.js`: large cyan hexagon at (640, 360)
-- Health: 100, glow alpha proportional to health/100
-- `takeDamage(amount)` method
-- Game over when health <= 0 → `this.scene.start('GameOverScene', { wave, score })`
-- Red health bar at top-left (placeholder)
+- This is the object Gerald hacks **into** — it is the mission objective, not a health entity
+- Displays hack progress visually (glow/outline shifts as the wave hack fills)
+- Gerald walks to it and presses E to begin hacking; completing enough words fills the wave hack bar
 
 ### Step 8: GameOverScene
 - Accept `{ wave, score }` data
-- Render "STATION DESTROYED", wave reached, score
+- Render "GERALD IS DEAD" (or equivalent), wave reached, score
 - "PLAY AGAIN" button → `this.scene.start('MenuScene')`
 
 ---
@@ -151,8 +151,8 @@ snail-hacker/
 
 ### Step 16: Shield Defense Station
 - Sequence minigame to activate
-- Semi-transparent circle around station, `stationShielded = true`
-- Blocks alien damage for 4s
+- Semi-transparent circle around **Gerald** (follows him), `snail.shielded = true`
+- Gerald's `takeDamage()` is a no-op while shielded
 - Cooldown: 25s
 
 ### Step 17: SlowField Defense Station
@@ -167,8 +167,8 @@ snail-hacker/
 - Wave 2: basic + fast, 1500ms, 40s
 - Wave 3+: + tank, 1200ms, 50s
 - Wave 5+: + bomber, 1000ms, 60s
-- Every 3 waves: intermission (5s), +20 station health (capped 100)
-- HUD: wave number + countdown timer
+- Intermission after every wave (upgrade card selection); IntermissionScene is the single inter-wave path
+- HUD: wave number + hack progress bar
 - **3-second spawn grace period** at the start of each wave (`CONFIG.WAVES.SPAWN_GRACE_MS`)
 
 ### Step 18b: Escape Ship Wave-End Flow *(added Session 3)*
@@ -187,8 +187,9 @@ snail-hacker/
 
 ### Step 20: IntermissionScene
 - Flavor text array keyed by wave number
+- Upgrade card selection (CANNON / SHIELD / SLOWFIELD / REPAIR) — up to 3 cards shown until all 4 acquired
 - 5s auto-advance countdown
-- Health restore before returning to GameScene
+- Gerald's HP and ammo are restored to full at the start of each new wave
 
 ### Step 21: VictoryScene
 - Trigger after wave 10 (or endless mode)
@@ -197,23 +198,23 @@ snail-hacker/
 ### Step 22: Audio Integration
 - Free assets from OpenGameArt/Freesound
 - Load in preload(), `playSound(key)` helper
-- Wire all events: shoot, alien_death, alien_reach_station, reload_complete, reload_typing, terminal_activate, minigame_success/fail, teleport, station_damage, wave_start, game_over
+- Wire all events: shoot, alien_death, alien_hit_gerald, reload_complete, terminal_activate, minigame_success/fail, teleport, gerald_damage, wave_start, game_over, upgrade_select, shield_activate, slow_activate
 - Looping background music at volume 0.3
 
 ### Step 23: Full HUD
-- Top-left: red health bar (200×20px) + "STATION INTEGRITY"
+- Top-left: red health bar (200×20px) + "GERALD HP"
 - Top-right: 10 bullet-icon shapes, grey out consumed
-- Top-center: wave number + countdown timer
+- Top-center: wave number + hack progress counter (words completed / threshold)
 - Bottom-center: MinigameDisplay (visible only during minigame)
-- Snail overhead: state text + reload progress bar
-- Warnings: "LOW AMMO" (ammo ≤ 2), "CANNON READY", "SHIELD READY"
+- Snail overhead: state text
+- Warnings: "LOW AMMO" (ammo ≤ 2)
 
 ### Step 24: Visual Polish
 - Starfield background (100-200 white dots, optional parallax)
 - Projectile trail particles
 - Alien death burst (color-matched)
 - Teleport warp rings (expanding at origin, contracting at destination, 0.3s)
-- Station glow driven by health/100, pulse tween when health < 30
+- Station glow shifts as hack progress fills
 - Bomber pulse tween on outer glow (alpha 0.3 ↔ 1.0)
 
 ### Step 25: Game-Feel Polish *(added Session 4)*
