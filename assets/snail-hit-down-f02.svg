@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <ellipse cx="24" cy="8" rx="3" ry="1.5" fill="#E8D44D" opacity="0.04"/>
+  <circle cx="24" cy="18" r="13" fill="#8B5E3C"/>
+  <circle cx="24" cy="19" r="9"  fill="#A0714F"/>
+  <circle cx="24" cy="20" r="5"  fill="#BD8C64"/>
+  <ellipse cx="24" cy="31.7" rx="4.3" ry="3.6" fill="#E8D44D" opacity="0.60"/>
+  <line x1="20.9" y1="30.6" x2="16.6" y2="37.7" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round" opacity="0.54"/>
+  <circle cx="16.6" cy="37.7" r="2" fill="#E8D44D" opacity="0.54"/>
+  <line x1="27.1" y1="30.6" x2="31.4" y2="37.7" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round" opacity="0.54"/>
+  <circle cx="31.4" cy="37.7" r="2" fill="#E8D44D" opacity="0.54"/>
+  <circle cx="21.6" cy="31.0" r="2" fill="#1a1a1a" opacity="0.54"/>
+  <circle cx="26.4" cy="31.0" r="2" fill="#1a1a1a" opacity="0.54"/>
+  <circle cx="22.0" cy="30.4" r="0.7" fill="white" opacity="0.09"/>
+  <circle cx="26.9" cy="30.4" r="0.7" fill="white" opacity="0.09"/>
+  <path d="M22 34.3 Q24 36.3 26 34.3" stroke="#1a1a1a" stroke-width="0.8" fill="none" stroke-linecap="round" opacity="0.29"/>
+  <rect width="48" height="48" fill="white" opacity="0.25"/>
+</svg>

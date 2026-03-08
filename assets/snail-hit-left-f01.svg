@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <g transform="translate(48,0) scale(-1,1)">
+  <ellipse cx="16" cy="33" rx="4" ry="1.2" fill="#E8D44D" opacity="0.17"/>
+  <circle cx="18" cy="24" r="12" fill="#8B5E3C"/>
+  <circle cx="19" cy="24" r="8"  fill="#A0714F"/>
+  <circle cx="20" cy="24" r="4"  fill="#BD8C64"/>
+  <ellipse cx="29.6" cy="29.4" rx="10.3" ry="4.3" fill="#E8D44D" opacity="0.80"/>
+  <line x1="31.1" y1="25.9" x2="27.4" y2="15.1" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round" opacity="0.77"/>
+  <circle cx="27.4" cy="15.1" r="2" fill="#E8D44D" opacity="0.77"/>
+  <line x1="34.6" y1="25.9" x2="36.0" y2="13.4" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round" opacity="0.77"/>
+  <circle cx="36.0" cy="13.4" r="2" fill="#E8D44D" opacity="0.77"/>
+  <circle cx="35.4" cy="26.7" r="1.8" fill="#1a1a1a" opacity="0.77"/>
+  <circle cx="36.0" cy="26.1" r="0.6" fill="white" opacity="0.54"/>
+  </g>
+  <rect width="48" height="48" fill="white" opacity="0.45"/>
+</svg>
