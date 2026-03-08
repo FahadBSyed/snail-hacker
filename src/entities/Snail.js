@@ -86,25 +86,23 @@ export default class Snail extends Phaser.GameObjects.Container {
         this.health = Math.max(0, this.health - amount);
         this.invincible = true;
 
-        // White flash on/off during i-frames (12 ticks = 250ms each at 3s default)
-        let flashCount = 0;
-        const flashTicks = 12;
-        const flashDelay = CONFIG.SNAIL.INVINCIBILITY_MS / flashTicks;
-        this.scene.time.addEvent({
-            delay: flashDelay,
-            repeat: flashTicks - 1,
-            callback: () => {
-                flashCount++;
-                if (this.sprite && this.sprite.active) {
-                    if (flashCount % 2 === 0) this.sprite.clearTint();
-                    else                      this.sprite.setTintFill(0xffffff);
-                }
-            },
+        // White overlay rectangle — child of container so it moves with Gerald.
+        // Tween yoyo flashes it on/off for the full i-frame window.
+        const flashCycles = 6;
+        const halfPeriod  = CONFIG.SNAIL.INVINCIBILITY_MS / (flashCycles * 2);
+        const flashOverlay = this.scene.add.rectangle(0, 0, 48, 48, 0xffffff, 0);
+        this.add(flashOverlay);
+        this.scene.tweens.add({
+            targets:  flashOverlay,
+            alpha:    0.85,
+            duration: halfPeriod,
+            yoyo:     true,
+            repeat:   flashCycles - 1,
+            onComplete: () => flashOverlay.destroy(),
         });
 
         this.scene.time.delayedCall(CONFIG.SNAIL.INVINCIBILITY_MS, () => {
             this.invincible = false;
-            if (this.sprite && this.sprite.active) this.sprite.clearTint();
         });
 
         return this.health <= 0;
