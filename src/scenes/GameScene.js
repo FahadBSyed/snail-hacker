@@ -301,7 +301,7 @@ export default class GameScene extends Phaser.Scene {
                         cooldown:       CONFIG.TERMINALS.SHIELD_COOLDOWN,
                         color:          0x4488ff,
                         launchMinigame: this._sequenceLauncher,
-                        onSuccess:      () => this.snail.shield(CONFIG.TERMINALS.SHIELD_DURATION),
+                        onSuccess:      () => { this.soundSynth.play('shieldActivate'); this.snail.shield(CONFIG.TERMINALS.SHIELD_DURATION); },
                     });
                     break;
                 case 'SLOWFIELD':
@@ -338,14 +338,38 @@ export default class GameScene extends Phaser.Scene {
     _activateSlowField() {
         if (this.slowFieldActive) return;
         this.slowFieldActive = true;
+        this.soundSynth.play('slowActivate');
+
         const mult = CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER;
         for (const alien of this.aliens) {
             if (!alien.active || alien._dying) continue;
             alien._origSpeed = alien._origSpeed || alien.speed;
             alien.speed = alien._origSpeed * mult;
         }
+
+        // Screen tint — purple overlay, fades in
+        this.slowOverlay = this.add.rectangle(640, 360, 1280, 720, 0xaa44ff, 0).setDepth(50);
+        this.tweens.add({ targets: this.slowOverlay, alpha: 0.10, duration: 500, ease: 'Sine.easeOut' });
+
+        // Clock tick every second while active
+        this.slowTickTimer = this.time.addEvent({
+            delay: 1000,
+            loop: true,
+            callback: () => this.soundSynth.play('slowTick'),
+        });
+
         this.time.delayedCall(CONFIG.TERMINALS.SLOW_DURATION, () => {
             this.slowFieldActive = false;
+
+            // Stop tick, fade out overlay
+            if (this.slowTickTimer) { this.slowTickTimer.remove(false); this.slowTickTimer = null; }
+            if (this.slowOverlay) {
+                this.tweens.add({
+                    targets: this.slowOverlay, alpha: 0, duration: 500,
+                    onComplete: () => { this.slowOverlay?.destroy(); this.slowOverlay = null; },
+                });
+            }
+
             for (const alien of this.aliens) {
                 if (!alien.active) continue;
                 if (alien._origSpeed !== undefined) {

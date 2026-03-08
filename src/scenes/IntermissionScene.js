@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import SoundSynth from '../systems/SoundSynth.js';
 
 const FLAVOR_TEXT = {
     1: ['Not bad for a snail.', 'Gerald flexes his antenna.', 'They keep coming.'],
@@ -47,6 +48,7 @@ export default class IntermissionScene extends Phaser.Scene {
     }
 
     create() {
+        this.soundSynth = new SoundSynth();
         const cx           = 640;
         const healedHealth = Math.min(CONFIG.SNAIL.MAX_HEALTH, this.snailHealth + CONFIG.INTERMISSION.HEAL_AMOUNT);
         const nextWave     = this.wave + 1;
@@ -232,6 +234,7 @@ export default class IntermissionScene extends Phaser.Scene {
                 if (selected) return;
                 selected = true;
                 this.input.keyboard.off('keydown', keyListener);
+                this.soundSynth.play('upgradeSelect');
 
                 // Flash selected card bright, dim others
                 drawCard(true);
