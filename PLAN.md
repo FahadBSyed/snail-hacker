@@ -227,6 +227,19 @@ snail-hacker/
 - **Opaque wave-complete overlay** — Black background fully covers the game level during the wave complete splash.
 - **Double-advance fix** — `advance()` on the wave complete splash guards against being called by both keyboard and pointer events; uses `advanced` flag + explicit `.off()` cleanup.
 
+### Step 26: Upgrade System *(added Session 5)*
+- **IntermissionScene after every wave** — All inter-wave flow routes through `IntermissionScene`; the old in-game splash overlay was removed. Flavor quotes added for all 9 pre-victory waves.
+- **Card selection** — Up to 3 upgrade cards (CANNON / SHIELD / SLOWFIELD / REPAIR) shown at each intermission until all 4 are acquired. Player clicks or presses 1/2/3. Chosen upgrade is removed from the pool and carried in `scene.data.upgrades[]`.
+- **Persistent terminals** — `GameScene` spawns all previously unlocked upgrade terminals at `CONFIG.UPGRADES.ORBIT_RADIUS` (180 px) from the station at wave start. RELOAD terminal placement avoids orbital overlap.
+- **SHIELD → protects Gerald** — `Snail.shield(duration)` / `unshield()` wraps Gerald in a pulsing circle and makes `takeDamage()` a no-op for the duration.
+- **Balance** — `CANNON.ACTIVE_DURATION`, `SHIELD_DURATION`, `SLOW_DURATION` raised to 25s. Rhythm minigame key pool narrowed to WASD. Upgrade card descriptions read from live CONFIG. `CONFIG_VERSION` bumped to 3.
+- **Audio** — `upgradeSelect` (triumphant chord), `shieldActivate` (hum + ping), `slowActivate` (pitch-bend whoosh), `slowTick` (muffled tick + purple tint while active).
+
+### Step 27: Gerald Damage Animation *(added Session 6)*
+- **64-frame SVG sprite sheet** — `scripts/generate-damage-sprites.js` produces `snail-hit-{right,left,up,down}-f{00..15}.svg`. Frames f00–f07: body withdraws into shell (feet/eyes/antennae retract, body shrinks). Frames f08–f15: shell pulses (alternating breathe scale).
+- **feColorMatrix white tint** — Instead of a white rectangle overlay, an SVG `<filter>` with `feColorMatrix` linearly interpolates every pixel toward white (`new = src*(1-w) + w`). Tint weight per frame: f00=0.75, f01=0.45, f02=0.25, f03=0.10, shell-pulse even frames=0.45. Gerald's actual colours bleach and recover; no covering square.
+- **Wired into game** — `GameScene.preload()` loads all 64 frames; `anims.create()` registers `snail-hit-{dir}` at 8 fps. `Snail.takeDamage()` plays the animation; the i-frame white-rectangle overlay was removed as the sprite animation now carries all visual feedback.
+
 ---
 
 ## Key Tension Resolutions
