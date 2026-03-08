@@ -355,7 +355,7 @@ export default class GameScene extends Phaser.Scene {
         this.slowTickTimer = this.time.addEvent({
             delay: 1000,
             loop: true,
-            callback: () => this.soundSynth.play('slowTick'),
+            callback: () => { if (this.slowFieldActive) this.soundSynth.play('slowTick'); },
         });
 
         this.time.delayedCall(CONFIG.TERMINALS.SLOW_DURATION, () => {
