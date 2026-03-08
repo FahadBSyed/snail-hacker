@@ -41,7 +41,13 @@ snail-hacker/
     ├── scenes/
     │   ├── MenuScene.js          ← Title screen + controls summary; DEV_MODE shows
     │   │                            an in-browser balance config editor overlay
-    │   ├── GameScene.js          ← Core loop: orchestrates all entities, HUD, collisions
+    │   ├── GameScene.js          ← Core loop: orchestrates all entities; sections are
+    │   │                            create() setup, wave-flow helpers (_startEscapePhase,
+    │   │                            _playDropInAnimation, _boardEscapeShip), gameplay
+    │   │                            actions (_startHack, _activateSlowField, etc.),
+    │   │                            alien spawning, and update()
+    │   ├── HUD.js                ← All HUD display objects + update methods; created once
+    │   │                            in GameScene.create() as this.hud = new HUD(scene, opts)
     │   ├── PauseScene.js         ← Overlay scene (ESC/P); resumes parent scene
     │   ├── IntermissionScene.js  ← Between-wave: flavor text, station heal, 5s auto-advance
     │   ├── GameOverScene.js      ← Station destroyed; shows wave + score, restart button
@@ -54,13 +60,18 @@ snail-hacker/
     │   │                            proximity detection, [E] prompt, cooldown timer
     │   ├── DefenseStation.js     ← Auto-turret (CANNON); fires at nearest alien when active
     │   └── aliens/
-    │       ├── BasicAlien.js     ← Red circle; 60 px/s straight at station
-    │       ├── FastAlien.js      ← Purple triangle; 150 px/s + sinusoidal zigzag
-    │       ├── TankAlien.js      ← Grey square; 38 px/s, 40 HP
-    │       └── BomberAlien.js    ← Orange pentagon; AoE blast on death or station arrival
+    │       ├── alienUtils.js     ← DIRS array + angleToDir(rad) shared by all alien types
+    │       ├── BaseAlien.js      ← Shared constructor, takeDamage, straight-line update
+    │       ├── BasicAlien.js     ← Extends BaseAlien; 60 px/s straight movement
+    │       ├── FastAlien.js      ← Extends BaseAlien; 150 px/s + sinusoidal zigzag override
+    │       ├── TankAlien.js      ← Extends BaseAlien; 38 px/s, 30 HP
+    │       └── BomberAlien.js    ← Extends BaseAlien; AoE blast on death or snail contact
     ├── systems/
+    │   ├── CollisionSystem.js    ← Pure functions: checkProjectileCollisions(scene),
+    │   │                            checkBomberBlast(scene, bx, by), spawnDeathBurst(scene, …)
     │   ├── WaveManager.js        ← 10-wave spawn config; intermission after waves 3/6/9
     │   ├── ReloadBuffer.js       ← Passive "RELOAD" detection from global keydown stream
+    │   ├── SoundSynth.js         ← Procedural Web Audio sound effects; play(name) dispatch
     │   └── TeleportSystem.js     ← Right-drag targeting line; teleports snail on release
     └── minigames/
         ├── SequenceMinigame.js   ← Type 4–6 random (non-WASD) keys in order within timer
