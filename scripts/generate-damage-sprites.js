@@ -48,14 +48,14 @@ function svgWrap(body) {
 }
 
 // White flash overlay opacity per frame index 0-15
+// (kept as documentation; overlay no longer rendered — animation alone signals damage)
 const FLASH = [
     0.75, 0.45, 0.25, 0.10, 0.00, 0.00, 0.00, 0.00,  // f00–f07 (withdraw)
     0.45, 0.00, 0.45, 0.00, 0.45, 0.00, 0.45, 0.00,  // f08–f15 (shell pulse)
 ];
 
-function flashRect(opacity) {
-    if (opacity <= 0) return '';
-    return `  <rect width="${SIZE}" height="${SIZE}" fill="white" opacity="${f2(opacity)}"/>`;
+function flashRect(_opacity) {
+    return '';  // white square removed — withdrawal animation is the visual cue
 }
 
 // ── RIGHT-facing withdrawal ───────────────────────────────────────────────────

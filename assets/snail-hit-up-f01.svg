@@ -8,5 +8,5 @@
   <circle cx="13.4" cy="5.7" r="2" fill="#E8D44D" opacity="0.77"/>
   <line x1="27.6" y1="12.7" x2="34.6" y2="5.7" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round" opacity="0.77"/>
   <circle cx="34.6" cy="5.7" r="2" fill="#E8D44D" opacity="0.77"/>
-  <rect width="48" height="48" fill="white" opacity="0.45"/>
+
 </svg>
