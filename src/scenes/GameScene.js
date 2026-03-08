@@ -276,17 +276,29 @@ export default class GameScene extends Phaser.Scene {
                 this.escapePhase  = false;
                 this.boardingShip = false;
                 if (this.escapeShip) { this.escapeShip.destroy(); this.escapeShip = null; }
-                // Restore snail for the new wave
-                this.snail.setVisible(true);
+
+                // Position snail but keep it hidden and locked until drop-in completes
+                this.snail.setVisible(false);
+                this.snail.setAlpha(1).setScale(1);
                 this.snail.x = 300;
                 this.snail.y = 400;
-                this.snail.hackingActive = false;
-                this.snail.setState('IDLE');
+                this.snail.hackingActive = true;
+
                 this.station.setHackProgress(0);
                 this.updateWaveDisplay();
                 this.updateHackDisplay();
                 this.soundSynth.play('waveStart');
                 this.logDebug(`Wave ${wave} started — need ${this.hackThreshold} words`);
+
+                // Pause alien spawning until drop-in completes
+                this.waveManager.active = false;
+
+                this._playDropInAnimation(300, 400, () => {
+                    this.snail.hackingActive = false;
+                    this.snail.setState('IDLE');
+                    this.waveManager.active = true;
+                    this.logDebug('Drop-in complete — player in control, spawning active');
+                });
             },
             onWaveEnd: (wave) => {
                 this.logDebug(`Wave ${wave} complete!`);
@@ -505,6 +517,75 @@ export default class GameScene extends Phaser.Scene {
             targets: msg, alpha: 1, duration: 300,
             yoyo: true, hold: 2500,
             onComplete: () => msg.destroy(),
+        });
+    }
+
+    /**
+     * Drop-in intro animation for each wave start.
+     * The EscapeShip descends from off the top of the screen, drops Gerald off
+     * at (dropX, dropY), then ascends and is destroyed. Only then is control
+     * handed to the player and alien spawning started.
+     */
+    _playDropInAnimation(dropX, dropY, onComplete) {
+        // Ship starts fully formed just above the visible area
+        const ship = new EscapeShip(this, dropX, -110, { skipIntro: true });
+
+        const spawnExhaust = () => this.time.addEvent({
+            delay: 60, loop: true,
+            callback: () => {
+                if (!ship.active) return;
+                const ex = this.add.circle(
+                    ship.x + Phaser.Math.Between(-22, 22),
+                    ship.y + 18,
+                    Phaser.Math.Between(3, 7), 0x00ccff, 0.75,
+                ).setDepth(48);
+                this.tweens.add({
+                    targets: ex, y: ex.y + 35, alpha: 0, scaleX: 0.2, scaleY: 0.2,
+                    duration: 320, onComplete: () => ex.destroy(),
+                });
+            },
+        });
+
+        // ── Phase 1: descend to drop-off hover position ───────────────────────
+        const descentExhaust = spawnExhaust();
+        this.tweens.add({
+            targets:  ship,
+            y:        dropY - 65,   // hover above snail drop point
+            duration: 1100,
+            ease:     'Power2.easeOut',
+            onComplete: () => {
+                descentExhaust.remove(false);
+                ship.startHoverBob();
+
+                // ── Phase 2: reveal snail below the ship ──────────────────────
+                this.snail.setVisible(true);
+                this.snail.setAlpha(0);
+                this.snail.setScale(0.1);
+                this.tweens.add({
+                    targets:  this.snail,
+                    alpha:    1,
+                    scaleX:   1,
+                    scaleY:   1,
+                    duration: 280,
+                    ease:     'Back.easeOut',
+                });
+
+                // ── Phase 3: brief hover pause, then ascend ───────────────────
+                this.time.delayedCall(550, () => {
+                    const ascentExhaust = spawnExhaust();
+                    this.tweens.add({
+                        targets:  ship,
+                        y:        -200,
+                        duration: 850,
+                        ease:     'Power2.easeIn',
+                        onComplete: () => {
+                            ascentExhaust.remove(false);
+                            ship.destroy();
+                            onComplete();
+                        },
+                    });
+                });
+            },
         });
     }
 

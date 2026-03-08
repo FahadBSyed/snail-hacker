@@ -6,7 +6,15 @@ import { CONFIG } from '../config.js';
  * Draws a large, distinctive rescue saucer distinct from enemy ships.
  */
 export default class EscapeShip extends Phaser.GameObjects.Container {
-    constructor(scene, x, y) {
+    /**
+     * @param {Phaser.Scene} scene
+     * @param {number} x
+     * @param {number} y
+     * @param {object} [opts]
+     * @param {boolean} [opts.skipIntro=false] — skip pop-in scale tween and auto hover-bob.
+     *   Call startHoverBob() manually once the ship has reached its final position.
+     */
+    constructor(scene, x, y, opts = {}) {
         super(scene, x, y);
         scene.add.existing(this);
         this.setDepth(50);
@@ -25,16 +33,6 @@ export default class EscapeShip extends Phaser.GameObjects.Container {
         }).setOrigin(0.5, 1).setAlpha(0).setDepth(110);
         this.add(this.prompt);
 
-        // ── Hover bob ────────────────────────────────────────────────────────
-        scene.tweens.add({
-            targets: this,
-            y: y - 8,
-            duration: 900,
-            ease: 'Sine.easeInOut',
-            yoyo: true,
-            repeat: -1,
-        });
-
         // ── Rim-light pulse ───────────────────────────────────────────────────
         this._rimTween = scene.tweens.add({
             targets: gfx,
@@ -45,13 +43,40 @@ export default class EscapeShip extends Phaser.GameObjects.Container {
             repeat: -1,
         });
 
-        // ── Spawn pop-in ──────────────────────────────────────────────────────
-        this.setScale(0);
-        scene.tweens.add({
-            targets: this,
-            scaleX: 1, scaleY: 1,
-            duration: 450,
-            ease: 'Back.easeOut',
+        if (opts.skipIntro) {
+            // Hover bob and pop-in are skipped; caller drives positioning and
+            // calls startHoverBob() when the ship reaches its final position.
+        } else {
+            // ── Hover bob ────────────────────────────────────────────────────
+            scene.tweens.add({
+                targets: this,
+                y: y - 8,
+                duration: 900,
+                ease: 'Sine.easeInOut',
+                yoyo: true,
+                repeat: -1,
+            });
+
+            // ── Spawn pop-in ──────────────────────────────────────────────────
+            this.setScale(0);
+            scene.tweens.add({
+                targets: this,
+                scaleX: 1, scaleY: 1,
+                duration: 450,
+                ease: 'Back.easeOut',
+            });
+        }
+    }
+
+    /** Start the hover bob tween anchored to the ship's current y position. */
+    startHoverBob() {
+        this.scene.tweens.add({
+            targets:  this,
+            y:        this.y - 8,
+            duration: 900,
+            ease:     'Sine.easeInOut',
+            yoyo:     true,
+            repeat:   -1,
         });
     }
 
@@ -97,9 +122,6 @@ export default class EscapeShip extends Phaser.GameObjects.Container {
         // Dome shine
         g.fillStyle(0xffffff, 0.14);
         g.fillEllipse(-7, -10, 16, 9);
-
-        // "ESCAPE" label inside dome
-        // (drawn as simple short lines — text is added separately above)
     }
 
     /** Fade the boarding prompt in or out. */
