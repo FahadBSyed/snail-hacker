@@ -1,7 +1,7 @@
 import { CONFIG } from '../config.js';
 
-// Keys that won't conflict with WASD movement (same pool as SequenceMinigame)
-const VALID_KEYS = ['F', 'G', 'H', 'J', 'K', 'L', 'Q', 'X', 'Z', 'B', 'N', 'M'];
+// Only WASD — player focuses on timing, not key location
+const VALID_KEYS = ['W', 'A', 'S', 'D'];
 
 const BAR_WIDTH        = 360;
 const TARGET_HALF      = 45;   // ±45px from center = 90px target zone
