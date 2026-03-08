@@ -297,6 +297,7 @@ export default class GameScene extends Phaser.Scene {
                     this.snail.hackingActive = false;
                     this.snail.setState('IDLE');
                     this.waveManager.active = true;
+                    this.soundSynth.play('waveBegin');
                     this.logDebug('Drop-in complete — player in control, spawning active');
                 });
             },

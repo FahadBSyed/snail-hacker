@@ -267,6 +267,21 @@ export default class SoundSynth {
         });
     }
 
+    /** Wave timer officially starts (drop-in complete) — bright bell chime, C–E–G. */
+    _waveBegin() {
+        const ctx   = this._ctx_get(), t = ctx.currentTime;
+        const notes = [523.2, 659.3, 784.0];   // C5, E5, G5
+        notes.forEach((freq, i) => {
+            const st = t + i * 0.09;
+            // Fundamental — long bell decay
+            const g = this._gain(ctx, 0.30, st, 0.70);
+            this._osc(ctx, 'sine', freq, freq, st, 0.68, g);
+            // Octave shimmer
+            const g2 = this._gain(ctx, 0.10, st, 0.45);
+            this._osc(ctx, 'sine', freq * 2, freq * 2, st, 0.43, g2);
+        });
+    }
+
     /** New wave beginning — two sharp alert beeps. */
     _waveStart() {
         const ctx = this._ctx_get(), t = ctx.currentTime;
