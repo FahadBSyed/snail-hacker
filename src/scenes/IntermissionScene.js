@@ -15,12 +15,19 @@ const FLAVOR_TEXT = {
 // All upgrade types that can be offered, in order.
 const UPGRADE_POOL = ['CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR'];
 
-const UPGRADE_DEFS = {
-    CANNON:    { label: 'AUTO TURRET',  color: 0xff8844, desc: 'Hack to unleash an\nauto-targeting cannon burst.' },
-    SHIELD:    { label: 'FORCE SHIELD', color: 0x4488ff, desc: 'Hack to project a shield\nthat blocks alien damage.' },
-    SLOWFIELD: { label: 'SLOW FIELD',   color: 0xaa44ff, desc: 'Hack to slow all aliens\nto 40% speed for 6 seconds.' },
-    REPAIR:    { label: 'REPAIR KIT',   color: 0x44ff88, desc: "Hack to restore\nGerald's shell HP." },
-};
+function getUpgradeDefs() {
+    const cannonSecs = Math.round(CONFIG.CANNON.ACTIVE_DURATION / 1000);
+    const shieldSecs = Math.round(CONFIG.TERMINALS.SHIELD_DURATION / 1000);
+    const slowSecs   = Math.round(CONFIG.TERMINALS.SLOW_DURATION / 1000);
+    const slowPct    = Math.round(CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER * 100);
+    const repairHp   = CONFIG.TERMINALS.REPAIR_HEAL;
+    return {
+        CANNON:    { label: 'AUTO TURRET',  color: 0xff8844, desc: `Hack to unleash an\nauto-targeting cannon\nfor ${cannonSecs}s.` },
+        SHIELD:    { label: 'FORCE SHIELD', color: 0x4488ff, desc: `Hack to project a shield\nthat blocks alien damage\nfor ${shieldSecs}s.` },
+        SLOWFIELD: { label: 'SLOW FIELD',   color: 0xaa44ff, desc: `Hack to slow all aliens\nto ${slowPct}% speed\nfor ${slowSecs}s.` },
+        REPAIR:    { label: 'REPAIR KIT',   color: 0x44ff88, desc: `Hack to restore\n+${repairHp} HP to Gerald's shell.` },
+    };
+}
 
 export default class IntermissionScene extends Phaser.Scene {
     constructor() {
@@ -180,6 +187,7 @@ export default class IntermissionScene extends Phaser.Scene {
         };
         this.input.keyboard.on('keydown', keyListener);
 
+        const UPGRADE_DEFS = getUpgradeDefs();
         types.forEach((type, i) => {
             const def = UPGRADE_DEFS[type];
             const x   = startX + i * (cardW + gap);
