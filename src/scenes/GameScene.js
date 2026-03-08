@@ -8,8 +8,11 @@ import BomberAlien from '../entities/aliens/BomberAlien.js';
 import HackingStation from '../entities/HackingStation.js';
 import GrabHandSystem from '../systems/GrabHandSystem.js';
 import Terminal from '../entities/Terminal.js';
+import DefenseStation from '../entities/DefenseStation.js';
 import HackMinigame from '../minigames/HackMinigame.js';
 import RhythmMinigame from '../minigames/RhythmMinigame.js';
+import SequenceMinigame from '../minigames/SequenceMinigame.js';
+import TypingMinigame from '../minigames/TypingMinigame.js';
 import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
@@ -28,6 +31,7 @@ export default class GameScene extends Phaser.Scene {
         this.startSnailHp = data.snailHealth !== undefined ? data.snailHealth
                           : data.stationHealth !== undefined ? data.stationHealth
                           : CONFIG.SNAIL.MAX_HEALTH;
+        this.upgradesList = data.upgrades || [];
     }
 
     preload() {
@@ -37,6 +41,13 @@ export default class GameScene extends Phaser.Scene {
         this.load.svg('snail-left',  'assets/snail-left.svg',  svgSize);
         this.load.svg('snail-up',    'assets/snail-up.svg',    svgSize);
         this.load.svg('snail-down',  'assets/snail-down.svg',  svgSize);
+        // Damage / invincibility animation frames
+        for (const dir of ['right', 'left', 'up', 'down']) {
+            for (let i = 0; i <= 15; i++) {
+                const f = `f${String(i).padStart(2, '0')}`;
+                this.load.svg(`snail-hit-${dir}-${f}`, `assets/snail-hit-${dir}-${f}.svg`, svgSize);
+            }
+        }
         // Alien sprites — 8 directions each
         const dirs = ['right', 'diag-right-down', 'down', 'diag-left-down',
                       'left',  'diag-left-up',    'up',   'diag-right-up'];
@@ -67,6 +78,26 @@ export default class GameScene extends Phaser.Scene {
         this.station = new HackingStation(this, 640, 360);
 
         // ── Snail (Player 1) ──────────────────────────────────────────────────
+        // Register per-direction damage animations (withdraw → shell pulse → extend).
+        // 24 frames total: f00–f07 withdraw, f08–f15 shell, f07–f00 extend (reverse).
+        for (const dir of ['right', 'left', 'up', 'down']) {
+            if (!this.anims.exists(`snail-hit-${dir}`)) {
+                const frameKeys = [];
+                for (let i = 0; i <= 15; i++) {
+                    frameKeys.push({ key: `snail-hit-${dir}-f${String(i).padStart(2, '0')}` });
+                }
+                for (let i = 7; i >= 0; i--) {
+                    frameKeys.push({ key: `snail-hit-${dir}-f${String(i).padStart(2, '0')}` });
+                }
+                this.anims.create({
+                    key:      `snail-hit-${dir}`,
+                    frames:   frameKeys,
+                    duration: CONFIG.SNAIL.INVINCIBILITY_MS,
+                    repeat:   0,
+                });
+            }
+        }
+
         this.snail = new Snail(this, 300, 400);
         if (this.startSnailHp < CONFIG.SNAIL.MAX_HEALTH) {
             this.snail.health = this.startSnailHp;
@@ -77,8 +108,9 @@ export default class GameScene extends Phaser.Scene {
         this.hackProgress  = 0;      // words completed this wave (persists across cancels)
         this.hackThreshold = this._wordsForWave(this.startWave);
 
-        // ── Alien speed multiplier ────────────────────────────────────────────
+        // ── Alien speed multiplier / slow field ───────────────────────────────
         this.alienSpeedMultiplier = 1.0;
+        this.slowFieldActive = false;
 
         // ── Shooting system (Player 2 — left-click) ───────────────────────────
         this.ammo    = CONFIG.PLAYER.STARTING_AMMO;
@@ -122,7 +154,7 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // ── Service terminals ─────────────────────────────────────────────────
-        // Shared helper: wraps a RhythmMinigame and tracks it so grab pickup can cancel it.
+        // Minigame launchers — each wraps the minigame and tracks it for grab-cancel support.
         this.activeTerminalMinigame = null;
         const rhythmLauncher = (_term, onSuccess, onFailure) => {
             const mg = new RhythmMinigame(this, {
@@ -131,11 +163,40 @@ export default class GameScene extends Phaser.Scene {
             });
             this.activeTerminalMinigame = mg;
         };
+        const sequenceLauncher = (_term, onSuccess, onFailure) => {
+            const mg = new SequenceMinigame(this, {
+                onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
+                onFailure: () => { this.activeTerminalMinigame = null; onFailure(); },
+            });
+            this.activeTerminalMinigame = mg;
+        };
+        const typingLauncher = (_term, onSuccess, onFailure) => {
+            const mg = new TypingMinigame(this, {
+                onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
+                onFailure: () => { this.activeTerminalMinigame = null; onFailure(); },
+            });
+            this.activeTerminalMinigame = mg;
+        };
+        // Store launchers so _spawnUpgradeTerminals can use them.
+        this._sequenceLauncher = sequenceLauncher;
+        this._typingLauncher   = typingLauncher;
 
         // RELOAD — orbits the hacking station at a fixed radius; relocates on each success.
+        // Picks an angle that won't overlap existing upgrade terminals.
         const _placeReloadTerm = () => {
-            const angle = Math.random() * Math.PI * 2;
-            const r     = CONFIG.STATIONS.RELOAD_ORBIT_RADIUS;
+            const r = CONFIG.STATIONS.RELOAD_ORBIT_RADIUS;
+            let angle, attempts = 0;
+            do {
+                angle = Math.random() * Math.PI * 2;
+                const tooClose = this.upgradesList.some(u => {
+                    const ur = CONFIG.UPGRADES.ORBIT_RADIUS;
+                    const dx = r * Math.cos(angle) - ur * Math.cos(u.angle);
+                    const dy = r * Math.sin(angle) - ur * Math.sin(u.angle);
+                    return Math.sqrt(dx * dx + dy * dy) < CONFIG.UPGRADES.MIN_SEPARATION;
+                });
+                if (!tooClose) break;
+                attempts++;
+            } while (attempts < 50);
             reloadTerm.x = 640 + Math.cos(angle) * r;
             reloadTerm.y = 360 + Math.sin(angle) * r;
             reloadTerm.setScale(0);
@@ -160,6 +221,9 @@ export default class GameScene extends Phaser.Scene {
         _placeReloadTerm(); // random initial placement
 
         this.terminals = [reloadTerm];
+
+        // ── Upgrade terminals (carried over from previous waves) ───────────────
+        this._spawnUpgradeTerminals();
 
         // ── E key: open hack OR activate nearby terminal ───────────────────────
         this.eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
@@ -223,17 +287,6 @@ export default class GameScene extends Phaser.Scene {
             },
             onWaveEnd: (wave) => {
                 this.logDebug(`Wave ${wave} complete!`);
-                if (this.waveManager.isLastWave) {
-                    this.scene.start('VictoryScene', { wave, score: this.score });
-                } else if (this.waveManager.isIntermissionWave) {
-                    this.scene.start('IntermissionScene', {
-                        wave,
-                        score:       this.score,
-                        snailHealth: this.snail.health,
-                    });
-                } else {
-                    this.time.delayedCall(2000, () => this.waveManager.nextWave());
-                }
             },
         });
         this.waveManager.startWave();
@@ -243,6 +296,115 @@ export default class GameScene extends Phaser.Scene {
 
     _wordsForWave(wave) {
         return CONFIG.HACK.BASE_WORDS + (wave - 1) * CONFIG.HACK.WORDS_GROWTH;
+    }
+
+    _spawnUpgradeTerminals() {
+        const cx = 640, cy = 360;
+        const r  = CONFIG.UPGRADES.ORBIT_RADIUS;
+
+        for (const upgrade of this.upgradesList) {
+            const x = cx + Math.cos(upgrade.angle) * r;
+            const y = cy + Math.sin(upgrade.angle) * r;
+
+            let term;
+            switch (upgrade.type) {
+                case 'CANNON': {
+                    const cannon = new DefenseStation(this, x, y - 30, {
+                        type:      'CANNON',
+                        getAliens: () => this.aliens,
+                    });
+                    term = new Terminal(this, x, y + 25, {
+                        label:          'TURRET',
+                        cooldown:       CONFIG.TERMINALS.CANNON_COOLDOWN,
+                        color:          0xff8844,
+                        launchMinigame: this._sequenceLauncher,
+                        onSuccess:      () => cannon.activate(),
+                    });
+                    break;
+                }
+                case 'SHIELD':
+                    term = new Terminal(this, x, y, {
+                        label:          'SHIELD',
+                        cooldown:       CONFIG.TERMINALS.SHIELD_COOLDOWN,
+                        color:          0x4488ff,
+                        launchMinigame: this._sequenceLauncher,
+                        onSuccess:      () => { this.soundSynth.play('shieldActivate'); this.snail.shield(CONFIG.TERMINALS.SHIELD_DURATION); },
+                    });
+                    break;
+                case 'SLOWFIELD':
+                    term = new Terminal(this, x, y, {
+                        label:          'SLOW',
+                        cooldown:       CONFIG.TERMINALS.SLOW_COOLDOWN,
+                        color:          0xaa44ff,
+                        launchMinigame: this._typingLauncher,
+                        onSuccess:      () => this._activateSlowField(),
+                    });
+                    break;
+                case 'REPAIR':
+                    term = new Terminal(this, x, y, {
+                        label:          'REPAIR',
+                        cooldown:       CONFIG.TERMINALS.REPAIR_COOLDOWN,
+                        color:          0x44ff88,
+                        launchMinigame: this._sequenceLauncher,
+                        onSuccess:      () => {
+                            this.snail.health = Math.min(
+                                this.snail.maxHealth,
+                                this.snail.health + CONFIG.TERMINALS.REPAIR_HEAL,
+                            );
+                            this.updateHealthDisplay();
+                        },
+                    });
+                    break;
+                default:
+                    break;
+            }
+            if (term) this.terminals.push(term);
+        }
+    }
+
+    _activateSlowField() {
+        if (this.slowFieldActive) return;
+        this.slowFieldActive = true;
+        this.soundSynth.play('slowActivate');
+
+        const mult = CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER;
+        for (const alien of this.aliens) {
+            if (!alien.active || alien._dying) continue;
+            alien._origSpeed = alien._origSpeed || alien.speed;
+            alien.speed = alien._origSpeed * mult;
+        }
+
+        // Screen tint — purple overlay, fades in
+        this.slowOverlay = this.add.rectangle(640, 360, 1280, 720, 0xaa44ff, 0).setDepth(50);
+        this.tweens.add({ targets: this.slowOverlay, alpha: 0.10, duration: 500, ease: 'Sine.easeOut' });
+
+        // Clock tick every second while active
+        this.slowTickTimer = this.time.addEvent({
+            delay: 1000,
+            loop: true,
+            callback: () => { if (this.slowFieldActive) this.soundSynth.play('slowTick'); },
+        });
+
+        this.time.delayedCall(CONFIG.TERMINALS.SLOW_DURATION, () => {
+            this.slowFieldActive = false;
+
+            // Stop tick, fade out overlay
+            if (this.slowTickTimer) { this.slowTickTimer.remove(false); this.slowTickTimer = null; }
+            if (this.slowOverlay) {
+                this.tweens.add({
+                    targets: this.slowOverlay, alpha: 0, duration: 500,
+                    onComplete: () => { this.slowOverlay?.destroy(); this.slowOverlay = null; },
+                });
+            }
+
+            for (const alien of this.aliens) {
+                if (!alien.active) continue;
+                if (alien._origSpeed !== undefined) {
+                    alien.speed = alien._origSpeed;
+                    delete alien._origSpeed;
+                }
+            }
+        });
     }
 
     _startHack() {
@@ -404,72 +566,17 @@ export default class GameScene extends Phaser.Scene {
 
     _showWaveCompleteSplash() {
         this.soundSynth.play('waveComplete');
-        // Restore snail HP and gun ammo for the next wave
-        this.snail.health = this.snail.maxHealth;
-        this.ammo         = this.ammoMax;
-        this.updateHealthDisplay();
-        this.updateAmmoDisplay();
-
-        // Dim overlay
-        const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 1).setDepth(300);
-
-        const waveText = this.add.text(640, 290, `WAVE ${this.wave} COMPLETE`, {
-            fontSize: '54px', fontFamily: 'monospace', color: '#00ffcc',
-            stroke: '#003322', strokeThickness: 8,
-        }).setOrigin(0.5).setDepth(310).setAlpha(0).setY(310);
-
-        const scoreText = this.add.text(640, 380, `SCORE: ${this.score}`, {
-            fontSize: '24px', fontFamily: 'monospace', color: '#ffffff',
-        }).setOrigin(0.5).setDepth(310).setAlpha(0);
-
-        const promptText = this.add.text(640, 450, 'PRESS ANY KEY TO CONTINUE', {
-            fontSize: '18px', fontFamily: 'monospace', color: '#ffdd44',
-        }).setOrigin(0.5).setDepth(310).setAlpha(0);
-
-        this.tweens.add({
-            targets: waveText, alpha: 1, y: 290,
-            duration: 500, ease: 'Back.easeOut', delay: 100,
-        });
-        this.tweens.add({
-            targets: [scoreText, promptText], alpha: 1, duration: 400, delay: 600,
-        });
-        // Blink the prompt
-        this.tweens.add({
-            targets: promptText, alpha: 0.2, duration: 600,
-            yoyo: true, repeat: -1, delay: 900,
-        });
-
-        // Accept input after a short grace period
-        this.time.delayedCall(700, () => {
-            let advanced = false;
-            const advance = () => {
-                if (advanced) return;
-                advanced = true;
-                // Remove the sibling listener so only one path fires
-                this.input.keyboard.off('keydown', advance);
-                this.input.off('pointerdown', advance);
-
-                overlay.destroy();
-                waveText.destroy();
-                scoreText.destroy();
-                promptText.destroy();
-
-                const wave = this.waveManager.wave;
-                if (this.waveManager.isLastWave) {
-                    this.scene.start('VictoryScene', { wave, score: this.score });
-                } else if (this.waveManager.isIntermissionWave) {
-                    this.scene.start('IntermissionScene', {
-                        wave,
-                        score:       this.score,
-                        snailHealth: this.snail.health, // already restored to max
-                    });
-                } else {
-                    this.waveManager.nextWave();
-                }
-            };
-            this.input.keyboard.once('keydown', advance);
-            this.input.once('pointerdown', advance);
-        });
+        const wave = this.waveManager.wave;
+        if (this.waveManager.isLastWave) {
+            this.scene.start('VictoryScene', { wave, score: this.score });
+        } else {
+            this.scene.start('IntermissionScene', {
+                wave,
+                score:       this.score,
+                snailHealth: this.snail.health,
+                upgrades:    this.upgradesList,
+            });
+        }
     }
 
     _openPause() {
@@ -582,6 +689,10 @@ export default class GameScene extends Phaser.Scene {
             case 'tank':   alien = new TankAlien(this, x, y);   break;
             case 'bomber': alien = new BomberAlien(this, x, y); break;
             default:       alien = new BasicAlien(this, x, y);
+        }
+        if (this.slowFieldActive) {
+            alien._origSpeed = alien.speed;
+            alien.speed = alien.speed * CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER;
         }
         this.aliens.push(alien);
     }

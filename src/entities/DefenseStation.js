@@ -21,25 +21,30 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
         this.isOnCooldown = false;
         this.cooldownDuration = CONFIG.CANNON.COOLDOWN;
 
-        // --- Draw based on type ---
+        // Base (circle + outline) — never rotates
         this.gfx = scene.add.graphics();
         this.add(this.gfx);
+
+        // Barrel — rotates toward target
+        this.barrelGfx = scene.add.graphics();
+        this.add(this.barrelGfx);
+
         this.drawStation();
 
-        // Label
-        this.labelText = scene.add.text(0, -35, this.stationType, {
+        // Label — left side of turret
+        this.labelText = scene.add.text(-28, 0, this.stationType, {
             fontSize: '10px',
             fontFamily: 'monospace',
             color: '#ff8844',
-        }).setOrigin(0.5);
+        }).setOrigin(1, 0.5);
         this.add(this.labelText);
 
-        // Status text
-        this.statusText = scene.add.text(0, 30, 'READY', {
+        // Status text — right side of turret
+        this.statusText = scene.add.text(28, 0, 'READY', {
             fontSize: '9px',
             fontFamily: 'monospace',
             color: '#44ff44',
-        }).setOrigin(0.5);
+        }).setOrigin(0, 0.5);
         this.add(this.statusText);
 
         // Cooldown arc (drawn over the station)
@@ -50,6 +55,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
     drawStation() {
         const g = this.gfx;
         g.clear();
+        this.barrelGfx.clear();
 
         if (this.stationType === 'CANNON') {
             // Base — dark circle
@@ -58,19 +64,20 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
             g.lineStyle(2, 0xff8844, 0.8);
             g.strokeCircle(0, 0, 20);
 
-            // Barrel — rectangle pointing up
-            g.fillStyle(0x555566, 1);
-            g.fillRect(-4, -28, 8, 16);
-            g.lineStyle(1.5, 0xff8844, 0.6);
-            g.strokeRect(-4, -28, 8, 16);
+            // Barrel — separate graphics, points up at rotation=0
+            const bg = this.barrelGfx;
+            bg.fillStyle(0x555566, 1);
+            bg.fillRect(-4, -28, 8, 16);
+            bg.lineStyle(1.5, 0xff8844, 0.6);
+            bg.strokeRect(-4, -28, 8, 16);
 
             // Muzzle dot
-            g.fillStyle(0xff8844, 0.8);
-            g.fillCircle(0, -28, 3);
+            bg.fillStyle(0xff8844, 0.8);
+            bg.fillCircle(0, -28, 3);
         }
     }
 
-    /** Fire the cannon effect — auto-target nearest alien for 5s */
+    /** Fire the cannon effect — auto-target nearest alien for duration */
     activate() {
         if (this.isActive || this.isOnCooldown) return;
         this.isActive = true;
@@ -110,12 +117,25 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
 
         if (!nearest) return;
 
-        // Fire a projectile toward it (remove the active check from the loop since filter handles it)
-        const proj = new Projectile(this.scene, this.x, this.y, nearest.x, nearest.y);
-        // Add to scene's projectiles array so collision detection works
-        if (this.scene.projectiles) {
-            this.scene.projectiles.push(proj);
-        }
+        // Rotate barrel toward target quickly, then fire
+        const dx = nearest.x - this.x;
+        const dy = nearest.y - this.y;
+        const targetAngle = Math.atan2(dy, dx) + Math.PI / 2;
+
+        this.scene.tweens.add({
+            targets: this.barrelGfx,
+            rotation: targetAngle,
+            duration: 120,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+                if (!this.active) return;
+                this.scene.soundSynth?.play('cannonFire');
+                const proj = new Projectile(this.scene, this.x, this.y, nearest.x, nearest.y);
+                if (this.scene.projectiles) {
+                    this.scene.projectiles.push(proj);
+                }
+            },
+        });
     }
 
     startCooldown() {

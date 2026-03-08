@@ -70,11 +70,66 @@ export default class SoundSynth {
 
     // ── Sound definitions ──────────────────────────────────────────────────────
 
+    /** Upgrade card selected — triumphant three-note ascending chord. */
+    _upgradeSelect() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        [523.2, 659.3, 783.9].forEach((freq, i) => {
+            const st = t + i * 0.07;
+            const g  = this._gain(ctx, 0.28, st, 0.38);
+            this._osc(ctx, 'sine', freq, freq, st, 0.35, g);
+            const g2 = this._gain(ctx, 0.10, st, 0.38);
+            this._osc(ctx, 'triangle', freq * 2, freq * 2, st, 0.35, g2);
+        });
+    }
+
+    /** Force shield activated — rising electric hum + resonant ping. */
+    _shieldActivate() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const g = this._gain(ctx, 0.38, t, 0.55);
+        this._osc(ctx, 'sine', 200, 620, t, 0.50, g);
+        const g2 = this._gain(ctx, 0.20, t + 0.35, 0.40);
+        this._osc(ctx, 'sine', 880, 880, t + 0.35, 0.38, g2);
+    }
+
+    /** Slow field activated — deep descending pitch-bend whoosh. */
+    _slowActivate() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const dur = 0.9;
+        const g = this._gain(ctx, 0.45, t, dur);
+        this._osc(ctx, 'sine', 440, 110, t, dur * 0.9, g);
+        const ng  = this._gain(ctx, 0.18, t, dur * 0.6);
+        const lpf = this._filter(ctx, 'lowpass', 800, ng);
+        this._noise(ctx, dur * 0.55, lpf);
+    }
+
+    /** Slow field clock tick — quiet, muffled tick. */
+    _slowTick() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const g = this._gain(ctx, 0.18, t, 0.06);
+        this._osc(ctx, 'square', 1200, 900, t, 0.05, g);
+        const ng  = this._gain(ctx, 0.10, t, 0.04);
+        const hpf = this._filter(ctx, 'highpass', 3000, ng);
+        this._noise(ctx, 0.03, hpf);
+    }
+
+    /** Auto-turret cannon shot — deeper thump + sharp crack. */
+    _cannonFire() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Low thump
+        const bg = this._gain(ctx, 0.55, t, 0.14);
+        this._osc(ctx, 'sawtooth', 160, 40, t, 0.12, bg);
+        // Sharp crack noise
+        const ng  = this._gain(ctx, 0.30, t, 0.08);
+        const hpf = this._filter(ctx, 'highpass', 2000, ng);
+        this._noise(ctx, 0.07, hpf);
+    }
+
     /** Gun shot — short sawtooth pitch-drop + highpass noise punch. */
     _shoot() {
         const ctx = this._ctx_get(), t = ctx.currentTime;
+        const pitch = 0.9 + Math.random() * 0.2;   // ±10% pitch variation
         const g = this._gain(ctx, 0.55, t, 0.11);
-        this._osc(ctx, 'sawtooth', 220, 50, t, 0.09, g);
+        this._osc(ctx, 'sawtooth', 220 * pitch, 50 * pitch, t, 0.09, g);
         const ng  = this._gain(ctx, 0.22, t, 0.07);
         const hpf = this._filter(ctx, 'highpass', 1200, ng);
         this._noise(ctx, 0.08, hpf);

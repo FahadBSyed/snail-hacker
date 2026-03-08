@@ -1,7 +1,9 @@
 const STORAGE_KEY = 'snail-hacker-config';
+const CONFIG_VERSION = 3;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
+    _version: CONFIG_VERSION,
 
     PLAYER: {
         SNAIL_SPEED:       40,    // px/s
@@ -13,7 +15,7 @@ export const DEFAULTS = {
 
     SNAIL: {
         MAX_HEALTH:       100,
-        INVINCIBILITY_MS: 1500,  // ms of i-frames after taking damage
+        INVINCIBILITY_MS: 3000,  // ms of i-frames after taking damage
     },
 
     STATION: {
@@ -80,14 +82,14 @@ export const DEFAULTS = {
         REPAIR_COOLDOWN:  12000,
         REPAIR_HEAL:      25,     // HP restored per repair
         SHIELD_COOLDOWN:  25000,
-        SHIELD_DURATION:  4000,   // ms — how long the shield lasts
+        SHIELD_DURATION:  25000,  // ms — how long the shield lasts
         SLOW_COOLDOWN:    18000,
-        SLOW_DURATION:    6000,   // ms — how long SlowField lasts
+        SLOW_DURATION:    25000,  // ms — how long SlowField lasts
     },
 
     CANNON: {
         FIRE_INTERVAL:   1000,   // ms between auto-shots while active
-        ACTIVE_DURATION: 5000,   // ms of continuous firing
+        ACTIVE_DURATION: 25000,  // ms of continuous firing
         COOLDOWN:        20000,  // ms — cannon's own recharge after activation
     },
 
@@ -106,6 +108,12 @@ export const DEFAULTS = {
     INTERMISSION: {
         HEAL_AMOUNT:       20,  // HP restored to snail between waves
         AUTO_ADVANCE_SECS: 5,   // seconds before auto-advancing
+    },
+
+    UPGRADES: {
+        ORBIT_RADIUS:   180,  // px from station center for upgrade terminals
+        MIN_SEPARATION:  80,  // min px between any two upgrade terminals
+        CARDS_OFFERED:    3,  // max cards shown per upgrade selection wave
     },
 
     WAVES: {
@@ -136,7 +144,15 @@ function deepMerge(target, source) {
 function loadConfig() {
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) return deepMerge(structuredClone(DEFAULTS), JSON.parse(saved));
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            // Discard saved config if it was written by an older version of the game.
+            if (parsed._version !== CONFIG_VERSION) {
+                console.info('[config] Version mismatch — resetting to defaults.');
+                return structuredClone(DEFAULTS);
+            }
+            return deepMerge(structuredClone(DEFAULTS), parsed);
+        }
     } catch (e) {
         console.warn('[config] Failed to load saved config:', e);
     }

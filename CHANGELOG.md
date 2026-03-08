@@ -105,3 +105,46 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 
 ### Bug Fixes
 - **Double wave increment on splash dismiss** — `keyboard.once` and `input.once` are on separate Phaser emitters; pressing a key then clicking (or vice versa) called `advance()` twice and ran `nextWave()` twice. Fixed with an `advanced` guard flag and explicit `.off()` calls to remove the sibling listener at the start of `advance()`.
+
+## Session 5 — 2026-03-07 / 2026-03-08
+
+### Audio Polish
+- **Gunfire pitch variation** — `SoundSynth._shoot()` now multiplies both the start (220 Hz) and end (50 Hz) frequencies by a random factor in [0.9, 1.1] on every call, giving each shot a slightly different pitch and preventing the firing sound from feeling monotonous during sustained fire.
+
+### Intermission After Every Wave
+- `_showWaveCompleteSplash()` now routes directly to `IntermissionScene` after every non-final wave instead of only after waves 3/6/9. Added flavor quotes for waves 1, 2, 4, 5, 7, and 8. The old in-game splash overlay was removed; `IntermissionScene` is the single path for all inter-wave flow.
+
+### Upgrade System (Step 26)
+- **Card selection at intermissions** — Every intermission up to 4 upgrades are offered (CANNON, SHIELD, SLOWFIELD, REPAIR) as clickable cards. Selecting a card removes it from the pool permanently. Player presses 1/2/3 or clicks to choose.
+- **Persistent terminals** — Selected upgrades are carried in scene data (`upgrades[]`) and spawned as terminals around the station at `CONFIG.UPGRADES.ORBIT_RADIUS` at the start of each subsequent wave. RELOAD terminal placement avoids overlapping any upgrade terminal.
+- **SHIELD → protects Gerald** — `Snail.shield(duration)` / `unshield()` methods added; shield circle is a child of the Snail container so it follows Gerald. `takeDamage()` returns false while shielded. Rhythm minigame keys changed from the broad key pool to just WASD so timing is the challenge, not key hunting.
+- **Bug fix** — Upgrade cards were only offered on wave 6 (`wave % 2 === 0` only matched multiples of 2 that were also ≤9 intermission waves). Fixed to offer cards at every intermission until all 4 are acquired.
+- **Upgrade card descriptions live** — `getUpgradeDefs()` reads `CANNON.ACTIVE_DURATION`, `SHIELD_DURATION`, `SLOW_DURATION`, `SLOW_SPEED_MULTIPLIER`, `REPAIR_HEAL` at render time so card text always matches the actual balance values.
+
+### Turret UX Improvements
+- Turret type label moved left and status text moved right to eliminate overlap with the Terminal label beneath the DefenseStation.
+- Barrel split into a separate Graphics object that rotates independently; 120ms tween toward target before each shot.
+- `cannonFire` sound added to `SoundSynth` (low thump + sharp crack).
+- `CANNON.ACTIVE_DURATION`, `SHIELD_DURATION`, and `SLOW_DURATION` extended from 4–6s to 25s so powers last long enough to matter. `CONFIG_VERSION` bumped to 2 to clear stale localStorage.
+
+### Audio — Upgrade / Shield / Slow Field
+- `upgradeSelect` — triumphant 3-note ascending chord on card pick.
+- `shieldActivate` — rising electric hum + resonant ping.
+- `slowActivate` — deep descending pitch-bend whoosh.
+- `slowTick` — quiet muffled tick every second while slow field is active, with a purple screen tint (depth 50, α 0.10) fading in/out with the effect.
+
+### Gerald Invincibility Frames
+- `INVINCIBILITY_MS` extended from 1500 → 3000ms to prevent instant death when swarmed without ammo. Flash changed from alternating red/white to white-only pulses. `CONFIG_VERSION` bumped to 3.
+- **Bug fixes (i-frame flash)** — `setTint(0xffffff)` is a no-op (multiplies by 1); `setTintFill` doesn't work reliably in Canvas renderer. Final solution: a 48×48 white `scene.add.rectangle` child on the Container, `setAlpha(0)` initially, tweened α 0→0.85 yoyo×6 over the full invincibility window. `fillAlpha=1` + `setAlpha(0)` distinction was required — setting `fillAlpha=0` made the fill transparent and the tween had nothing to show.
+
+### Bug Fix — Slow Field Clock Tick After Expiry
+- In Phaser 3.80 a `loop:true` TimerEvent can fire one extra time after `remove(false)` is called. Guarded `slowTick` callback with a `slowFieldActive` boolean so it never plays sound after the field expires.
+
+---
+
+## Session 6 — 2026-03-08
+
+### Damage Animation — Gerald Hit Sprites
+- **`scripts/generate-damage-sprites.js`** — New sprite generator producing 64 SVG frames (16 per direction: right/left/up/down). Frames f00–f07 show Gerald withdrawing into his shell (body shrinks, feet retract, eyes/antennae pull in); frames f08–f15 show the shell pulsing with an alternating breathe scale. Left frames are the right frames mirrored via `<g transform="scale(-1,1)">`.
+- **feColorMatrix white tint** — Rather than a white rectangle overlay, frames with `FLASH[fi] > 0` are wrapped in an SVG `<filter>` using `feColorMatrix` to linearly interpolate every pixel toward white: `new_channel = src * (1-w) + w`. f00 (w=0.75) is nearly white; f03 (w=0.10) is a faint wash; shell-pulse frames alternate at w=0.45. No covering rectangle — Gerald's actual colours bleach out and recover together.
+- **Wired into GameScene** — `GameScene.preload()` loads all 64 frames (`snail-hit-{dir}-f{00..15}`). An `anims.create()` call registers `snail-hit-{dir}` (8 fps, no repeat). `Snail.takeDamage()` plays the animation on the sprite; the existing i-frame white-rectangle overlay was removed since the sprite animation now carries the visual feedback.
