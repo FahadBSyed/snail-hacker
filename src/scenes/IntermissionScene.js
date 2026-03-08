@@ -56,7 +56,7 @@ export default class IntermissionScene extends Phaser.Scene {
 
         // Determine available upgrades and whether this is an upgrade selection wave.
         const available     = UPGRADE_POOL.filter(t => !this.upgrades.some(u => u.type === t));
-        const isUpgradeWave = this.wave % 2 === 0 && available.length > 0;
+        const isUpgradeWave = available.length > 0;
 
         if (isUpgradeWave) {
             this._buildUpgradeLayout(cx, healedHealth, flavors, available);
