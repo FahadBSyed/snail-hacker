@@ -424,6 +424,7 @@ export default class GameScene extends Phaser.Scene {
         const eligible = this.terminals.filter(t => {
             if (t.terminalState !== 'IDLE') return false;
             if (t.label === 'REPAIR' && this.snail.health >= this.snail.maxHealth) return false;
+            if (t.label === 'RELOAD' && this.ammo >= this.ammoMax) return false;
             return true;
         });
         if (eligible.length === 0) return;
