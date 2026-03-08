@@ -32,9 +32,18 @@ export default class GameScene extends Phaser.Scene {
                           : data.stationHealth !== undefined ? data.stationHealth
                           : CONFIG.SNAIL.MAX_HEALTH;
         this.upgradesList = data.upgrades || [];
+
+        // Pick a deterministic background per wave (prime step gives good spread across 20)
+        const bgIdx = ((this.startWave - 1) * 7) % 20;
+        this.bgKey  = `bg-${String(bgIdx).padStart(2, '0')}`;
     }
 
     preload() {
+        // Background for this wave (only load if not already cached)
+        if (!this.textures.exists(this.bgKey)) {
+            this.load.svg(this.bgKey, `assets/backgrounds/${this.bgKey}.svg`, { width: 1280, height: 720 });
+        }
+
         const svgSize = { width: 48, height: 48 };
         // Snail directional sprites
         this.load.svg('snail-right', 'assets/snail-right.svg', svgSize);
@@ -60,14 +69,8 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
-        // ── Starfield background ──────────────────────────────────────────────
-        for (let i = 0; i < 150; i++) {
-            const x     = Phaser.Math.Between(0, 1280);
-            const y     = Phaser.Math.Between(0, 720);
-            const size  = Phaser.Math.FloatBetween(0.5, 2);
-            const alpha = Phaser.Math.FloatBetween(0.3, 0.8);
-            this.add.circle(x, y, size, 0xffffff, alpha);
-        }
+        // ── Alien planet surface background ──────────────────────────────────
+        this.add.image(640, 360, this.bgKey).setDepth(-1);
 
         this.input.mouse.disableContextMenu();
 
