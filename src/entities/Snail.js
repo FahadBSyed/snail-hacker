@@ -97,7 +97,7 @@ export default class Snail extends Phaser.GameObjects.Container {
                 flashCount++;
                 if (this.sprite && this.sprite.active) {
                     if (flashCount % 2 === 0) this.sprite.clearTint();
-                    else                      this.sprite.setTint(0xffffff);
+                    else                      this.sprite.setTintFill(0xffffff);
                 }
             },
         });
