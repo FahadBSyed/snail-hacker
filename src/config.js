@@ -85,6 +85,7 @@ export const DEFAULTS = {
         SHIELD_DURATION:  25000,  // ms — how long the shield lasts
         SLOW_COOLDOWN:    18000,
         SLOW_DURATION:    25000,  // ms — how long SlowField lasts
+        DRONE_INTERVAL:   60000,  // ms between autonomous drone activations
     },
 
     CANNON: {

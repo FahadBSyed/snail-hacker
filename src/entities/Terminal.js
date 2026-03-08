@@ -156,6 +156,30 @@ export default class Terminal extends Phaser.GameObjects.Container {
         );
     }
 
+    /**
+     * Autonomously activate this terminal (drone upgrade — no minigame).
+     * Calls onSuccess and starts a full cooldown. Returns false if not IDLE.
+     */
+    droneActivate() {
+        if (this.terminalState !== 'IDLE') return false;
+
+        this.terminalState = 'ACTIVE';
+        this.ePrompt.setVisible(false);
+        this.screenGlow.fillColor = 0xffdd44;
+        this.screenGlow.fillAlpha = 0.8;
+
+        // Brief visible flash, then trigger success + cooldown
+        this.scene.time.delayedCall(350, () => {
+            if (!this.active) return;
+            this.screenGlow.fillColor = this.color;
+            this.screenGlow.fillAlpha = 0.3;
+            if (this.onSuccess) this.onSuccess();
+            this.startCooldown(this.cooldownDuration);
+        });
+
+        return true;
+    }
+
     /** Cancel any active minigame on this terminal (e.g. from teleport) */
     cancelMinigame(snail) {
         if (this.terminalState === 'ACTIVE') {

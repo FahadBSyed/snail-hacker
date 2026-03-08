@@ -282,6 +282,15 @@ export default class SoundSynth {
         });
     }
 
+    /** Drone fires — quick robotic two-tone chirp. */
+    _droneActivate() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const g1 = this._gain(ctx, 0.22, t,        0.09);
+        this._osc(ctx, 'square', 880, 1200, t,        0.08, g1);
+        const g2 = this._gain(ctx, 0.22, t + 0.10, 0.12);
+        this._osc(ctx, 'square', 1400, 1400, t + 0.10, 0.10, g2);
+    }
+
     /** New wave beginning — two sharp alert beeps. */
     _waveStart() {
         const ctx = this._ctx_get(), t = ctx.currentTime;

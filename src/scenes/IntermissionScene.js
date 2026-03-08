@@ -14,7 +14,7 @@ const FLAVOR_TEXT = {
 };
 
 // All upgrade types that can be offered, in order.
-const UPGRADE_POOL = ['CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR'];
+const UPGRADE_POOL = ['CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR', 'DRONE'];
 
 function getUpgradeDefs() {
     const cannonSecs = Math.round(CONFIG.CANNON.ACTIVE_DURATION / 1000);
@@ -22,11 +22,13 @@ function getUpgradeDefs() {
     const slowSecs   = Math.round(CONFIG.TERMINALS.SLOW_DURATION / 1000);
     const slowPct    = Math.round(CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER * 100);
     const repairHp   = CONFIG.TERMINALS.REPAIR_HEAL;
+    const droneSecs  = Math.round(CONFIG.TERMINALS.DRONE_INTERVAL / 1000);
     return {
         CANNON:    { label: 'AUTO TURRET',  color: 0xff8844, desc: `Hack to unleash an\nauto-targeting cannon\nfor ${cannonSecs}s.` },
         SHIELD:    { label: 'FORCE SHIELD', color: 0x4488ff, desc: `Hack to project a shield\nthat blocks alien damage\nfor ${shieldSecs}s.` },
         SLOWFIELD: { label: 'SLOW FIELD',   color: 0xaa44ff, desc: `Hack to slow all aliens\nto ${slowPct}% speed\nfor ${slowSecs}s.` },
         REPAIR:    { label: 'REPAIR KIT',   color: 0x44ff88, desc: `Hack to restore\n+${repairHp} HP to Gerald's shell.` },
+        DRONE:     { label: 'AUTO DRONE',   color: 0xffdd44, desc: `A drone autonomously\nhacks a random terminal\nevery ${droneSecs}s.` },
     };
 }
 
@@ -265,6 +267,7 @@ export default class IntermissionScene extends Phaser.Scene {
         do {
             angle = Math.random() * Math.PI * 2;
             const safe = this.upgrades.every(u => {
+                if (u.type === 'DRONE') return true; // drone has no terminal to collide with
                 const dx = r * (Math.cos(angle) - Math.cos(u.angle));
                 const dy = r * (Math.sin(angle) - Math.sin(u.angle));
                 return Math.sqrt(dx * dx + dy * dy) >= minSep;
