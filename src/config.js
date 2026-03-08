@@ -1,7 +1,9 @@
 const STORAGE_KEY = 'snail-hacker-config';
+const CONFIG_VERSION = 2;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
+    _version: CONFIG_VERSION,
 
     PLAYER: {
         SNAIL_SPEED:       40,    // px/s
@@ -142,7 +144,15 @@ function deepMerge(target, source) {
 function loadConfig() {
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) return deepMerge(structuredClone(DEFAULTS), JSON.parse(saved));
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            // Discard saved config if it was written by an older version of the game.
+            if (parsed._version !== CONFIG_VERSION) {
+                console.info('[config] Version mismatch — resetting to defaults.');
+                return structuredClone(DEFAULTS);
+            }
+            return deepMerge(structuredClone(DEFAULTS), parsed);
+        }
     } catch (e) {
         console.warn('[config] Failed to load saved config:', e);
     }
