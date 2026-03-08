@@ -381,11 +381,15 @@ export default class GameScene extends Phaser.Scene {
         this._droneGfx = this.add.graphics().setDepth(60);
         this._drawDrone(this._droneGfx, 640, 360); // initial draw
 
-        // Repeating timer — fires every DRONE_INTERVAL ms
-        this._droneTimer = this.time.addEvent({
-            delay:    CONFIG.TERMINALS.DRONE_INTERVAL,
-            loop:     true,
-            callback: () => this._droneFire(),
+        // First activation: random time within DRONE_FIRST_SHOT_MAX, then fixed cooldown loop.
+        const firstDelay = Math.random() * CONFIG.TERMINALS.DRONE_FIRST_SHOT_MAX;
+        this._droneTimer = this.time.delayedCall(firstDelay, () => {
+            this._droneFire();
+            this._droneTimer = this.time.addEvent({
+                delay:    CONFIG.TERMINALS.DRONE_COOLDOWN,
+                loop:     true,
+                callback: () => this._droneFire(),
+            });
         });
     }
 
