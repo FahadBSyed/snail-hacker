@@ -24,7 +24,7 @@ export default class Snail extends Phaser.GameObjects.Container {
         this.shielded   = false;
 
         // --- Sprite (uses preloaded SVG textures) ---
-        this.sprite = scene.add.image(0, 0, DIR_TEXTURES.right);
+        this.sprite = scene.add.sprite(0, 0, DIR_TEXTURES.right);
         this.add(this.sprite);
 
         // --- Overhead state label ---
@@ -86,25 +86,14 @@ export default class Snail extends Phaser.GameObjects.Container {
         this.health = Math.max(0, this.health - amount);
         this.invincible = true;
 
-        // White overlay rectangle — child of container so it moves with Gerald.
-        // Tween yoyo flashes it on/off for the full i-frame window.
-        const flashCycles = 6;
-        const halfPeriod  = CONFIG.SNAIL.INVINCIBILITY_MS / (flashCycles * 2);
-        // fillAlpha=1 (solid white fill); alpha=0 starts it invisible.
-        // Tween controls the GameObject alpha, not fillAlpha.
-        const flashOverlay = this.scene.add.rectangle(0, 0, 48, 48, 0xffffff, 1).setAlpha(0);
-        this.add(flashOverlay);
-        this.scene.tweens.add({
-            targets:  flashOverlay,
-            alpha:    0.85,
-            duration: halfPeriod,
-            yoyo:     true,
-            repeat:   flashCycles - 1,
-            onComplete: () => flashOverlay.destroy(),
-        });
+        // Play the directional withdraw → shell → extend animation.
+        // White flash is baked into the sprite frames.
+        this.sprite.play(`snail-hit-${this.facing}`);
 
         this.scene.time.delayedCall(CONFIG.SNAIL.INVINCIBILITY_MS, () => {
             this.invincible = false;
+            this.sprite.stop();
+            this.sprite.setTexture(DIR_TEXTURES[this.facing]);
         });
 
         return this.health <= 0;
@@ -113,7 +102,10 @@ export default class Snail extends Phaser.GameObjects.Container {
     setFacing(direction) {
         if (this.facing !== direction) {
             this.facing = direction;
-            this.sprite.setTexture(DIR_TEXTURES[direction]);
+            // Don't interrupt the damage animation while invincible.
+            if (!this.invincible) {
+                this.sprite.setTexture(DIR_TEXTURES[direction]);
+            }
         }
     }
 

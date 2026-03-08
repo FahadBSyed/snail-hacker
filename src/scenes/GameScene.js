@@ -41,6 +41,13 @@ export default class GameScene extends Phaser.Scene {
         this.load.svg('snail-left',  'assets/snail-left.svg',  svgSize);
         this.load.svg('snail-up',    'assets/snail-up.svg',    svgSize);
         this.load.svg('snail-down',  'assets/snail-down.svg',  svgSize);
+        // Damage / invincibility animation frames
+        for (const dir of ['right', 'left', 'up', 'down']) {
+            for (let i = 0; i <= 15; i++) {
+                const f = `f${String(i).padStart(2, '0')}`;
+                this.load.svg(`snail-hit-${dir}-${f}`, `assets/snail-hit-${dir}-${f}.svg`, svgSize);
+            }
+        }
         // Alien sprites — 8 directions each
         const dirs = ['right', 'diag-right-down', 'down', 'diag-left-down',
                       'left',  'diag-left-up',    'up',   'diag-right-up'];
@@ -71,6 +78,26 @@ export default class GameScene extends Phaser.Scene {
         this.station = new HackingStation(this, 640, 360);
 
         // ── Snail (Player 1) ──────────────────────────────────────────────────
+        // Register per-direction damage animations (withdraw → shell pulse → extend).
+        // 24 frames total: f00–f07 withdraw, f08–f15 shell, f07–f00 extend (reverse).
+        for (const dir of ['right', 'left', 'up', 'down']) {
+            if (!this.anims.exists(`snail-hit-${dir}`)) {
+                const frameKeys = [];
+                for (let i = 0; i <= 15; i++) {
+                    frameKeys.push({ key: `snail-hit-${dir}-f${String(i).padStart(2, '0')}` });
+                }
+                for (let i = 7; i >= 0; i--) {
+                    frameKeys.push({ key: `snail-hit-${dir}-f${String(i).padStart(2, '0')}` });
+                }
+                this.anims.create({
+                    key:      `snail-hit-${dir}`,
+                    frames:   frameKeys,
+                    duration: CONFIG.SNAIL.INVINCIBILITY_MS,
+                    repeat:   0,
+                });
+            }
+        }
+
         this.snail = new Snail(this, 300, 400);
         if (this.startSnailHp < CONFIG.SNAIL.MAX_HEALTH) {
             this.snail.health = this.startSnailHp;
