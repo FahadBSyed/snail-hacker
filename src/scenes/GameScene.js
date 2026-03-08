@@ -14,10 +14,11 @@ import RhythmMinigame from '../minigames/RhythmMinigame.js';
 import SequenceMinigame from '../minigames/SequenceMinigame.js';
 import TypingMinigame from '../minigames/TypingMinigame.js';
 import Battery from '../entities/Battery.js';
-import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
 import SoundSynth from '../systems/SoundSynth.js';
+import HUD from './HUD.js';
+import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions } from '../systems/CollisionSystem.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -127,7 +128,7 @@ export default class GameScene extends Phaser.Scene {
             // Fire from station toward cursor
             const proj = new Projectile(this, this.station.x, this.station.y, pointer.x, pointer.y);
             this.projectiles.push(proj);
-            this.updateAmmoDisplay();
+            this.hud.updateAmmo(this.ammo);
             this.cameras.main.shake(90, 0.005);
             this.soundSynth.play('shoot');
         });
@@ -216,7 +217,7 @@ export default class GameScene extends Phaser.Scene {
             launchMinigame: rhythmLauncher,
             onSuccess: () => {
                 this.ammo = this.ammoMax;
-                this.updateAmmoDisplay();
+                this.hud.updateAmmo(this.ammo);
                 _placeReloadTerm();
                 this.logDebug('Ammo reloaded! Terminal relocated.');
             },
@@ -263,7 +264,15 @@ export default class GameScene extends Phaser.Scene {
         this.escapeShip   = null;
 
         // ── HUD ───────────────────────────────────────────────────────────────
-        this._createHUD();
+        this.hud = new HUD(this, {
+            wave:          this.startWave,
+            hackThreshold: this.hackThreshold,
+            ammoMax:       this.ammoMax,
+            score:         this.startScore,
+        });
+        this.hud.updateAmmo(this.ammo);
+        this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
+        this.hud.updateGrab(this.grabSystem.statusText, this.grabSystem.statusColor);
 
         // ── Wave Manager ──────────────────────────────────────────────────────
         this.waveManager = new WaveManager(this, {
@@ -285,8 +294,8 @@ export default class GameScene extends Phaser.Scene {
                 this.snail.hackingActive = true;
 
                 this.station.setHackProgress(0);
-                this.updateWaveDisplay();
-                this.updateHackDisplay();
+                this.hud.updateWave(this.wave);
+                this.hud.updateHack(this.hackProgress, this.hackThreshold);
                 this.soundSynth.play('waveStart');
                 this.logDebug(`Wave ${wave} started — need ${this.hackThreshold} words`);
 
@@ -367,7 +376,7 @@ export default class GameScene extends Phaser.Scene {
                                 this.snail.maxHealth,
                                 this.snail.health + CONFIG.TERMINALS.REPAIR_HEAL,
                             );
-                            this.updateHealthDisplay();
+                            this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
                         },
                     });
                     break;
@@ -433,7 +442,7 @@ export default class GameScene extends Phaser.Scene {
             wordsRequired: remaining,
             onWordComplete: (_count) => {
                 this.hackProgress++;
-                this.updateHackDisplay();
+                this.hud.updateHack(this.hackProgress, this.hackThreshold);
                 this.station.setHackProgress(this.hackProgress / this.hackThreshold);
                 // Every N words the station loses power — but not if the hack just finished
                 if (this.hackProgress < this.hackThreshold &&
@@ -608,7 +617,7 @@ export default class GameScene extends Phaser.Scene {
         for (const alien of this.aliens) {
             if (!alien.active) continue;
             const burstColor = { basic: 0xdd3333, fast: 0xaa44ff, tank: 0x7799aa, bomber: 0xff7722 }[alien.alienType] || 0xffffff;
-            this.spawnDeathBurst(alien.x, alien.y, burstColor);
+            spawnDeathBurst(this, alien.x, alien.y, burstColor);
             alien.destroy();
         }
         this.aliens = [];
@@ -670,93 +679,6 @@ export default class GameScene extends Phaser.Scene {
         this.scene.pause();
     }
 
-    // ── HUD ───────────────────────────────────────────────────────────────────
-
-    _createHUD() {
-        // Snail health — top-left
-        this.add.text(10, 10, 'GERALD HP', {
-            fontSize: '12px', fontFamily: 'monospace', color: '#44ff88',
-        }).setDepth(100);
-        this.healthBarBg   = this.add.rectangle(10, 28, 204, 14, 0x333333).setOrigin(0, 0).setDepth(100);
-        this.healthBarFill = this.add.rectangle(12, 30, 200, 10, 0x44ff44).setOrigin(0, 0).setDepth(100);
-
-        // Wave — top-centre-left
-        this.waveLabel = this.add.text(510, 10, `WAVE ${this.startWave}`, {
-            fontSize: '14px', fontFamily: 'monospace', color: '#ffdd44',
-        }).setOrigin(0.5, 0).setDepth(100);
-
-        // Hack progress — below wave label
-        this.hackProgressLabel = this.add.text(510, 28, `HACK: 0 / ${this.hackThreshold}`, {
-            fontSize: '11px', fontFamily: 'monospace', color: '#00ffcc',
-        }).setOrigin(0.5, 0).setDepth(100);
-
-        // Score — top-centre
-        this.scoreLabel = this.add.text(640, 10, `SCORE: ${this.startScore}`, {
-            fontSize: '18px', fontFamily: 'monospace', color: '#ffffff',
-        }).setOrigin(0.5, 0).setDepth(100);
-
-        // Ammo — top-right (bullet icons)
-        this.ammoBullets = [];
-        const bulletGap      = 12;
-        const bulletsStartX  = 1270 - (this.ammoMax - 1) * bulletGap;
-        for (let i = 0; i < this.ammoMax; i++) {
-            const bx = bulletsStartX + i * bulletGap;
-            this.ammoBullets.push(this.add.rectangle(bx, 18, 7, 14, 0xffdd44, 1).setDepth(100));
-        }
-
-        this.lowAmmoLabel = this.add.text(1270, 38, '! LOW AMMO !', {
-            fontSize: '10px', fontFamily: 'monospace', color: '#ff4444',
-        }).setOrigin(1, 0).setDepth(100).setVisible(false);
-
-        // Grab hand status — below ammo
-        this.grabLabel = this.add.text(1270, 54, 'GRAB: READY', {
-            fontSize: '10px', fontFamily: 'monospace', color: '#cc66ff',
-        }).setOrigin(1, 0).setDepth(100);
-
-        this.updateAmmoDisplay();
-        this.updateHealthDisplay();
-        this.updateGrabDisplay();
-    }
-
-    updateAmmoDisplay() {
-        if (this.ammoBullets) {
-            this.ammoBullets.forEach((b, i) => {
-                const loaded = i < this.ammo;
-                b.fillColor = loaded ? 0xffdd44 : 0x444444;
-                b.fillAlpha = loaded ? 1.0 : 0.4;
-            });
-        }
-        if (this.lowAmmoLabel) {
-            this.lowAmmoLabel.setVisible(this.ammo <= 2 && this.ammo > 0);
-        }
-    }
-
-    updateHealthDisplay() {
-        const pct = this.snail.health / this.snail.maxHealth;
-        this.healthBarFill.width = 200 * pct;
-        if (pct > 0.5)       this.healthBarFill.fillColor = 0x44ff44;
-        else if (pct > 0.25) this.healthBarFill.fillColor = 0xffdd44;
-        else                 this.healthBarFill.fillColor = 0xff4444;
-    }
-
-    updateScoreDisplay() {
-        this.scoreLabel.setText(`SCORE: ${this.score}`);
-    }
-
-    updateWaveDisplay() {
-        this.waveLabel.setText(`WAVE ${this.wave}`);
-    }
-
-    updateHackDisplay() {
-        this.hackProgressLabel.setText(`HACK: ${this.hackProgress} / ${this.hackThreshold}`);
-    }
-
-    updateGrabDisplay() {
-        if (!this.grabLabel) return;
-        this.grabLabel.setText(this.grabSystem.statusText);
-        this.grabLabel.setColor(this.grabSystem.statusColor);
-    }
-
     // ── Alien spawning ─────────────────────────────────────────────────────────
 
     _randomEdgePosition() {
@@ -782,144 +704,11 @@ export default class GameScene extends Phaser.Scene {
         this.aliens.push(alien);
     }
 
-    // ── Visual effects ────────────────────────────────────────────────────────
-
-    spawnDeathBurst(x, y, color = 0xff4444) {
-        this.soundSynth.play('explosion');
-        // Expanding light pulse — large soft outer glow
-        const pulse = this.add.circle(x, y, 6, 0xff3300, 0.45).setDepth(53);
-        this.tweens.add({
-            targets: pulse, scaleX: 9, scaleY: 9, alpha: 0,
-            duration: 480, ease: 'Power2.easeOut', onComplete: () => pulse.destroy(),
-        });
-        // Bright inner flash
-        const flash = this.add.circle(x, y, 4, 0xff8833, 0.80).setDepth(54);
-        this.tweens.add({
-            targets: flash, scaleX: 5, scaleY: 5, alpha: 0,
-            duration: 260, ease: 'Power1.easeOut', onComplete: () => flash.destroy(),
-        });
-
-        // Debris dots
-        const count = 7;
-        for (let i = 0; i < count; i++) {
-            const angle = (Math.PI * 2 / count) * i;
-            const speed = Phaser.Math.Between(30, 70);
-            const dot   = this.add.circle(x, y, Phaser.Math.Between(2, 5), color, 0.9).setDepth(55);
-            this.tweens.add({
-                targets: dot,
-                x: x + Math.cos(angle) * speed,
-                y: y + Math.sin(angle) * speed,
-                alpha: 0,
-                scaleX: 0.2,
-                scaleY: 0.2,
-                duration: Phaser.Math.Between(250, 450),
-                ease: 'Power2',
-                onComplete: () => dot.destroy(),
-            });
-        }
-    }
-
-    triggerBomberExplosion(bx, by) {
-        const blastRadius = CONFIG.DAMAGE.BOMBER_BLAST_RADIUS;
-
-        // Damage snail if in blast radius
-        const snailDist = Phaser.Math.Distance.Between(bx, by, this.snail.x, this.snail.y);
-        if (snailDist < blastRadius) {
-            const died = this.snail.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_SNAIL);
-            this.updateHealthDisplay();
-            this.soundSynth.play('damage');
-            if (died) {
-                if (this.waveManager) this.waveManager.active = false;
-                if (this.activeHack)  { this.activeHack.cancel(); this.activeHack = null; }
-                this.scene.start('GameOverScene', { wave: this.wave, score: this.score });
-                return;
-            }
-        }
-
-        // Damage nearby aliens from the blast
-        for (const a of this.aliens) {
-            if (!a.active) continue;
-            const d = Phaser.Math.Distance.Between(bx, by, a.x, a.y);
-            if (d < blastRadius) a.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_ALIEN);
-        }
-
-        // Expanding ring visual
-        const ring = this.add.circle(bx, by, 5, 0xff6600, 0.0).setDepth(60)
-            .setStrokeStyle(3, 0xff8833, 0.9);
-        this.tweens.add({
-            targets: ring,
-            scaleX: blastRadius / 5,
-            scaleY: blastRadius / 5,
-            alpha: 0,
-            duration: 350,
-            ease: 'Power2',
-            onComplete: () => ring.destroy(),
-        });
-    }
-
-    // ── Collision checks ──────────────────────────────────────────────────────
-
-    checkCollisions() {
-        for (const proj of this.projectiles) {
-            if (!proj.active) continue;
-            for (const alien of this.aliens) {
-                if (!alien.active) continue;
-                const dist = Phaser.Math.Distance.Between(proj.x, proj.y, alien.x, alien.y);
-                if (dist < alien.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
-                    proj.destroy();
-                    const isBomber = alien.alienType === 'bomber';
-                    const bx = alien.x, by = alien.y;
-                    const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
-
-                    // Red flash overlay — drawn as a scene-level circle so it works
-                    // in Canvas renderer (setTint/setTintFill are no-ops on Canvas).
-                    const flash = this.add.arc(bx, by, alien.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
-                    this.tweens.add({
-                        targets: flash, alpha: 0, duration: 200,
-                        onComplete: () => flash.destroy(),
-                    });
-
-                    // Hit-stop wobble: quick horizontal jerk on the container
-                    this.tweens.add({
-                        targets:  alien,
-                        x:        alien.x + 5,
-                        duration: 50,
-                        ease:     'Sine.easeOut',
-                        yoyo:     true,
-                        repeat:   1,
-                    });
-
-                    if (died) {
-                        this.score++;
-                        this.updateScoreDisplay();
-                        const burstColor = { basic: 0xdd3333, fast: 0xaa44ff, tank: 0x7799aa, bomber: 0xff7722 }[alien.alienType] || 0xffffff;
-
-                        // Mark dying so the update loop skips it, then destroy after flash
-                        alien._dying = true;
-                        this.time.delayedCall(200, () => {
-                            if (!alien.active) return;
-                            this.spawnDeathBurst(bx, by, burstColor);
-
-                            // Random health drop on kill
-                            if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
-                                this.healthDrops.push(new HealthDrop(this, bx, by));
-                            }
-
-                            if (isBomber) this.triggerBomberExplosion(bx, by);
-                            alien.destroy();
-                        });
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
     // ── Main update loop ──────────────────────────────────────────────────────
 
     update(time, delta) {
         this.grabSystem.update(delta);
-        this.updateGrabDisplay();
+        this.hud.updateGrab(this.grabSystem.statusText, this.grabSystem.statusColor);
         if (!this.boardingShip) this.snail.update(time, delta);
 
         // ── Battery logic ─────────────────────────────────────────────────────
@@ -1006,10 +795,10 @@ export default class GameScene extends Phaser.Scene {
                 alien.destroy();
 
                 if (isBomber) {
-                    this.triggerBomberExplosion(bx, by);
+                    checkBomberBlast(this, bx, by);
                 } else {
                     const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
-                    this.updateHealthDisplay();
+                    this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
                     this.soundSynth.play('damage');
                     if (died) {
                         if (this.waveManager) this.waveManager.active = false;
@@ -1024,7 +813,7 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // Collision checks (projectile vs alien)
-        this.checkCollisions();
+        checkProjectileCollisions(this);
 
         // Health drop pickups
         this.healthDrops = this.healthDrops.filter(drop => {
@@ -1035,7 +824,7 @@ export default class GameScene extends Phaser.Scene {
                     this.snail.maxHealth - this.snail.health,
                 );
                 this.snail.health += healed;
-                this.updateHealthDisplay();
+                this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
                 if (healed > 0) { this.soundSynth.play('healthPickup'); this.logDebug(`Health pickup! +${healed} HP`); }
                 drop.destroy();
                 return false;
