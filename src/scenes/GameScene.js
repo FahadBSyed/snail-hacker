@@ -301,7 +301,7 @@ export default class GameScene extends Phaser.Scene {
                         cooldown:       CONFIG.TERMINALS.SHIELD_COOLDOWN,
                         color:          0x4488ff,
                         launchMinigame: this._sequenceLauncher,
-                        onSuccess:      () => this.station.shield(CONFIG.TERMINALS.SHIELD_DURATION),
+                        onSuccess:      () => this.snail.shield(CONFIG.TERMINALS.SHIELD_DURATION),
                     });
                     break;
                 case 'SLOWFIELD':

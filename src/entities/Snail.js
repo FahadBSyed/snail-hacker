@@ -21,6 +21,7 @@ export default class Snail extends Phaser.GameObjects.Container {
         this.health    = CONFIG.SNAIL.MAX_HEALTH;
         this.maxHealth = CONFIG.SNAIL.MAX_HEALTH;
         this.invincible = false;
+        this.shielded   = false;
 
         // --- Sprite (uses preloaded SVG textures) ---
         this.sprite = scene.add.image(0, 0, DIR_TEXTURES.right);
@@ -45,12 +46,43 @@ export default class Snail extends Phaser.GameObjects.Container {
         });
     }
 
+    shield(duration) {
+        if (this.shielded) return false;
+        this.shielded = true;
+
+        this.shieldGfx = this.scene.add.graphics();
+        this.shieldGfx.fillStyle(0x4488ff, 0.15);
+        this.shieldGfx.fillCircle(0, 0, 32);
+        this.shieldGfx.lineStyle(2.5, 0x88ccff, 0.8);
+        this.shieldGfx.strokeCircle(0, 0, 32);
+        this.add(this.shieldGfx); // child of container — moves with Gerald
+
+        this.shieldTween = this.scene.tweens.add({
+            targets:  this.shieldGfx,
+            alpha:    0.5,
+            duration: 550,
+            ease:     'Sine.easeInOut',
+            yoyo:     true,
+            repeat:   -1,
+        });
+
+        this.scene.time.delayedCall(duration, () => this.unshield());
+        return true;
+    }
+
+    unshield() {
+        if (!this.shielded) return;
+        this.shielded = false;
+        if (this.shieldTween) { this.shieldTween.stop(); this.shieldTween = null; }
+        if (this.shieldGfx)   { this.shieldGfx.destroy(); this.shieldGfx = null; }
+    }
+
     /**
      * Deal damage to the snail. Returns true if snail died.
      * Triggers invincibility frames + flash effect.
      */
     takeDamage(amount) {
-        if (this.invincible) return false;
+        if (this.invincible || this.shielded) return false;
         this.health = Math.max(0, this.health - amount);
         this.invincible = true;
 
