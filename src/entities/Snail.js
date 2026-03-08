@@ -90,7 +90,9 @@ export default class Snail extends Phaser.GameObjects.Container {
         // Tween yoyo flashes it on/off for the full i-frame window.
         const flashCycles = 6;
         const halfPeriod  = CONFIG.SNAIL.INVINCIBILITY_MS / (flashCycles * 2);
-        const flashOverlay = this.scene.add.rectangle(0, 0, 48, 48, 0xffffff, 0);
+        // fillAlpha=1 (solid white fill); alpha=0 starts it invisible.
+        // Tween controls the GameObject alpha, not fillAlpha.
+        const flashOverlay = this.scene.add.rectangle(0, 0, 48, 48, 0xffffff, 1).setAlpha(0);
         this.add(flashOverlay);
         this.scene.tweens.add({
             targets:  flashOverlay,
