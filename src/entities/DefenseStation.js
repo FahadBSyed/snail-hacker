@@ -1,5 +1,6 @@
 import Projectile from './Projectile.js';
 import { CONFIG } from '../config.js';
+import { startCooldown } from './shared/CooldownTimer.js';
 
 export default class DefenseStation extends Phaser.GameObjects.Container {
     /**
@@ -143,31 +144,22 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
         this.statusText.setText('COOLDOWN').setColor('#888888');
         this.labelText.setColor('#888888');
 
-        const startTime = this.scene.time.now;
-        const timer = this.scene.time.addEvent({
-            delay: 50,
-            loop: true,
-            callback: () => {
-                const elapsed = this.scene.time.now - startTime;
-                const pct = Math.min(1, elapsed / this.cooldownDuration);
-                const remaining = Math.ceil((this.cooldownDuration - elapsed) / 1000);
-                this.statusText.setText(`${remaining}s`);
-
-                // Draw cooldown arc
+        startCooldown(
+            this.scene, this.cooldownDuration, 50,
+            (remaining, pct) => {
+                this.statusText.setText(`${Math.ceil(remaining / 1000)}s`);
                 this.cooldownGfx.clear();
                 this.cooldownGfx.lineStyle(3, 0xff8844, 0.3);
                 this.cooldownGfx.beginPath();
-                this.cooldownGfx.arc(0, 0, 24, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * pct), false);
+                this.cooldownGfx.arc(0, 0, 24, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct, false);
                 this.cooldownGfx.strokePath();
-
-                if (pct >= 1) {
-                    timer.remove(false);
-                    this.isOnCooldown = false;
-                    this.cooldownGfx.clear();
-                    this.statusText.setText('READY').setColor('#44ff44');
-                    this.labelText.setColor('#ff8844');
-                }
             },
-        });
+            () => {
+                this.isOnCooldown = false;
+                this.cooldownGfx.clear();
+                this.statusText.setText('READY').setColor('#44ff44');
+                this.labelText.setColor('#ff8844');
+            },
+        );
     }
 }

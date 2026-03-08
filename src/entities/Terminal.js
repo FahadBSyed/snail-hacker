@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { startCooldown } from './shared/CooldownTimer.js';
 
 const WIDTH = 40;
 const HEIGHT = 30;
@@ -142,23 +143,17 @@ export default class Terminal extends Phaser.GameObjects.Container {
         this.snailNearby = false;
         this.drawTerminal(false);
 
-        const startTime = this.scene.time.now;
-        const timer = this.scene.time.addEvent({
-            delay: 100,
-            loop: true,
-            callback: () => {
-                const elapsed = this.scene.time.now - startTime;
-                const remaining = Math.max(0, duration - elapsed);
+        startCooldown(
+            this.scene, duration, 100,
+            (remaining) => {
                 this.cooldownText.setText(`${Math.ceil(remaining / 1000)}s`);
-
-                if (remaining <= 0) {
-                    timer.remove(false);
-                    this.terminalState = 'IDLE';
-                    this.cooldownOverlay.setVisible(false);
-                    this.cooldownText.setVisible(false);
-                }
             },
-        });
+            () => {
+                this.terminalState = 'IDLE';
+                this.cooldownOverlay.setVisible(false);
+                this.cooldownText.setVisible(false);
+            },
+        );
     }
 
     /** Cancel any active minigame on this terminal (e.g. from teleport) */
