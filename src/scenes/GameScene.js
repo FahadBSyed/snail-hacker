@@ -374,12 +374,17 @@ export default class GameScene extends Phaser.Scene {
 
     _setupDrone() {
         // Small yellow diamond that orbits the station inside the terminal ring.
+        // Uses a Container so Phaser tweens can animate its world position.
         this._droneAngle  = Math.random() * Math.PI * 2;
         this._droneOrbit  = 115; // px — inside the upgrade terminal ring (180px)
         this._droneSpeed  = 0.55; // radians per second
+        this._droneFlying = false;
 
-        this._droneGfx = this.add.graphics().setDepth(60);
-        this._drawDrone(this._droneGfx, 640, 360); // initial draw
+        const startX = 640 + Math.cos(this._droneAngle) * this._droneOrbit;
+        const startY = 360 + Math.sin(this._droneAngle) * this._droneOrbit;
+        this._droneGfx = this.add.graphics();
+        this._renderDroneGfx(false);
+        this._droneContainer = this.add.container(startX, startY, [this._droneGfx]).setDepth(60);
 
         // First activation: random time within DRONE_FIRST_SHOT_MAX, then fixed cooldown loop.
         const firstDelay = Math.random() * CONFIG.TERMINALS.DRONE_FIRST_SHOT_MAX;
@@ -393,22 +398,28 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
-    _drawDrone(gfx, x, y) {
-        const s = 7; // half-size of diamond
+    /** Redraw the drone diamond at container-local (0, 0). */
+    _renderDroneGfx(flash) {
+        const gfx = this._droneGfx;
+        const s   = flash ? 10 : 7;
         gfx.clear();
-        gfx.fillStyle(0xffdd44, 0.92);
+        gfx.fillStyle(flash ? 0xffffff : 0xffdd44, flash ? 1 : 0.92);
         gfx.beginPath();
-        gfx.moveTo(x,     y - s);
-        gfx.lineTo(x + s, y    );
-        gfx.lineTo(x,     y + s);
-        gfx.lineTo(x - s, y    );
+        gfx.moveTo( 0, -s);
+        gfx.lineTo( s,  0);
+        gfx.lineTo( 0,  s);
+        gfx.lineTo(-s,  0);
         gfx.closePath();
         gfx.fillPath();
-        gfx.lineStyle(1.5, 0xffffff, 0.55);
-        gfx.strokePath();
+        if (!flash) {
+            gfx.lineStyle(1.5, 0xffffff, 0.55);
+            gfx.strokePath();
+        }
     }
 
     _droneFire() {
+        if (!this._droneContainer || !this._droneContainer.active) return;
+
         // Collect eligible terminals: IDLE, and skip REPAIR if Gerald is at full health.
         const eligible = this.terminals.filter(t => {
             if (t.terminalState !== 'IDLE') return false;
@@ -418,28 +429,39 @@ export default class GameScene extends Phaser.Scene {
         if (eligible.length === 0) return;
 
         const target = Phaser.Utils.Array.GetRandom(eligible);
+        this._droneFlying = true;
 
-        // Brief drone flash — pause normal orbit drawing so it isn't overwritten
-        if (this._droneGfx && this._droneGfx.active) {
-            this._droneFlashing = true;
-            const cx = 640 + Math.cos(this._droneAngle) * this._droneOrbit;
-            const cy = 360 + Math.sin(this._droneAngle) * this._droneOrbit;
-            this._droneGfx.clear();
-            this._droneGfx.fillStyle(0xffffff, 1);
-            const s = 10;
-            this._droneGfx.beginPath();
-            this._droneGfx.moveTo(cx,     cy - s);
-            this._droneGfx.lineTo(cx + s, cy    );
-            this._droneGfx.lineTo(cx,     cy + s);
-            this._droneGfx.lineTo(cx - s, cy    );
-            this._droneGfx.closePath();
-            this._droneGfx.fillPath();
-            this.time.delayedCall(200, () => { this._droneFlashing = false; });
-        }
+        // Phase 1 — fly to the target terminal
+        this.tweens.add({
+            targets:  this._droneContainer,
+            x:        target.x,
+            y:        target.y,
+            duration: 500,
+            ease:     'Sine.easeInOut',
+            onComplete: () => {
+                // Phase 2 — flash at terminal, activate, play sound
+                this._renderDroneGfx(true);
+                this.soundSynth.play('droneActivate');
+                target.droneActivate();
+                this.logDebug(`Drone autonomously activated: ${target.label}`);
 
-        this.soundSynth.play('droneActivate');
-        target.droneActivate();
-        this.logDebug(`Drone autonomously activated: ${target.label}`);
+                // Phase 3 — brief pause, then return to orbit
+                this.time.delayedCall(350, () => {
+                    if (!this._droneContainer || !this._droneContainer.active) return;
+                    this._renderDroneGfx(false);
+                    const returnX = 640 + Math.cos(this._droneAngle) * this._droneOrbit;
+                    const returnY = 360 + Math.sin(this._droneAngle) * this._droneOrbit;
+                    this.tweens.add({
+                        targets:  this._droneContainer,
+                        x:        returnX,
+                        y:        returnY,
+                        duration: 600,
+                        ease:     'Sine.easeInOut',
+                        onComplete: () => { this._droneFlying = false; },
+                    });
+                });
+            },
+        });
     }
 
     _activateSlowField() {
@@ -767,11 +789,10 @@ export default class GameScene extends Phaser.Scene {
         if (!this.boardingShip) this.snail.update(time, delta);
 
         // ── Drone orbit animation ─────────────────────────────────────────────
-        if (this._droneGfx && this._droneGfx.active && !this._droneFlashing) {
+        if (this._droneContainer && this._droneContainer.active && !this._droneFlying) {
             this._droneAngle += this._droneSpeed * (delta / 1000);
-            const dx = 640 + Math.cos(this._droneAngle) * this._droneOrbit;
-            const dy = 360 + Math.sin(this._droneAngle) * this._droneOrbit;
-            this._drawDrone(this._droneGfx, dx, dy);
+            this._droneContainer.x = 640 + Math.cos(this._droneAngle) * this._droneOrbit;
+            this._droneContainer.y = 360 + Math.sin(this._droneAngle) * this._droneOrbit;
         }
 
         // ── Battery logic ─────────────────────────────────────────────────────
