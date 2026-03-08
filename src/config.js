@@ -108,6 +108,12 @@ export const DEFAULTS = {
         AUTO_ADVANCE_SECS: 5,   // seconds before auto-advancing
     },
 
+    UPGRADES: {
+        ORBIT_RADIUS:   180,  // px from station center for upgrade terminals
+        MIN_SEPARATION:  80,  // min px between any two upgrade terminals
+        CARDS_OFFERED:    3,  // max cards shown per upgrade selection wave
+    },
+
     WAVES: {
         SPAWN_GRACE_MS: 3000,  // ms of no-spawn buffer at the start of each wave
     },
