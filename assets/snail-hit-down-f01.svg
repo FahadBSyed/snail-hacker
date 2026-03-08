@@ -1,4 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <filter id="t">
+    <feColorMatrix type="matrix" values="0.55 0 0 0 0.45  0 0.55 0 0 0.45  0 0 0.55 0 0.45  0 0 0 1 0"/>
+  </filter>
+  <g filter="url(#t)">
   <ellipse cx="24" cy="8" rx="3" ry="1.5" fill="#E8D44D" opacity="0.17"/>
   <circle cx="24" cy="18" r="13" fill="#8B5E3C"/>
   <circle cx="24" cy="19" r="9"  fill="#A0714F"/>
@@ -13,5 +17,6 @@
   <circle cx="21.8" cy="31.3" r="0.7" fill="white" opacity="0.54"/>
   <circle cx="27.2" cy="31.3" r="0.7" fill="white" opacity="0.54"/>
   <path d="M22 35.1 Q24 37.1 26 35.1" stroke="#1a1a1a" stroke-width="0.8" fill="none" stroke-linecap="round" opacity="0.64"/>
+  </g>
 
 </svg>

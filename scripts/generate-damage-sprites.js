@@ -47,15 +47,25 @@ function svgWrap(body) {
     );
 }
 
-// White flash overlay opacity per frame index 0-15
-// (kept as documentation; overlay no longer rendered — animation alone signals damage)
+// White tint weight per frame index 0-15 (0 = no tint, 1 = solid white)
 const FLASH = [
     0.75, 0.45, 0.25, 0.10, 0.00, 0.00, 0.00, 0.00,  // f00–f07 (withdraw)
     0.45, 0.00, 0.45, 0.00, 0.45, 0.00, 0.45, 0.00,  // f08–f15 (shell pulse)
 ];
 
-function flashRect(_opacity) {
-    return '';  // white square removed — withdrawal animation is the visual cue
+// Wrap SVG body content in a feColorMatrix filter that lerps every pixel
+// toward white by weight w, without any covering rectangle.
+//   new_channel = original * (1-w) + 1 * w
+function applyTint(inner, w) {
+    if (w <= 0) return inner;
+    const s = f2(1 - w);
+    const t = f2(w);
+    return (
+        `  <filter id="t">\n` +
+        `    <feColorMatrix type="matrix" values="${s} 0 0 0 ${t}  0 ${s} 0 0 ${t}  0 0 ${s} 0 ${t}  0 0 0 1 0"/>\n` +
+        `  </filter>\n` +
+        `  <g filter="url(#t)">\n${inner}  </g>\n`
+    );
 }
 
 // ── RIGHT-facing withdrawal ───────────────────────────────────────────────────
@@ -285,22 +295,12 @@ for (let fi = 0; fi <= 15; fi++) {
     const rightInner = isShell ? rightShellInner(breathe) : rightSnailInner(t);
     const upInner    = isShell ? upShellInner(breathe)    : upSnailInner(t);
     const downInner  = isShell ? downShellInner(breathe)  : downSnailInner(t);
+    const leftInner  = `  <g transform="translate(${SIZE},0) scale(-1,1)">\n${rightInner}  </g>\n`;
 
-    const fr = flashRect(flash);
-
-    // Right
-    files[`snail-hit-right-${fname}.svg`] = svgWrap(rightInner + fr);
-
-    // Left — mirror right content, then overlay flash rect outside the transform
-    files[`snail-hit-left-${fname}.svg`] = svgWrap(
-        `  <g transform="translate(${SIZE},0) scale(-1,1)">\n${rightInner}  </g>\n` + fr,
-    );
-
-    // Up
-    files[`snail-hit-up-${fname}.svg`] = svgWrap(upInner + fr);
-
-    // Down
-    files[`snail-hit-down-${fname}.svg`] = svgWrap(downInner + fr);
+    files[`snail-hit-right-${fname}.svg`] = svgWrap(applyTint(rightInner, flash));
+    files[`snail-hit-left-${fname}.svg`]  = svgWrap(applyTint(leftInner,  flash));
+    files[`snail-hit-up-${fname}.svg`]    = svgWrap(applyTint(upInner,    flash));
+    files[`snail-hit-down-${fname}.svg`]  = svgWrap(applyTint(downInner,  flash));
 }
 
 // ── Write files ───────────────────────────────────────────────────────────────
