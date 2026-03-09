@@ -233,10 +233,10 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 - **`assets/sprites/PALETTE_SWAPS.md`** — New reference file listing all 5 alien palettes (frog/basic = violet, fast = purple, tank = grey/steel, bomber = orange, shield = cyan/ice-blue) with per-element colour tables. The shared saucer geometry is described once at the top.
 
 ### Audio File Override System
-- `src/soundOverrides.js` — new registry file mapping SoundSynth names to arrays of audio file paths. Multiple files per name are supported; one is chosen at random on each play.
-- `SoundSynth` constructor now accepts an optional `overrides` map. Files are fetched and decoded in the background on first `play()` call; the procedural synth plays as fallback until loading completes or if any file fails (e.g. `file://` protocol). Failed individual files are silently skipped; remaining valid files in the same name's array still work.
+- `src/soundOverrides.js` — new registry file mapping SoundSynth names to audio file entries. Each entry is a plain path string or a `{ url, volume }` object; multiple entries per name are supported and one is chosen at random on each play.
+- `SoundSynth` constructor now accepts an optional `overrides` map. Entries are normalised to `{ url, volume }` internally. Files are fetched and decoded in the background on first `play()` call; the procedural synth plays as fallback until loading completes or permanently if loading fails. Per-file `volume` is multiplied by master volume at playback.
 - `GameScene` and `IntermissionScene` both import and pass `SOUND_OVERRIDES` to their `SoundSynth` instance.
-- `assets/sounds/` directory created with a `README.md` listing all overrideable sound names and usage instructions.
+- `assets/sounds/` directory created with a `README.md` documenting all overrideable sound names and the `{ url, volume }` entry format.
 
 ### DEV: Start at Arbitrary Wave with Pre-Game Upgrades
 - `CONFIG.DEV_START_WAVE` (default 1, DEV_MODE only) — set to any wave number to jump directly there. Starting at wave N grants N−1 pre-game upgrade picks.

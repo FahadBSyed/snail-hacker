@@ -5,17 +5,22 @@ then register them in `src/soundOverrides.js`.
 
 ## Usage
 
-Edit `src/soundOverrides.js` and add entries for any sound you want to override:
+Edit `src/soundOverrides.js` and add entries for any sound you want to override.
+Each entry is either a plain path string or a `{ url, volume }` object:
 
 ```js
 export const SOUND_OVERRIDES = {
     shoot: [
-        'assets/sounds/shoot-a.mp3',
-        'assets/sounds/shoot-b.mp3',   // multiple files = random pick each time
+        'assets/sounds/shoot-a.mp3',                       // master volume
+        { url: 'assets/sounds/shoot-b.mp3', volume: 0.8 }, // 80% of master
     ],
     explosion: ['assets/sounds/explosion.mp3'],
+    shieldReflect: [{ url: 'assets/sounds/ricochet.wav', volume: 0.6 }],
 };
 ```
+
+Multiple files per name → one is chosen at random on each play. Per-file
+`volume` is a multiplier on top of the master volume (default `1.0`).
 
 ## Available sound names
 

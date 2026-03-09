@@ -14,10 +14,18 @@ export default class SoundSynth {
         this._ctx   = null;
         this.volume = 0.35;   // master volume 0–1
 
-        // name -> { urls: string[], buffers: AudioBuffer[]|null, loading: boolean }
+        // Normalise each entry to { url, volume } so callers can use plain strings
+        // or { url, volume } objects interchangeably.
+        // name -> { entries: {url,volume}[], buffers: {buf,volume}[]|null, loading: boolean }
         this._overrides = new Map(
-            Object.entries(overrides).map(([name, urls]) => [
-                name, { urls, buffers: null, loading: false },
+            Object.entries(overrides).map(([name, entries]) => [
+                name, {
+                    entries: entries.map(e =>
+                        typeof e === 'string' ? { url: e, volume: 1.0 } : { volume: 1.0, ...e }
+                    ),
+                    buffers: null,
+                    loading: false,
+                },
             ])
         );
     }
@@ -86,9 +94,9 @@ export default class SoundSynth {
         const override = this._overrides.get(name);
         if (override) {
             if (override.buffers?.length) {
-                // Already decoded — play a random file
-                const buf = override.buffers[Math.floor(Math.random() * override.buffers.length)];
-                this._playBuffer(buf);
+                // Already decoded — play a random entry
+                const entry = override.buffers[Math.floor(Math.random() * override.buffers.length)];
+                this._playBuffer(entry.buf, entry.volume);
                 return;
             }
             if (!override.loading) {
@@ -96,14 +104,15 @@ export default class SoundSynth {
                 override.loading = true;
                 const ctx = this._ctx_get();
                 Promise.all(
-                    override.urls.map(url =>
+                    override.entries.map(({ url, volume }) =>
                         fetch(url)
                             .then(r => r.arrayBuffer())
                             .then(ab => ctx.decodeAudioData(ab))
+                            .then(buf => ({ buf, volume }))
                             .catch(() => null)
                     )
-                ).then(bufs => {
-                    override.buffers = bufs.filter(Boolean);
+                ).then(results => {
+                    override.buffers = results.filter(Boolean);
                 });
             }
             // Fall through to procedural synth while loading (or if all files failed)
@@ -111,11 +120,11 @@ export default class SoundSynth {
         try { this[`_${name}`]?.(); } catch (_) { /* never let audio errors crash the game */ }
     }
 
-    /** Play a decoded AudioBuffer through the master volume gain. */
-    _playBuffer(buf) {
+    /** Play a decoded AudioBuffer at master volume × per-file volume. */
+    _playBuffer(buf, volume = 1.0) {
         const ctx = this._ctx_get(), t = ctx.currentTime;
         const g = ctx.createGain();
-        g.gain.setValueAtTime(this.volume, t);
+        g.gain.setValueAtTime(this.volume * volume, t);
         g.connect(ctx.destination);
         const src = ctx.createBufferSource();
         src.buffer = buf;
