@@ -259,6 +259,12 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 ### Bug Fix — Bomber Blast Not Killing Nearby Aliens
 - `checkBomberBlast` called `a.takeDamage()` but discarded the return value, so splash-damaged aliens that reached 0 HP kept walking. Fixed: when `takeDamage` returns true in the splash loop, the alien is marked `_dying`, score is incremented, a death burst fires after 120 ms, and the alien is destroyed. Chain bombers (a bomber killed by another bomber's blast) recursively call `checkBomberBlast` from their own position.
 
+### Ship Sound — Looped Ambient During All Ship Appearances
+- `SoundSynth.playLooped(name)` — new method that plays a decoded AudioBuffer on a continuous loop and returns a `{ stop(fadeOut?) }` handle (`fadeOut` defaults to 0.25s linear fade). Returns `null` if no decoded buffer is available, so callers can safely use `?.stop()`.
+- **Drop-in animation** — starts the loop when the ship enters; stops it (with fade) in the Phase 3 ascent `onComplete` before `ship.destroy()`.
+- **Battery delivery** — starts the loop when the delivery ship is created; stops it in the fly-out `onComplete` before `ship.destroy()`.
+- **Wave escape** — `_startEscapePhase` stores the handle on `this._escapeShipSound`; `_boardEscapeShip` stops it when the ship disappears off the top. `onWaveStart` also clears the handle for safety.
+
 ### SoundSynth — Eager Preload
 - **Separated fetch from decode** — `SoundSynth` override state now tracks four fields: `fetching`, `rawBuffers` (fetched `ArrayBuffer`s), `decoding`, and `buffers` (decoded `AudioBuffer`s ready to play), replacing the single `loading` boolean.
 - **`preload()` method** — Kicks off `fetch()` for all override files immediately on call, with no `AudioContext` required (network requests don't need a user gesture). When the context becomes available (on first `play()`), any already-fetched raw buffers are decoded right away via the internal `_decode()` helper.

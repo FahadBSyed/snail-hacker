@@ -314,6 +314,7 @@ export default class GameScene extends Phaser.Scene {
                 this.escapePhase  = false;
                 this.boardingShip = false;
                 if (this.escapeShip) { this.escapeShip.destroy(); this.escapeShip = null; }
+                this._escapeShipSound?.stop(); this._escapeShipSound = null;
 
                 // Position snail but keep it hidden and locked until drop-in completes
                 this.snail.setVisible(false);
@@ -696,6 +697,7 @@ export default class GameScene extends Phaser.Scene {
         const entryY = 360 + Math.sin(angle) * 800;
 
         const ship = new EscapeShip(this, entryX, entryY, { skipIntro: true });
+        const batteryShipSound = this.soundSynth.playLooped('ship');
 
         // Phase 1 — fly in to drop position
         this.tweens.add({
@@ -725,6 +727,7 @@ export default class GameScene extends Phaser.Scene {
                         duration: 350,
                         ease:     'Sine.easeIn',
                         onComplete: () => {
+                            batteryShipSound?.stop();
                             ship._rimTween?.stop();
                             ship.destroy();
                         },
@@ -766,7 +769,7 @@ export default class GameScene extends Phaser.Scene {
         ];
         const pos = Phaser.Utils.Array.GetRandom(sides);
         this.escapeShip = new EscapeShip(this, pos.x, pos.y);
-        this.soundSynth.play('ship');
+        this._escapeShipSound = this.soundSynth.playLooped('ship');
 
         // Instruction flash
         const msg = this.add.text(640, 180, 'HACK COMPLETE — REACH THE ESCAPE SHIP!', {
@@ -806,7 +809,7 @@ export default class GameScene extends Phaser.Scene {
             },
         });
 
-        this.soundSynth.play('ship');
+        const dropInSound = this.soundSynth.playLooped('ship');
 
         // ── Phase 1: descend to drop-off hover position ───────────────────────
         const descentExhaust = spawnExhaust();
@@ -842,6 +845,7 @@ export default class GameScene extends Phaser.Scene {
                         ease:     'Power2.easeIn',
                         onComplete: () => {
                             ascentExhaust.remove(false);
+                            dropInSound?.stop();
                             ship.destroy();
                             onComplete();
                         },
@@ -904,6 +908,7 @@ export default class GameScene extends Phaser.Scene {
             ease: 'Power2.easeIn',
             onComplete: () => {
                 exhaustTimer.remove(false);
+                this._escapeShipSound?.stop(); this._escapeShipSound = null;
                 this.snail.setVisible(false);
                 this._showWaveCompleteSplash();
             },

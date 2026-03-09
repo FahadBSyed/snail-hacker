@@ -91,6 +91,38 @@ export default class SoundSynth {
         });
     }
 
+    /**
+     * Play a sound on a continuous loop. Returns a handle `{ stop(fadeOut?) }`
+     * where `fadeOut` is the fade-out duration in seconds (default 0.25).
+     * Returns null if no decoded buffer is available (no override defined, or
+     * files still loading) — callers should guard with `?.stop()`.
+     * Procedural synth sounds are not looped.
+     */
+    playLooped(name) {
+        const override = this._overrides.get(name);
+        if (!override?.buffers?.length) return null;
+        const entry = override.buffers[Math.floor(Math.random() * override.buffers.length)];
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(this.volume * entry.volume, t);
+        g.connect(ctx.destination);
+        const src = ctx.createBufferSource();
+        src.buffer = entry.buf;
+        src.loop = true;
+        src.connect(g);
+        src.start(t);
+        return {
+            stop: (fadeOut = 0.25) => {
+                try {
+                    const now = ctx.currentTime;
+                    g.gain.setValueAtTime(g.gain.value, now);
+                    g.gain.linearRampToValueAtTime(0, now + fadeOut);
+                    src.stop(now + fadeOut);
+                } catch (_) {}
+            },
+        };
+    }
+
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     _ctx_get() {
