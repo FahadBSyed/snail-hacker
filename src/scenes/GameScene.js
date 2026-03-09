@@ -10,6 +10,7 @@ import GrabHandSystem from '../systems/GrabHandSystem.js';
 import Terminal from '../entities/Terminal.js';
 import DefenseStation from '../entities/DefenseStation.js';
 import HackMinigame from '../minigames/HackMinigame.js';
+import MathMinigame from '../minigames/MathMinigame.js';
 import RhythmMinigame from '../minigames/RhythmMinigame.js';
 import SequenceMinigame from '../minigames/SequenceMinigame.js';
 import TypingMinigame from '../minigames/TypingMinigame.js';
@@ -92,6 +93,7 @@ export default class GameScene extends Phaser.Scene {
         this.activeHack    = null;   // current HackMinigame instance
         this.hackProgress  = 0;      // words completed this wave (persists across cancels)
         this.hackThreshold = this._wordsForWave(this.startWave);
+        this._hackMode     = 'typing'; // alternates to 'math' on each battery spawn
 
         // ── Alien speed multiplier / slow field ───────────────────────────────
         this.alienSpeedMultiplier = 1.0;
@@ -515,8 +517,9 @@ export default class GameScene extends Phaser.Scene {
         this.snail.hackingActive = true;
         this.snail.setState('HACKING');
 
-        const remaining = this.hackThreshold - this.hackProgress;
-        this.activeHack = new HackMinigame(this, {
+        const remaining   = this.hackThreshold - this.hackProgress;
+        const MinigameCls = this._hackMode === 'math' ? MathMinigame : HackMinigame;
+        this.activeHack = new MinigameCls(this, {
             wordsRequired: remaining,
             onWordComplete: (_count) => {
                 this.hackProgress++;
@@ -559,6 +562,9 @@ export default class GameScene extends Phaser.Scene {
         const angle = Math.random() * Math.PI * 2;
         const r     = CONFIG.BATTERY.SPAWN_RADIUS;
         this.battery = new Battery(this, 640 + Math.cos(angle) * r, 360 + Math.sin(angle) * r);
+
+        // Toggle hack minigame mode so the next hack session uses the other type
+        this._hackMode = this._hackMode === 'typing' ? 'math' : 'typing';
 
         this.station.setPowered(false);
         this.soundSynth.play('powerLoss');
