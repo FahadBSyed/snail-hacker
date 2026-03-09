@@ -57,10 +57,10 @@ export default class HUD {
     }
 
     /** Draw a small bullet icon (casing + tip) centred on (cx, cy). */
-    _drawBulletIcon(g, cx, cy) {
+    _drawBulletIcon(g, cx, cy, color = 0xffdd44) {
         g.clear();
         // Casing
-        g.fillStyle(0xffdd44, 1);
+        g.fillStyle(color, 1);
         g.fillRect(cx - 3, cy - 5, 6, 9);
         // Tip (triangle)
         g.fillTriangle(cx - 3, cy - 5, cx + 3, cy - 5, cx, cy - 10);
@@ -71,9 +71,10 @@ export default class HUD {
 
     updateAmmo(ammo) {
         const low = ammo <= 2 && ammo > 0;
-        const color = low ? '#ff4444' : '#ffdd44';
-        this.ammoCounter.setText(`${ammo}/${this._ammoMax}`).setColor(color);
-        this._bulletIcon.setTint(low ? 0xff4444 : 0xffffff);
+        const hexColor = low ? 0xff4444 : 0xffdd44;
+        const cssColor = low ? '#ff4444' : '#ffdd44';
+        this.ammoCounter.setText(`${ammo}/${this._ammoMax}`).setColor(cssColor);
+        this._drawBulletIcon(this._bulletIcon, 1252, 18, hexColor);
         this.lowAmmoLabel.setVisible(low);
     }
 

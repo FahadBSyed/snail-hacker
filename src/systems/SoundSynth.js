@@ -14,6 +14,11 @@ export default class SoundSynth {
     _ctx_get() {
         if (!this._ctx) {
             this._ctx = new (window.AudioContext || window.webkitAudioContext)();
+            // Re-resume on any future gesture in case the context was created
+            // during scene setup before the browser settled the gesture state.
+            const resume = () => { if (this._ctx.state === 'suspended') this._ctx.resume(); };
+            window.addEventListener('pointerdown', resume, { once: false });
+            window.addEventListener('keydown',     resume, { once: false });
         }
         if (this._ctx.state === 'suspended') this._ctx.resume();
         return this._ctx;
