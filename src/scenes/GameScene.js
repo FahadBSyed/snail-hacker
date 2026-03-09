@@ -168,13 +168,6 @@ export default class GameScene extends Phaser.Scene {
         // ── Service terminals ─────────────────────────────────────────────────
         // Minigame launchers — each wraps the minigame and tracks it for grab-cancel support.
         this.activeTerminalMinigame = null;
-        const rhythmLauncher = (_term, onSuccess, onFailure) => {
-            const mg = new RhythmMinigame(this, {
-                onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
-                onFailure: () => { this.activeTerminalMinigame = null; onFailure(); },
-            });
-            this.activeTerminalMinigame = mg;
-        };
         const sequenceLauncher = (_term, onSuccess, onFailure) => {
             const mg = new SequenceMinigame(this, {
                 onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
