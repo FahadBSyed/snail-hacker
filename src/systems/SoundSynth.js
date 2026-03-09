@@ -1,12 +1,25 @@
 /**
- * SoundSynth — procedural Web Audio API sound effects.
- * No audio files required. AudioContext is created lazily on first play()
- * call so it always occurs after a user gesture (satisfying browser policy).
+ * SoundSynth — procedural Web Audio API sound effects with optional file overrides.
+ *
+ * Pass an overrides map (see src/soundOverrides.js) to the constructor.
+ * For any name with override files defined, one file is chosen at random
+ * on each play(). Files are fetched in the background on first play() and
+ * the procedural synth is used as a fallback until loading completes.
+ *
+ * AudioContext is created lazily on first play() to satisfy browser policy
+ * (requires a prior user gesture).
  */
 export default class SoundSynth {
-    constructor() {
+    constructor(overrides = {}) {
         this._ctx   = null;
         this.volume = 0.35;   // master volume 0–1
+
+        // name -> { urls: string[], buffers: AudioBuffer[]|null, loading: boolean }
+        this._overrides = new Map(
+            Object.entries(overrides).map(([name, urls]) => [
+                name, { urls, buffers: null, loading: false },
+            ])
+        );
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
@@ -70,7 +83,44 @@ export default class SoundSynth {
     // ── Public API ─────────────────────────────────────────────────────────────
 
     play(name) {
+        const override = this._overrides.get(name);
+        if (override) {
+            if (override.buffers?.length) {
+                // Already decoded — play a random file
+                const buf = override.buffers[Math.floor(Math.random() * override.buffers.length)];
+                this._playBuffer(buf);
+                return;
+            }
+            if (!override.loading) {
+                // Kick off background fetch+decode; fall through to synth this time
+                override.loading = true;
+                const ctx = this._ctx_get();
+                Promise.all(
+                    override.urls.map(url =>
+                        fetch(url)
+                            .then(r => r.arrayBuffer())
+                            .then(ab => ctx.decodeAudioData(ab))
+                            .catch(() => null)
+                    )
+                ).then(bufs => {
+                    override.buffers = bufs.filter(Boolean);
+                });
+            }
+            // Fall through to procedural synth while loading (or if all files failed)
+        }
         try { this[`_${name}`]?.(); } catch (_) { /* never let audio errors crash the game */ }
+    }
+
+    /** Play a decoded AudioBuffer through the master volume gain. */
+    _playBuffer(buf) {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(this.volume, t);
+        g.connect(ctx.destination);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(g);
+        src.start(t);
     }
 
     // ── Sound definitions ──────────────────────────────────────────────────────

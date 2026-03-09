@@ -232,6 +232,12 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 ### Palette Swap Documentation
 - **`assets/sprites/PALETTE_SWAPS.md`** — New reference file listing all 5 alien palettes (frog/basic = violet, fast = purple, tank = grey/steel, bomber = orange, shield = cyan/ice-blue) with per-element colour tables. The shared saucer geometry is described once at the top.
 
+### Audio File Override System
+- `src/soundOverrides.js` — new registry file mapping SoundSynth names to arrays of audio file paths. Multiple files per name are supported; one is chosen at random on each play.
+- `SoundSynth` constructor now accepts an optional `overrides` map. Files are fetched and decoded in the background on first `play()` call; the procedural synth plays as fallback until loading completes or if any file fails (e.g. `file://` protocol). Failed individual files are silently skipped; remaining valid files in the same name's array still work.
+- `GameScene` and `IntermissionScene` both import and pass `SOUND_OVERRIDES` to their `SoundSynth` instance.
+- `assets/sounds/` directory created with a `README.md` listing all overrideable sound names and usage instructions.
+
 ### DEV: Start at Arbitrary Wave with Pre-Game Upgrades
 - `CONFIG.DEV_START_WAVE` (default 1, DEV_MODE only) — set to any wave number to jump directly there. Starting at wave N grants N−1 pre-game upgrade picks.
 - `MenuScene` — on START, checks `CONFIG.DEV_MODE && CONFIG.DEV_START_WAVE > 1`; if so, routes to `IntermissionScene` in startup mode instead of directly to `GameScene`.
