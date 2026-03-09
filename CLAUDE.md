@@ -33,9 +33,11 @@ snail-hacker/
 ├── assets/
 │   ├── backgrounds/              ← bg-00.svg … bg-19.svg (procedural planet backdrops,
 │   │                                loaded per-wave in GameScene.preload())
-│   ├── alien-{frog,fast,tank,bomber}-{dir}.svg  ← 8-directional saucer sprites per type
-│   │                                               (32 SVGs; dir = right/left/up/down/
+│   ├── alien-{frog,fast,tank,bomber,shield}-{dir}.svg  ← 8-directional saucer sprites per type
+│   │                                               (40 SVGs; dir = right/left/up/down/
 │   │                                               diag-right-up/diag-right-down/etc.)
+│   ├── sprites/
+│   │   └── PALETTE_SWAPS.md          ← Documents colour palettes for all alien sprite types
 │   ├── snail-{right,left,up,down}.svg    ← Base directional walk sprites
 │   └── snail-hit-{dir}-f{00..15}.svg    ← 64-frame Gerald damage animation
 │                                            (f00–f07 shell-withdraw, f08–f15 shell-pulse;
@@ -84,7 +86,9 @@ snail-hacker/
     │   │   ├── BasicAlien.js     ← Extends BaseAlien; 60 px/s straight movement
     │   │   ├── FastAlien.js      ← Extends BaseAlien; 150 px/s + sinusoidal zigzag override
     │   │   ├── TankAlien.js      ← Extends BaseAlien; 38 px/s, 30 HP
-    │   │   └── BomberAlien.js    ← Extends BaseAlien; AoE blast on death or snail contact
+    │   │   ├── BomberAlien.js    ← Extends BaseAlien; AoE blast on death or snail contact
+    │   │   └── ShieldAlien.js    ← Extends BaseAlien; rotating energy ring blocks projectiles
+    │   │                            until within SHIELD_DROP_DIST of the snail
     │   └── shared/
     │       └── CooldownTimer.js  ← Reusable cooldown arc-fill + countdown text widget
     ├── systems/
@@ -108,6 +112,16 @@ snail-hacker/
 
 - **`PLAN.md`** — Implementation plan across 28 steps in 3 phases, plus key tension resolutions (RELOAD-vs-WASD, teleport-cancels-minigame, minigame-suppresses-movement).
 - **`CHANGELOG.md`** — Per-session log of completed steps. Always check this to understand the current state of the codebase before making changes.
+
+### Keeping docs up to date
+
+After completing any change, **always** update the relevant markdown files before committing:
+
+1. **`CHANGELOG.md`** — Add or append to the current session's entry. Describe what changed and why (new features, bug fixes, config additions, file additions). Use the same heading style as existing entries (`### Feature Name` with bullet details).
+2. **`assets/sprites/PALETTE_SWAPS.md`** — Update whenever a new alien sprite type is added or an existing palette is changed.
+3. **Any other `*.md` files** in the repo — Update if the change affects the information they document.
+
+Do **not** modify `CLAUDE.md` itself unless the user explicitly asks.
 
 ---
 
