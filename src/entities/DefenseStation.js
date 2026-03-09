@@ -130,7 +130,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
             ease: 'Cubic.easeOut',
             onComplete: () => {
                 if (!this.active) return;
-                this.scene.soundSynth?.play('cannonFire');
+                this.scene.soundSynth?.play('shootTurret');
                 const proj = new Projectile(this.scene, this.x, this.y, nearest.x, nearest.y);
                 if (this.scene.projectiles) {
                     this.scene.projectiles.push(proj);

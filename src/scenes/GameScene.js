@@ -766,6 +766,7 @@ export default class GameScene extends Phaser.Scene {
         ];
         const pos = Phaser.Utils.Array.GetRandom(sides);
         this.escapeShip = new EscapeShip(this, pos.x, pos.y);
+        this.soundSynth.play('ship');
 
         // Instruction flash
         const msg = this.add.text(640, 180, 'HACK COMPLETE — REACH THE ESCAPE SHIP!', {
@@ -804,6 +805,8 @@ export default class GameScene extends Phaser.Scene {
                 });
             },
         });
+
+        this.soundSynth.play('ship');
 
         // ── Phase 1: descend to drop-off hover position ───────────────────────
         const descentExhaust = spawnExhaust();
@@ -861,7 +864,7 @@ export default class GameScene extends Phaser.Scene {
         this.snail.hackingActive = false;
 
         // Stop alien spawning and clear remaining aliens
-        this.soundSynth.play('escape');
+        
         if (this.waveManager) this.waveManager.active = false;
         for (const alien of this.aliens) {
             if (!alien.active) continue;
