@@ -153,6 +153,9 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 
 ## Session 8 — 2026-03-09
 
+### Tank Alien — 50% Bigger Sprite
+- `TankAlien._initSprite()` now calls `this.sprite.setScale(1.5)` after the base sprite is created, making the tank visually 50% larger than other alien types without touching any SVG assets or CONFIG values.
+
 ### Station & Terminal Sprites
 - **`scripts/generate-station-sprites.js`** — New generator producing 7 SVG assets in oblique top-down style (classic SNES/Pokémon perspective): visible front face, top parallelogram, and right shadow face with light from upper-left.
 - **`assets/station-mainframe.svg`** (96×96) — Classic mainframe cabinet with 3D oblique depth, CRT display, LED indicators, tape reels, punch-card slot, and a raised gun-mount platform on top.

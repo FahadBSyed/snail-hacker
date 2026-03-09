@@ -10,5 +10,6 @@ export default class TankAlien extends BaseAlien {
         this.speed  = CONFIG.ALIENS.TANK.SPEED;
         this.radius = CONFIG.ALIENS.TANK.RADIUS;
         this._initSprite();
+        this.sprite.setScale(1.5);
     }
 }
