@@ -46,6 +46,7 @@ export default class Snail extends Phaser.GameObjects.Container {
 
         this.health    = CONFIG.SNAIL.MAX_HEALTH;
         this.maxHealth = CONFIG.SNAIL.MAX_HEALTH;
+        this.speed     = CONFIG.PLAYER.SNAIL_SPEED;
         this.invincible = false;
         this.shielded   = false;
 
@@ -165,8 +166,8 @@ export default class Snail extends Phaser.GameObjects.Container {
         }
 
         if (dx !== 0 || dy !== 0) {
-            this.x += dx * CONFIG.PLAYER.SNAIL_SPEED * dt;
-            this.y += dy * CONFIG.PLAYER.SNAIL_SPEED * dt;
+            this.x += dx * this.speed * dt;
+            this.y += dy * this.speed * dt;
             this.setState('MOVING');
 
             // Update facing direction — horizontal takes priority over vertical

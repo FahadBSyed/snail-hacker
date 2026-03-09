@@ -15,6 +15,7 @@ import RhythmMinigame from '../minigames/RhythmMinigame.js';
 import SequenceMinigame from '../minigames/SequenceMinigame.js';
 import TypingMinigame from '../minigames/TypingMinigame.js';
 import Battery from '../entities/Battery.js';
+import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
 import SoundSynth from '../systems/SoundSynth.js';
@@ -104,13 +105,37 @@ export default class GameScene extends Phaser.Scene {
         this.ammoMax = CONFIG.PLAYER.MAX_AMMO;
         this.projectiles = [];
 
+        // ── Passive upgrades — applied every wave from the persistent list ───────
+        this._laserMode = false;
+        for (const upgrade of this.upgradesList) {
+            switch (upgrade.type) {
+                case 'HEALTH_BOOST':
+                    this.snail.maxHealth = Math.round(CONFIG.SNAIL.MAX_HEALTH * 1.5);
+                    this.snail.health    = Math.min(this.snail.maxHealth, this.snail.health);
+                    break;
+                case 'SPEED_BOOST':
+                    this.snail.speed = CONFIG.PLAYER.SNAIL_SPEED * 2;
+                    break;
+                case 'AMMO_BOOST':
+                    this.ammoMax = Math.round(CONFIG.PLAYER.MAX_AMMO * 1.5);
+                    this.ammo    = this.ammoMax;
+                    break;
+                case 'LASER':
+                    this._laserMode = true;
+                    break;
+            }
+        }
+
         this.input.on('pointerdown', (pointer) => {
             if (pointer.button !== 0) return;
             if (this.ammo <= 0) return;
             this.ammo--;
-            // Fire from station toward cursor
-            const proj = new Projectile(this, this.station.x, this.station.y, pointer.x, pointer.y);
-            this.projectiles.push(proj);
+            if (this._laserMode) {
+                this._fireLaser(pointer.x, pointer.y);
+            } else {
+                const proj = new Projectile(this, this.station.x, this.station.y, pointer.x, pointer.y);
+                this.projectiles.push(proj);
+            }
             this.hud.updateAmmo(this.ammo);
             this.cameras.main.shake(90, 0.005);
             this.soundSynth.play('shoot');
@@ -558,6 +583,75 @@ export default class GameScene extends Phaser.Scene {
             this.activeHack.cancel();
             // onCancel callback above resets state
         }
+    }
+
+    /**
+     * Fire a hitscan laser from the station toward (tx, ty).
+     * Hits every alien along the ray (within HIT_RADIUS px) in one instant shot.
+     */
+    _fireLaser(tx, ty) {
+        const sx  = this.station.x;
+        const sy  = this.station.y;
+        const angle = Phaser.Math.Angle.Between(sx, sy, tx, ty);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+
+        // Find where the ray exits the screen
+        let tMax = 9999;
+        if (cos > 0)  tMax = Math.min(tMax, (1280 - sx) / cos);
+        else if (cos < 0) tMax = Math.min(tMax, -sx / cos);
+        if (sin > 0)  tMax = Math.min(tMax, (720 - sy) / sin);
+        else if (sin < 0) tMax = Math.min(tMax, -sy / sin);
+
+        const ex = sx + cos * tMax;
+        const ey = sy + sin * tMax;
+
+        // Hit all aliens along the ray
+        const HIT_RADIUS = 18;
+        const BURST_COLORS = { basic: 0xdd3333, fast: 0xaa44ff, tank: 0x7799aa, bomber: 0xff7722 };
+        for (const alien of this.aliens) {
+            if (!alien.active || alien._dying) continue;
+            const rx    = alien.x - sx;
+            const ry    = alien.y - sy;
+            const along = rx * cos + ry * sin;
+            if (along <= 0 || along > tMax) continue;
+            const perp = Math.abs(rx * sin - ry * cos);
+            if (perp > HIT_RADIUS) continue;
+
+            const bx = alien.x, by = alien.y;
+
+            // Hit flash + wobble (same as projectile hit)
+            const hitFlash = this.add.arc(bx, by, alien.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
+            this.tweens.add({ targets: hitFlash, alpha: 0, duration: 200, onComplete: () => hitFlash.destroy() });
+            this.tweens.add({ targets: alien, x: alien.x + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+
+            const isBomber = alien.alienType === 'bomber';
+            const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+            if (died) {
+                this.score++;
+                this.hud.updateScore(this.score);
+                alien._dying = true;
+                this.time.delayedCall(200, () => {
+                    if (!alien.active) return;
+                    spawnDeathBurst(this, bx, by, BURST_COLORS[alien.alienType] || 0xffffff);
+                    if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                        this.healthDrops.push(new HealthDrop(this, bx, by));
+                    }
+                    if (isBomber) checkBomberBlast(this, bx, by);
+                    alien.destroy();
+                });
+            }
+        }
+
+        // Laser beam visual — outer glow + inner beam + bright core, quick fade
+        const gfx = this.add.graphics().setDepth(200);
+        gfx.lineStyle(10, 0xff2200, 0.2);
+        gfx.lineBetween(sx, sy, ex, ey);
+        gfx.lineStyle(3, 0xff6644, 0.9);
+        gfx.lineBetween(sx, sy, ex, ey);
+        gfx.lineStyle(1, 0xffffff, 1);
+        gfx.lineBetween(sx, sy, ex, ey);
+        this.tweens.add({ targets: gfx, alpha: 0, duration: 150, onComplete: () => gfx.destroy() });
     }
 
     /** Called when hackProgress hits a POWER_LOSS_WORDS multiple. */

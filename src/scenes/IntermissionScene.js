@@ -13,8 +13,14 @@ const FLAVOR_TEXT = {
     9: ['One final wave.', 'Gerald knows what must be done.', 'The last stand approaches.'],
 };
 
-// All upgrade types that can be offered, in order.
-const UPGRADE_POOL = ['CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR', 'DRONE'];
+// Passive upgrades apply instantly on selection — no terminal is spawned.
+const PASSIVE_UPGRADES = new Set(['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST']);
+
+// All upgrade types that can be offered.
+const UPGRADE_POOL = [
+    'CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR', 'DRONE',
+    'HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST',
+];
 
 function getUpgradeDefs() {
     const cannonSecs = Math.round(CONFIG.CANNON.ACTIVE_DURATION / 1000);
@@ -25,11 +31,15 @@ function getUpgradeDefs() {
     const droneFirstSecs = Math.round(CONFIG.TERMINALS.DRONE_FIRST_SHOT_MAX / 1000);
     const droneCoolSecs  = Math.round(CONFIG.TERMINALS.DRONE_COOLDOWN / 1000);
     return {
-        CANNON:    { label: 'AUTO TURRET',  color: 0xff8844, desc: `Hack to unleash an\nauto-targeting cannon\nfor ${cannonSecs}s.` },
-        SHIELD:    { label: 'FORCE SHIELD', color: 0x4488ff, desc: `Hack to project a shield\nthat blocks alien damage\nfor ${shieldSecs}s.` },
-        SLOWFIELD: { label: 'SLOW FIELD',   color: 0xaa44ff, desc: `Hack to slow all aliens\nto ${slowPct}% speed\nfor ${slowSecs}s.` },
-        REPAIR:    { label: 'REPAIR KIT',   color: 0x44ff88, desc: `Hack to restore\n+${repairHp} HP to Gerald's shell.` },
-        DRONE:     { label: 'AUTO DRONE',   color: 0xffdd44, desc: `Drone fires within ${droneFirstSecs}s\nof each round, then every\n${droneCoolSecs}s after.` },
+        CANNON:       { label: 'AUTO TURRET',    color: 0xff8844, desc: `Hack to unleash an\nauto-targeting cannon\nfor ${cannonSecs}s.` },
+        SHIELD:       { label: 'FORCE SHIELD',   color: 0x4488ff, desc: `Hack to project a shield\nthat blocks alien damage\nfor ${shieldSecs}s.` },
+        SLOWFIELD:    { label: 'SLOW FIELD',     color: 0xaa44ff, desc: `Hack to slow all aliens\nto ${slowPct}% speed\nfor ${slowSecs}s.` },
+        REPAIR:       { label: 'REPAIR KIT',     color: 0x44ff88, desc: `Hack to restore\n+${repairHp} HP to Gerald's shell.` },
+        DRONE:        { label: 'AUTO DRONE',     color: 0xffdd44, desc: `Drone fires within ${droneFirstSecs}s\nof each round, then every\n${droneCoolSecs}s after.` },
+        HEALTH_BOOST: { label: 'HEALTH BOOST',   color: 0xff6666, desc: `Gerald's max health\nincreases by 50%.` },
+        AMMO_BOOST:   { label: 'AMMO BOOST',     color: 0xffcc44, desc: `Gun capacity increases\nby 50% more bullets\nbefore reload.` },
+        LASER:        { label: 'HITSCAN LASER',  color: 0xff3333, desc: `Replaces bullets with\na piercing laser beam\nthat hits all enemies.` },
+        SPEED_BOOST:  { label: 'SPEED BOOST',    color: 0x44ffdd, desc: `Gerald moves\nat double speed.` },
     };
 }
 
@@ -163,7 +173,7 @@ export default class IntermissionScene extends Phaser.Scene {
         this.add.text(cx, 205, 'UPGRADE AVAILABLE', {
             fontSize: '24px', fontFamily: 'monospace', color: '#cc88ff',
         }).setOrigin(0.5);
-        this.add.text(cx, 238, 'Select a new defense terminal for the arena:', {
+        this.add.text(cx, 238, 'Choose an upgrade for the next wave:', {
             fontSize: '13px', fontFamily: 'monospace', color: '#776688',
         }).setOrigin(0.5);
 
@@ -217,6 +227,13 @@ export default class IntermissionScene extends Phaser.Scene {
                 fontSize: '12px', fontFamily: 'monospace', color: colorHex, fontStyle: 'bold',
             }).setOrigin(0.5);
 
+            // Passive badge (shown just below accent stripe for passive upgrades)
+            if (PASSIVE_UPGRADES.has(type)) {
+                this.add.text(x, cardY - cardH / 2 + 40, '— PASSIVE —', {
+                    fontSize: '9px', fontFamily: 'monospace', color: '#557755',
+                }).setOrigin(0.5);
+            }
+
             // Description
             this.add.text(x, cardY + 12, def.desc, {
                 fontSize: '12px', fontFamily: 'monospace', color: '#aaaaaa', align: 'center',
@@ -268,7 +285,7 @@ export default class IntermissionScene extends Phaser.Scene {
         do {
             angle = Math.random() * Math.PI * 2;
             const safe = this.upgrades.every(u => {
-                if (u.type === 'DRONE') return true; // drone has no terminal to collide with
+                if (u.type === 'DRONE' || PASSIVE_UPGRADES.has(u.type)) return true; // no physical terminal
                 const dx = r * (Math.cos(angle) - Math.cos(u.angle));
                 const dy = r * (Math.sin(angle) - Math.sin(u.angle));
                 return Math.sqrt(dx * dx + dy * dy) >= minSep;
