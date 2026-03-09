@@ -71,9 +71,23 @@ export function checkBomberBlast(scene, bx, by) {
 
     // Splash nearby aliens
     for (const a of scene.aliens) {
-        if (!a.active) continue;
+        if (!a.active || a._dying) continue;
         if (Phaser.Math.Distance.Between(bx, by, a.x, a.y) < blastRadius) {
-            a.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_ALIEN);
+            const killed = a.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_ALIEN);
+            if (killed) {
+                scene.score++;
+                scene.hud.updateScore(scene.score);
+                const ax = a.x, ay = a.y;
+                const burstColor = BURST_COLORS[a.alienType] || 0xff4444;
+                const wasChainBomber = a.alienType === 'bomber';
+                a._dying = true;
+                scene.time.delayedCall(120, () => {
+                    if (!a.active) return;
+                    spawnDeathBurst(scene, ax, ay, burstColor);
+                    if (wasChainBomber) checkBomberBlast(scene, ax, ay);
+                    a.destroy();
+                });
+            }
         }
     }
 

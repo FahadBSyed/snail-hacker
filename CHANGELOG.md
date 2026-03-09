@@ -231,3 +231,6 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 
 ### Palette Swap Documentation
 - **`assets/sprites/PALETTE_SWAPS.md`** — New reference file listing all 5 alien palettes (frog/basic = violet, fast = purple, tank = grey/steel, bomber = orange, shield = cyan/ice-blue) with per-element colour tables. The shared saucer geometry is described once at the top.
+
+### Bug Fix — Bomber Blast Not Killing Nearby Aliens
+- `checkBomberBlast` called `a.takeDamage()` but discarded the return value, so splash-damaged aliens that reached 0 HP kept walking. Fixed: when `takeDamage` returns true in the splash loop, the alien is marked `_dying`, score is incremented, a death burst fires after 120 ms, and the alien is destroyed. Chain bombers (a bomber killed by another bomber's blast) recursively call `checkBomberBlast` from their own position.
