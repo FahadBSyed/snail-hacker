@@ -1,33 +1,94 @@
 /**
  * SoundSynth — procedural Web Audio API sound effects with optional file overrides.
  *
- * Pass an overrides map (see src/soundOverrides.js) to the constructor.
- * For any name with override files defined, one file is chosen at random
- * on each play(). Files are fetched in the background on first play() and
- * the procedural synth is used as a fallback until loading completes.
+ * Pass an overrides map (see src/soundOverrides.js) to the constructor,
+ * then call preload() immediately to start fetching all audio files in the
+ * background (no AudioContext — and therefore no user-gesture — required for
+ * the network requests). Decoding happens automatically once the AudioContext
+ * is created on the first play() call.
  *
- * AudioContext is created lazily on first play() to satisfy browser policy
- * (requires a prior user gesture).
+ * AudioContext is still created lazily on first play() to satisfy browser
+ * policy (requires a prior user gesture).
  */
 export default class SoundSynth {
     constructor(overrides = {}) {
         this._ctx   = null;
         this.volume = 0.35;   // master volume 0–1
 
-        // Normalise each entry to { url, volume } so callers can use plain strings
-        // or { url, volume } objects interchangeably.
-        // name -> { entries: {url,volume}[], buffers: {buf,volume}[]|null, loading: boolean }
+        // name -> {
+        //   entries:    {url,volume}[]          — original config
+        //   rawBuffers: {ab,volume}[] | null     — fetched ArrayBuffers, awaiting decode
+        //   buffers:    {buf,volume}[] | null    — decoded AudioBuffers, ready to play
+        //   fetching:   boolean
+        //   decoding:   boolean
+        // }
         this._overrides = new Map(
             Object.entries(overrides).map(([name, entries]) => [
                 name, {
                     entries: entries.map(e =>
                         typeof e === 'string' ? { url: e, volume: 1.0 } : { volume: 1.0, ...e }
                     ),
-                    buffers: null,
-                    loading: false,
+                    rawBuffers: null,
+                    buffers:    null,
+                    fetching:   false,
+                    decoding:   false,
                 },
             ])
         );
+    }
+
+    /**
+     * Fetch all override files now. No AudioContext required — call this as
+     * early as possible (e.g. right after constructing the synth). Decoding
+     * into AudioBuffers happens automatically once the context is available.
+     */
+    preload() {
+        for (const [name, override] of this._overrides) {
+            if (override.fetching || override.rawBuffers || override.buffers) continue;
+            override.fetching = true;
+            Promise.all(
+                override.entries.map(({ url, volume }) =>
+                    fetch(url)
+                        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.arrayBuffer(); })
+                        .then(ab => ({ ab, volume }))
+                        .catch(err => {
+                            console.warn(`[SoundSynth] failed to fetch "${name}" → ${url}:`, err.message ?? err);
+                            return null;
+                        })
+                )
+            ).then(results => {
+                override.rawBuffers = results.filter(Boolean);
+                override.fetching   = false;
+                // If the AudioContext already exists, kick off decode immediately.
+                if (this._ctx && override.rawBuffers.length) this._decode(name, override);
+            });
+        }
+    }
+
+    /** Decode pending rawBuffers into AudioBuffers using the given context. */
+    _decode(name, override) {
+        if (override.decoding || override.buffers || !override.rawBuffers?.length) return;
+        override.decoding = true;
+        const ctx = this._ctx;
+        Promise.all(
+            override.rawBuffers.map(({ ab, volume }) =>
+                // slice() so the ArrayBuffer stays detachable on re-decode attempts
+                ctx.decodeAudioData(ab.slice(0))
+                    .then(buf => ({ buf, volume }))
+                    .catch(err => {
+                        console.warn(`[SoundSynth] decode failed for "${name}":`, err.message ?? err);
+                        return null;
+                    })
+            )
+        ).then(results => {
+            override.buffers  = results.filter(Boolean);
+            override.decoding = false;
+            if (override.buffers.length) {
+                console.log(`[SoundSynth] ready: ${override.buffers.length} file(s) for "${name}"`);
+            } else {
+                console.warn(`[SoundSynth] all files failed for "${name}" — using procedural synth`);
+            }
+        });
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
@@ -94,39 +155,37 @@ export default class SoundSynth {
         const override = this._overrides.get(name);
         if (override) {
             if (override.buffers?.length) {
-                // Already decoded — play a random entry
+                // Already decoded — play a random entry immediately.
                 const entry = override.buffers[Math.floor(Math.random() * override.buffers.length)];
                 this._playBuffer(entry.buf, entry.volume);
                 return;
             }
-            if (!override.loading) {
-                // Kick off background fetch+decode; fall through to synth this time
-                override.loading = true;
-                const ctx = this._ctx_get();
+            // AudioContext is now available (user gesture has occurred). If we
+            // have pre-fetched raw bytes waiting, kick off decode. If fetch
+            // hasn't been started at all (preload() was never called), do the
+            // old fetch-then-decode path as a fallback.
+            const ctx = this._ctx_get();
+            if (override.rawBuffers?.length) {
+                this._decode(name, override);
+            } else if (!override.fetching) {
+                override.fetching = true;
                 Promise.all(
                     override.entries.map(({ url, volume }) =>
                         fetch(url)
-                            .then(r => {
-                                if (!r.ok) throw new Error(`HTTP ${r.status}`);
-                                return r.arrayBuffer();
-                            })
-                            .then(ab => ctx.decodeAudioData(ab))
-                            .then(buf => ({ buf, volume }))
+                            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.arrayBuffer(); })
+                            .then(ab => ({ ab, volume }))
                             .catch(err => {
-                                console.warn(`[SoundSynth] failed to load override "${name}" → ${url}:`, err.message ?? err);
+                                console.warn(`[SoundSynth] failed to fetch "${name}" → ${url}:`, err.message ?? err);
                                 return null;
                             })
                     )
                 ).then(results => {
-                    override.buffers = results.filter(Boolean);
-                    if (override.buffers.length) {
-                        console.log(`[SoundSynth] loaded ${override.buffers.length} file(s) for "${name}"`);
-                    } else {
-                        console.warn(`[SoundSynth] all files failed for "${name}" — using procedural synth`);
-                    }
+                    override.rawBuffers = results.filter(Boolean);
+                    override.fetching   = false;
+                    if (this._ctx) this._decode(name, override);
                 });
             }
-            // Fall through to procedural synth while loading (or if all files failed)
+            // Fall through to procedural synth while loading (or if all files failed).
         }
         try { this[`_${name}`]?.(); } catch (_) { /* never let audio errors crash the game */ }
     }

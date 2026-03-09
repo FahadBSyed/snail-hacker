@@ -66,6 +66,7 @@ export default class IntermissionScene extends Phaser.Scene {
 
     create() {
         this.soundSynth = new SoundSynth(SOUND_OVERRIDES);
+        this.soundSynth.preload();   // fetch audio files now; decode on first play()
         const cx           = 640;
 
         // In startup mode: if we've already collected all needed upgrades, go straight to game.

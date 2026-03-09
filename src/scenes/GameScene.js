@@ -95,6 +95,7 @@ export default class GameScene extends Phaser.Scene {
 
         // ── Sound synthesizer ─────────────────────────────────────────────────
         this.soundSynth = new SoundSynth(SOUND_OVERRIDES);
+        this.soundSynth.preload();   // fetch audio files now; decode on first play()
 
         // ── Hacking Station (center — objective to hack) ──────────────────────
         this.station = new HackingStation(this, 640, 360);

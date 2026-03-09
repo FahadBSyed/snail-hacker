@@ -258,3 +258,9 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 
 ### Bug Fix — Bomber Blast Not Killing Nearby Aliens
 - `checkBomberBlast` called `a.takeDamage()` but discarded the return value, so splash-damaged aliens that reached 0 HP kept walking. Fixed: when `takeDamage` returns true in the splash loop, the alien is marked `_dying`, score is incremented, a death burst fires after 120 ms, and the alien is destroyed. Chain bombers (a bomber killed by another bomber's blast) recursively call `checkBomberBlast` from their own position.
+
+### SoundSynth — Eager Preload
+- **Separated fetch from decode** — `SoundSynth` override state now tracks four fields: `fetching`, `rawBuffers` (fetched `ArrayBuffer`s), `decoding`, and `buffers` (decoded `AudioBuffer`s ready to play), replacing the single `loading` boolean.
+- **`preload()` method** — Kicks off `fetch()` for all override files immediately on call, with no `AudioContext` required (network requests don't need a user gesture). When the context becomes available (on first `play()`), any already-fetched raw buffers are decoded right away via the internal `_decode()` helper.
+- **Called at scene create** — `GameScene.create()` and `IntermissionScene.create()` call `this.soundSynth.preload()` right after constructing the synth. By the time the player fires their first shot the files are already fetched and decoded, eliminating the first-play fallback to procedural synth.
+- **Fallback preserved** — If `preload()` was never called (or all files failed), `play()` falls back to the old inline fetch-then-decode path, then to the procedural synth, as before.
