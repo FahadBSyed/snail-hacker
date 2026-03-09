@@ -82,6 +82,7 @@ export default class GameScene extends Phaser.Scene {
                 this.load.svg(key, `assets/${key}.svg`, { width: 64, height: 64 });
             }
         }
+    }
 
     create() {
         // ── Alien planet surface background ──────────────────────────────────
