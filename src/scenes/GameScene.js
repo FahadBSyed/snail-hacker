@@ -630,6 +630,12 @@ export default class GameScene extends Phaser.Scene {
 
             const bx = alien.x, by = alien.y;
 
+            if (alien.shielded) {
+                alien.flashShield?.();
+                this.soundSynth.play('shieldReflect');
+                continue;
+            }
+
             // Hit flash + wobble (same as projectile hit)
             const hitFlash = this.add.arc(bx, by, alien.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
             this.tweens.add({ targets: hitFlash, alpha: 0, duration: 200, onComplete: () => hitFlash.destroy() });

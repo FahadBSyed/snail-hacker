@@ -53,6 +53,30 @@ export default class ShieldAlien extends BaseAlien {
         return super.takeDamage(amount);
     }
 
+    /** Brief white flash on the shield when a hit is blocked. */
+    flashShield() {
+        if (!this.shielded) return;
+        const r       = this.radius + 11;
+        const flashGfx = this.scene.add.graphics().setDepth(57);
+        flashGfx.x = this.x;
+        flashGfx.y = this.y;
+        flashGfx.fillStyle(0x00eeff, 0.30);
+        flashGfx.fillCircle(0, 0, r);
+        flashGfx.lineStyle(5, 0xffffff, 1.0);
+        flashGfx.strokeCircle(0, 0, r);
+        this.scene.tweens.add({
+            targets: flashGfx, alpha: 0, scaleX: 1.25, scaleY: 1.25,
+            duration: 250, ease: 'Power2.easeOut',
+            onComplete: () => flashGfx.destroy(),
+        });
+        // Kick the rim to full brightness for the flash duration
+        if (this._rimTween) this._rimTween.pause();
+        this._shieldRim.alpha = 1;
+        this.scene.time.delayedCall(250, () => {
+            if (this._rimTween) this._rimTween.resume();
+        });
+    }
+
     _drawShield() {
         const r   = this.radius + 11;   // ring radius
         const gfx = this._shieldGfx;

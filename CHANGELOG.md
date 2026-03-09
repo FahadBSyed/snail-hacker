@@ -232,6 +232,13 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 ### Palette Swap Documentation
 - **`assets/sprites/PALETTE_SWAPS.md`** — New reference file listing all 5 alien palettes (frog/basic = violet, fast = purple, tank = grey/steel, bomber = orange, shield = cyan/ice-blue) with per-element colour tables. The shared saucer geometry is described once at the top.
 
+### ShieldAlien — Shield Hit Feedback + Wider Drop Distance
+- `ShieldAlien.flashShield()` — bright cyan/white flash ring expands + fades at the shield radius (250ms); rim tween kicked to full brightness for the duration.
+- `SoundSynth._shieldReflect()` — metallic ping (two sine harmonics 1800→900 Hz, 3200→1600 Hz) + brief highpass noise zip, like a bullet bouncing off.
+- `CollisionSystem.checkProjectileCollisions` — shield deflect block now calls `alien.flashShield()` and `scene.soundSynth.play('shieldReflect')`.
+- `GameScene` cannon hit loop — added `alien.shielded` guard; shielded aliens trigger flash + sound and skip the red hit flash/wobble entirely.
+- `CONFIG.ALIENS.SHIELD.SHIELD_DROP_DIST` increased 130 → 200.
+
 ### ShieldAlien — True Damage Immunity + 1-Shot Health
 - `ShieldAlien.takeDamage()` override returns `false` immediately while `this.shielded` is true, blocking all damage sources (projectiles, bomber splash, cannon auto-fire) — not just the projectile deflection already handled in `CollisionSystem`.
 - `CONFIG.ALIENS.SHIELD.HEALTH` reduced 15 → 10 so it dies in one shot once the shield drops (matches `PROJECTILE_HIT_ALIEN: 10`).

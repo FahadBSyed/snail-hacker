@@ -120,6 +120,8 @@ export function checkProjectileCollisions(scene) {
             // Shield check — deflect the projectile without damaging the alien
             if (alien.shielded) {
                 proj.destroy();
+                alien.flashShield?.();
+                scene.soundSynth?.play('shieldReflect');
                 // Deflect spark at impact point
                 const sx = proj.x, sy = proj.y;
                 const spark = scene.add.arc(sx, sy, 5, 0, 360, false, 0x00eeff, 0.9).setDepth(58);

@@ -296,6 +296,20 @@ export default class SoundSynth {
         this._osc(ctx, 'square', 1400, 1400, t + 0.10, 0.10, g2);
     }
 
+    /** Bullet deflected off shield — metallic ping + highpass zip. */
+    _shieldReflect() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Metallic ping — two harmonics, quick pitch-fall
+        const g  = this._gain(ctx, 0.45, t, 0.28);
+        this._osc(ctx, 'sine', 1800, 900, t, 0.25, g);
+        const g2 = this._gain(ctx, 0.20, t, 0.18);
+        this._osc(ctx, 'sine', 3200, 1600, t, 0.15, g2);
+        // Brief ricochet zip noise
+        const ng  = this._gain(ctx, 0.18, t, 0.07);
+        const hpf = this._filter(ctx, 'highpass', 3000, ng);
+        this._noise(ctx, 0.06, hpf);
+    }
+
     /** New wave beginning — two sharp alert beeps. */
     _waveStart() {
         const ctx = this._ctx_get(), t = ctx.currentTime;
