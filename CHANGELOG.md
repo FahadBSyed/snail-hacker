@@ -209,3 +209,25 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 
 ### Drone — RELOAD Terminal Eligible
 - The drone can now autonomously activate the RELOAD terminal in addition to the upgrade terminals (CANNON, SHIELD, SLOWFIELD, REPAIR). The RELOAD terminal was already present in `this.terminals` with no explicit exclusion; a smart skip guard was added — `if (t.label === 'RELOAD' && this.ammo >= this.ammoMax) return false` — mirroring the existing REPAIR skip-at-full-health condition. The drone will not waste an action reloading a full magazine.
+
+---
+
+## Session 9 — 2026-03-09
+
+### Bug Fixes
+- **HUD ammo icon `setTint` crash** — `Graphics` objects have no `setTint` method (that belongs to Image/Sprite). `_drawBulletIcon` now accepts an optional `color` parameter and redraws the icon in cyan or red each call; `updateAmmo` passes the appropriate hex colour instead of calling `setTint`.
+- **AudioContext autoplay warning** — When `SoundSynth._ctx_get()` creates the `AudioContext`, two persistent `pointerdown` / `keydown` listeners are registered on `window` to call `resume()` on every subsequent user gesture. This covers edge cases where the context is created during scene setup before the browser has fully settled a user gesture.
+
+### ShieldAlien — New Enemy Type
+- **`src/entities/aliens/ShieldAlien.js`** — Extends `BaseAlien`. Approaches the snail with a rotating cyan energy ring that blocks all incoming projectiles. Two overlapping arcs (thick `#00eeff` arc + offset `#0088cc` arc) form a "broken hex ring" silhouette; a pulsing white rim tween gives an electric shimmer. When the alien closes within `CONFIG.ALIENS.SHIELD.SHIELD_DROP_DIST` (130 px) of the snail, `_dropShield()` fires: the tween stops, an expanding ring burst tweens outward and fades, and the shield graphics are cleared — leaving the alien vulnerable but already dangerously close.
+- **`config.js`** — `ALIENS.SHIELD: { SPEED: 55, RADIUS: 16, HEALTH: 15, SHIELD_DROP_DIST: 130 }`.
+- **`CollisionSystem`** — Projectile vs alien now checks `alien.shielded` before the damage path. If shielded, the projectile is destroyed and a small cyan spark arc spawns at the impact point (scales 3×, fades in 220 ms); no damage, score, or death burst. Burst colour `0x00eeff` registered for shield type death.
+- **`GameScene`** — Imports `ShieldAlien`; `case 'shield'` added to `spawnAlien` switch; `alien-shield-*` SVG textures loaded in `preload()`.
+- **`WaveManager`** — `'shield'` added to the type pools for waves 5–10.
+
+### alien-shield Sprites
+- **`scripts/generate-alien-enemy-sprites.js`** — Added `shield` palette: dark-to-bright teal disc (`#082233` → `#1fa8cc`), `#00eeff` dome ring and glow (matching the in-game shield arc colour), cyan rim lights. Count message updated to 32 SVGs.
+- **8 new SVG assets** generated: `assets/alien-shield-{right,left,up,down,diag-*}.svg`.
+
+### Palette Swap Documentation
+- **`assets/sprites/PALETTE_SWAPS.md`** — New reference file listing all 5 alien palettes (frog/basic = violet, fast = purple, tank = grey/steel, bomber = orange, shield = cyan/ice-blue) with per-element colour tables. The shared saucer geometry is described once at the top.
