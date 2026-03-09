@@ -660,17 +660,62 @@ export default class GameScene extends Phaser.Scene {
         this.stationPowered = false;
         if (this.activeHack) this.activeHack.cancel();
 
-        // Spawn battery at a random angle around the station
-        const angle = Math.random() * Math.PI * 2;
-        const r     = CONFIG.BATTERY.SPAWN_RADIUS;
-        this.battery = new Battery(this, 640 + Math.cos(angle) * r, 360 + Math.sin(angle) * r);
+        this.station.setPowered(false);
+        this.soundSynth.play('powerLoss');
 
         // Toggle hack minigame mode so the next hack session uses the other type
         this._hackMode = this._hackMode === 'typing' ? 'math' : 'typing';
 
-        this.station.setPowered(false);
-        this.soundSynth.play('powerLoss');
-        this.logDebug('Station lost power! Battery spawned.');
+        // ── Delivery ship animation ───────────────────────────────────────────
+        // Pick a drop point around the station, then enter from off-screen in
+        // the same radial direction so the approach looks intentional.
+        const angle = Math.random() * Math.PI * 2;
+        const dropX = 640 + Math.cos(angle) * CONFIG.BATTERY.SPAWN_RADIUS;
+        const dropY = 360 + Math.sin(angle) * CONFIG.BATTERY.SPAWN_RADIUS;
+
+        // 800 px from screen center guarantees off-screen in any direction
+        const entryX = 640 + Math.cos(angle) * 800;
+        const entryY = 360 + Math.sin(angle) * 800;
+
+        const ship = new EscapeShip(this, entryX, entryY, { skipIntro: true });
+
+        // Phase 1 — fly in to drop position
+        this.tweens.add({
+            targets:  ship,
+            x:        dropX,
+            y:        dropY,
+            duration: 380,
+            ease:     'Sine.easeInOut',
+            onComplete: () => {
+                if (!ship.active) return;
+
+                // Phase 2 — drop the battery (scale pop-in for visual flair)
+                this.battery = new Battery(this, dropX, dropY);
+                this.battery.setScale(0);
+                this.tweens.add({
+                    targets: this.battery, scaleX: 1, scaleY: 1,
+                    duration: 200, ease: 'Back.easeOut',
+                });
+
+                // Phase 3 — brief hover, then fly back off-screen
+                this.time.delayedCall(280, () => {
+                    if (!ship.active) return;
+                    this.tweens.add({
+                        targets:  ship,
+                        x:        entryX,
+                        y:        entryY,
+                        duration: 350,
+                        ease:     'Sine.easeIn',
+                        onComplete: () => {
+                            ship._rimTween?.stop();
+                            ship.destroy();
+                        },
+                    });
+                });
+            },
+        });
+
+        this.logDebug('Station lost power! Delivery ship inbound.');
     }
 
     /** Called when the snail reaches the station while carrying the battery. */
