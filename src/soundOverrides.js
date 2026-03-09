@@ -24,12 +24,10 @@
  *   waveBegin, waveStart, droneActivate, upgradeSelect
  */
 export const SOUND_OVERRIDES = {
-    // Examples — uncomment and add your files to assets/sounds/:
-    shoot: [
-         { url: 'assets/sounds/shoot-b.mp3', volume: 0.1 }
-    ],
-    shootTurret: [
-         { url: 'assets/sounds/shoot-d.mp3', volume: 0.085 }
+    error: [
+         { url: 'assets/sounds/error-a.mp3', volume: 0.15 },
+         { url: 'assets/sounds/error-b.mp3', volume: 0.15 },
+         { url: 'assets/sounds/error-c.mp3', volume: 0.15 }
     ],
     explosion: [
          { url: 'assets/sounds/explosion-a.mp3', volume: 0.3 },
@@ -37,18 +35,25 @@ export const SOUND_OVERRIDES = {
          { url: 'assets/sounds/explosion-c.mp3', volume: 0.3 },
          { url: 'assets/sounds/explosion-d.mp3', volume: 0.3 }
     ],
-    ship: [
-        { url: 'assets/sounds/ship-a.mp3', volume: 0.6 }
-    ],
-    error: [
-         { url: 'assets/sounds/error-a.mp3', volume: 0.15 },
-         { url: 'assets/sounds/error-b.mp3', volume: 0.15 },
-         { url: 'assets/sounds/error-c.mp3', volume: 0.15 }
-    ],
     damage: [
          { url: 'assets/sounds/damage-a.mp3', volume: 0.3 },
          { url: 'assets/sounds/damage-b.mp3', volume: 0.4 },
          { url: 'assets/sounds/damage-c.mp3', volume: 0.3 }
+    ],
+    ship: [
+        { url: 'assets/sounds/ship-a.mp3', volume: 0.6 }
+    ],
+    shoot: [
+         { url: 'assets/sounds/shoot-b.mp3', volume: 0.1 }
+    ],
+    shootTurret: [
+         { url: 'assets/sounds/shoot-d.mp3', volume: 0.085 }
+    ],
+    success: [
+         { url: 'assets/sounds/success-a.mp3', volume: 0.4 },
+         { url: 'assets/sounds/success-b.mp3', volume: 0.4 },
+         { url: 'assets/sounds/success-c.mp3', volume: 0.4 },
+         { url: 'assets/sounds/success-d.mp3', volume: 0.4 }
     ],
     waveStart: [
         { url: 'assets/sounds/wave-start.mp3', volume: 0.4 }
