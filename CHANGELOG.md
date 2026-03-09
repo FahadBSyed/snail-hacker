@@ -148,3 +148,19 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 - **`scripts/generate-damage-sprites.js`** — New sprite generator producing 64 SVG frames (16 per direction: right/left/up/down). Frames f00–f07 show Gerald withdrawing into his shell (body shrinks, feet retract, eyes/antennae pull in); frames f08–f15 show the shell pulsing with an alternating breathe scale. Left frames are the right frames mirrored via `<g transform="scale(-1,1)">`.
 - **feColorMatrix white tint** — Rather than a white rectangle overlay, frames with `FLASH[fi] > 0` are wrapped in an SVG `<filter>` using `feColorMatrix` to linearly interpolate every pixel toward white: `new_channel = src * (1-w) + w`. f00 (w=0.75) is nearly white; f03 (w=0.10) is a faint wash; shell-pulse frames alternate at w=0.45. No covering rectangle — Gerald's actual colours bleach out and recover together.
 - **Wired into GameScene** — `GameScene.preload()` loads all 64 frames (`snail-hit-{dir}-f{00..15}`). An `anims.create()` call registers `snail-hit-{dir}` (8 fps, no repeat). `Snail.takeDamage()` plays the animation on the sprite; the existing i-frame white-rectangle overlay was removed since the sprite animation now carries the visual feedback.
+
+---
+
+## Session 7 — 2026-03-08
+
+### Drone — Fly-to-Terminal Animation
+- **Container refactor** — The drone was previously a raw `Graphics` object drawn at world coordinates each frame (untweenable). Replaced with a `Phaser.GameObjects.Container` (`_droneContainer`) positioned at the orbit location, with a child `Graphics` (`_droneGfx`) that draws the diamond at container-local (0, 0). Phaser tweens can now animate `_droneContainer.x`/`.y` smoothly.
+- **Three-phase activation sequence** — When the drone selects a target terminal it now:
+  1. Tweens to the terminal's world position (500 ms, `Sine.easeInOut`)
+  2. Flashes white + plays `droneActivate` sound + calls `target.droneActivate()`, holds for 350 ms
+  3. Tweens back to the stored orbit position (600 ms, `Sine.easeInOut`)
+- **`_droneFlying` guard** — The orbit update in `GameScene.update()` checks `!this._droneFlying` so the container isn't snapped back to orbit coordinates while the flight tweens are in progress. Replaces the old `_droneFlashing` flag.
+- **`_renderDroneGfx(flash)`** — Replaces the old `_drawDrone(gfx, x, y)` method. Draws the diamond at (0, 0) in normal (gold, s=7) or flash (white, s=10) style. Called only on state transitions, not every frame.
+
+### Drone — RELOAD Terminal Eligible
+- The drone can now autonomously activate the RELOAD terminal in addition to the upgrade terminals (CANNON, SHIELD, SLOWFIELD, REPAIR). The RELOAD terminal was already present in `this.terminals` with no explicit exclusion; a smart skip guard was added — `if (t.label === 'RELOAD' && this.ammo >= this.ammoMax) return false` — mirroring the existing REPAIR skip-at-full-health condition. The drone will not waste an action reloading a full magazine.
