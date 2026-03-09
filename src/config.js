@@ -60,7 +60,7 @@ export const DEFAULTS = {
         FAST:   { SPEED: 150, RADIUS: 12, HEALTH: 10 },
         TANK:   { SPEED: 38,  RADIUS: 18, HEALTH: 30 },
         BOMBER: { SPEED: 50,  RADIUS: 18, HEALTH: 10 },
-        SHIELD: { SPEED: 55,  RADIUS: 16, HEALTH: 15, SHIELD_DROP_DIST: 130 },
+        SHIELD: { SPEED: 55,  RADIUS: 16, HEALTH: 10, SHIELD_DROP_DIST: 130 },
     },
 
     DAMAGE: {

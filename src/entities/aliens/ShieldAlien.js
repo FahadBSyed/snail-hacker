@@ -47,6 +47,12 @@ export default class ShieldAlien extends BaseAlien {
         this._drawShield();
     }
 
+    /** Block all damage while the shield is active. */
+    takeDamage(amount) {
+        if (this.shielded) return false;
+        return super.takeDamage(amount);
+    }
+
     _drawShield() {
         const r   = this.radius + 11;   // ring radius
         const gfx = this._shieldGfx;
