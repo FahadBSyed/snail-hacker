@@ -257,6 +257,32 @@ snail-hacker/
 - **Balance** — `CANNON.ACTIVE_DURATION`, `SHIELD_DURATION`, `SLOW_DURATION` raised to 25s. Rhythm minigame key pool narrowed to WASD. Upgrade card descriptions read from live CONFIG. `CONFIG_VERSION` bumped to 3.
 - **Audio** — `upgradeSelect` (triumphant chord), `shieldActivate` (hum + ping), `slowActivate` (pitch-bend whoosh), `slowTick` (muffled tick + purple tint while active).
 
+### Step 29: Station & Terminal Sprites *(added Session 8)*
+- **`scripts/generate-station-sprites.js`** — Oblique top-down (SNES/Pokémon style) sprite generator for 7 assets: `station-mainframe.svg` (96×96), `station-gun.svg` (48×48), and five `terminal-*.svg` (64×64 each).
+- **Mainframe** — 3D cabinet with visible front + top + right-shadow faces, CRT display, tape reels, punch-card slot, and a raised gun-mount platform. **Gun is a separate sprite** that rotates toward the player's crosshair, recoils on fire, and emits a muzzle-flash.
+- **Terminals** — Color-coded CRT monitors on squat desks: reload (cyan), turret (orange), shield (blue), slow (purple), repair (green). Icon unique to each function baked into the screen art.
+- All 7 SVGs loaded in `GameScene.preload()` with conditional caching (`this.textures.exists()` guard).
+
+### Step 30: Passive Upgrade Cards *(added Session 8)*
+- Four passive upgrades added alongside the active terminal upgrades (9 total in pool):
+  - **HEALTH_BOOST** — Gerald max HP ×1.5 (100 → 150).
+  - **AMMO_BOOST** — Magazine size ×1.5 (default 35 → ~52 bullets).
+  - **LASER** — Hitscan left-click replaces projectiles (`_laserMode` flag in `GameScene`).
+  - **SPEED_BOOST** — Gerald movement speed ×2 (40 → 80 px/s).
+- Passive cards show "— PASSIVE —" badge; applied immediately in `GameScene.create()`; no terminal spawned.
+- `_spawnUpgradeTerminals()` skips passive upgrades when placing orbital terminals.
+
+### Step 31: Upgrade Stations → Rhythm Minigame *(added Session 8)*
+- SHIELD, SLOWFIELD, and REPAIR terminals unified onto `RhythmMinigame` (previously Sequence and Typing).
+- Key pool restricted to WASD — timing challenge, not key-hunting.
+- Shared `rhythmLauncher` helper in `GameScene`; config: 1 beat required, 1 miss allowed, 2.5s timeout per beat.
+
+### Step 32: Math Minigame + Battery Hack-Mode Rotation *(added Session 8)*
+- **`src/minigames/MathMinigame.js`** — Single-digit addition/subtraction; same contract as `HackMinigame` (wordsRequired, onWordComplete, onSuccess, cancel()). Auto-submits on correct digit count; backspace supported; 180ms correct / 300ms wrong feedback delays.
+- **Hack-mode toggle** — `_hackMode` (`'typing'` | `'math'`) in `GameScene` selects `HackMinigame` or `MathMinigame` at hack-start. Mode flips every time the station loses power (battery spawn event). Pattern: typing → battery → math → battery → typing → …
+- **Battery delivery ship** — Flies in from a random off-screen radial direction, hovers while the `Battery` pops in (`scale 0→1`, `Back.easeOut`), then exits. Snail auto-picks up on contact and carries the battery to the station center to restore power.
+- Config: `BATTERY.POWER_LOSS_WORDS` (15), `BATTERY.SPAWN_RADIUS` (200 px), `BATTERY.SNAIL_PICKUP_DIST` (35 px), `BATTERY.DELIVERY_DIST` (55 px).
+
 ### Step 28: Drone Polish *(added Session 7)*
 - **Fly-to animation** — Drone physically travels from its orbit position to the chosen terminal before activating (500ms `Sine.easeInOut` tween), flashes white at arrival + plays sound, holds briefly, then returns to orbit (600ms tween). Refactored from world-coordinate Graphics redraw each frame to a Phaser `Container` with a local-origin child `Graphics` so tweens can move the object directly.
 - **RELOAD terminal eligible** — Drone can now autonomously activate the RELOAD terminal; skipped when ammo is already at max (mirrors existing REPAIR skip-at-full-health guard).

@@ -153,9 +153,38 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 
 ## Session 8 — 2026-03-09
 
+### Station & Terminal Sprites
+- **`scripts/generate-station-sprites.js`** — New generator producing 7 SVG assets in oblique top-down style (classic SNES/Pokémon perspective): visible front face, top parallelogram, and right shadow face with light from upper-left.
+- **`assets/station-mainframe.svg`** (96×96) — Classic mainframe cabinet with 3D oblique depth, CRT display, LED indicators, tape reels, punch-card slot, and a raised gun-mount platform on top.
+- **`assets/station-gun.svg`** (48×48) — Separate rotatable turret gun with oblique barrel, scope, muzzle highlight, and pivot pin centered at (24,24) so it can be rotated independently of the mainframe. Rotates to face the player's crosshair; recoils and emits a muzzle-flash light burst on fire.
+- **Five terminal SVGs** (64×64 each) — Each shows a CRT monitor on a squat desk unit, color-coded by function: `terminal-reload` (cyan, ammo counter + reload icon), `terminal-turret` (orange, cannon + crosshair), `terminal-shield` (blue, shield icon + bar), `terminal-slow` (purple, snowflake + clock face), `terminal-repair` (green, health cross + wrench).
+- All 7 SVGs loaded in `GameScene.preload()` with conditional texture caching (avoids reloading across waves).
+
+### Passive Upgrade Cards
+- Four new passive upgrades added to the upgrade pool alongside the existing active terminals:
+  - **HEALTH_BOOST** — Gerald's max HP raised by +50% (`CONFIG.SNAIL.MAX_HEALTH × 1.5`; default 100 → 150).
+  - **AMMO_BOOST** — Magazine size raised by +50% (`CONFIG.PLAYER.MAX_AMMO × 1.5`; default 35 → ~52 bullets).
+  - **LASER** — Hitscan laser replaces projectiles on left-click; sets `_laserMode = true` in `GameScene`.
+  - **SPEED_BOOST** — Gerald's movement speed doubled (`CONFIG.PLAYER.SNAIL_SPEED × 2`; default 40 → 80 px/s).
+- Passive card cards display a **"— PASSIVE —"** label beneath the color accent stripe to distinguish them from active terminal upgrades.
+- Passive upgrades apply immediately in `GameScene.create()` and do **not** spawn a physical terminal — `_spawnUpgradeTerminals()` skips them entirely.
+- All upgrade definitions (active + passive, 9 total) live in `IntermissionScene.getUpgradeDefs()` and read live CONFIG at render time so card text always reflects current balance values.
+
+### All Upgrade Stations → Rhythm Minigame
+- SHIELD, SLOWFIELD, and REPAIR terminals now all use `RhythmMinigame` instead of their previous minigames (SequenceMinigame and TypingMinigame respectively).
+- Rhythm minigame restricted to **WASD keys only** — timing is the challenge, not key-hunting.
+- A shared `rhythmLauncher` helper in `GameScene` constructs the minigame for all three terminals, keeping the wiring DRY.
+- One beat required to succeed; one miss allowed (two misses = failure); 2.5s per-beat timeout.
+
+### Math Minigame + Hack-Mode Rotation
+- **`src/minigames/MathMinigame.js`** — New minigame implementing the same `wordsRequired / onWordComplete / onSuccess / cancel()` contract as `HackMinigame`. Presents single-digit addition or subtraction (`a + b =` / `a − b =`; subtraction guaranteed non-negative). Player types the numeric answer; auto-submits on correct digit count; backspace supported. Correct answer turns green (180ms before next problem); wrong answer turns red (300ms before reset).
+- **Hack-mode rotation** — `GameScene` tracks a `_hackMode` flag (`'typing'` | `'math'`). The active hack class is chosen at start-of-hack: `HackMinigame` for `'typing'`, `MathMinigame` for `'math'`.
+- **Rotation tied to battery spawns** — Every time the station loses power (`hackProgress` hits a `CONFIG.BATTERY.POWER_LOSS_WORDS` multiple), `_hackMode` toggles before the battery delivery ship animation plays. Pattern: typing → (battery) → math → (battery) → typing → …
+- **Battery delivery animation** — A small ship flies in from off-screen along a random radial direction, hovers briefly, and exits. The `Battery` instance pops in (`scale 0 → 1`, `Back.easeOut`) while the ship hovers, then sits on the ground until the snail walks into it. Snail auto-picks up on contact and must carry it to the station center to restore power.
+- New config keys: `BATTERY.POWER_LOSS_WORDS` (15), `BATTERY.SPAWN_RADIUS` (200 px), `BATTERY.SNAIL_PICKUP_DIST` (35 px), `BATTERY.DELIVERY_DIST` (55 px).
+
 ### Bug Fix — GameScene preload() Missing Closing Brace
-- `GameScene.preload()` was missing its closing `}` after the terminal sprite loading loop (lines 80–84). The parser hit the opening `{` of `create()` and threw `SyntaxError: Unexpected token '{'`, preventing the game from loading entirely.
-- Fixed by inserting the missing `}` between the terminal loop and the `create()` method declaration.
+- `GameScene.preload()` was missing its closing `}` after the terminal sprite loading loop. The parser hit the opening `{` of `create()` and threw `SyntaxError: Unexpected token '{'`, preventing the game from loading entirely. Fixed by inserting the missing brace.
 
 ---
 
