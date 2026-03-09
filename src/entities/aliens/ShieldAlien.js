@@ -18,7 +18,7 @@ export default class ShieldAlien extends BaseAlien {
     constructor(scene, x, y) {
         super(scene, x, y);
         this.alienType = 'shield';
-        this.spriteKey = 'alien-frog';
+        this.spriteKey = 'alien-shield';
         this.health    = CONFIG.ALIENS.SHIELD.HEALTH;
         this.speed     = CONFIG.ALIENS.SHIELD.SPEED;
         this.radius    = CONFIG.ALIENS.SHIELD.RADIUS;
