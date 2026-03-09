@@ -259,6 +259,11 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 ### Bug Fix — Bomber Blast Not Killing Nearby Aliens
 - `checkBomberBlast` called `a.takeDamage()` but discarded the return value, so splash-damaged aliens that reached 0 HP kept walking. Fixed: when `takeDamage` returns true in the splash loop, the alien is marked `_dying`, score is incremented, a death burst fires after 120 ms, and the alien is destroyed. Chain bombers (a bomber killed by another bomber's blast) recursively call `checkBomberBlast` from their own position.
 
+### SoundSynth — Shared Instance + Menu Warmup
+- **Single shared instance** — `SoundSynth` is now created once in `main.js`, `preload()` is called immediately (HTTP fetches start while the menu is showing), and the instance is stored in `game.registry` under `'soundSynth'`.
+- **`warmup()` method** — creates the `AudioContext` and decodes all already-fetched `rawBuffers` in one shot. Called on the START button `pointerdown` in `MenuScene`, which is a confirmed user gesture. By the time `GameScene` starts and the drop-in ship animation plays, all audio files are decoded and ready.
+- **`GameScene` + `IntermissionScene`** — replaced `new SoundSynth(SOUND_OVERRIDES)` + `preload()` with `this.registry.get('soundSynth')`. Removed now-unused `SoundSynth` and `SOUND_OVERRIDES` imports from both files.
+
 ### Ship Sound — Looped Ambient During All Ship Appearances
 - `SoundSynth.playLooped(name)` — new method that plays a decoded AudioBuffer on a continuous loop and returns a `{ stop(fadeOut?) }` handle (`fadeOut` defaults to 0.25s linear fade). Returns `null` if no decoded buffer is available, so callers can safely use `?.stop()`.
 - **Drop-in animation** — starts the loop when the ship enters; stops it (with fade) in the Phase 3 ascent `onComplete` before `ship.destroy()`.

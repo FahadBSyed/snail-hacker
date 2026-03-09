@@ -19,8 +19,6 @@ import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
-import SoundSynth from '../systems/SoundSynth.js';
-import { SOUND_OVERRIDES } from '../soundOverrides.js';
 import HUD from './HUD.js';
 import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions } from '../systems/CollisionSystem.js';
 
@@ -94,8 +92,7 @@ export default class GameScene extends Phaser.Scene {
         this.input.mouse.disableContextMenu();
 
         // ── Sound synthesizer ─────────────────────────────────────────────────
-        this.soundSynth = new SoundSynth(SOUND_OVERRIDES);
-        this.soundSynth.preload();   // fetch audio files now; decode on first play()
+        this.soundSynth = this.registry.get('soundSynth');
 
         // ── Hacking Station (center — objective to hack) ──────────────────────
         this.station = new HackingStation(this, 640, 360);

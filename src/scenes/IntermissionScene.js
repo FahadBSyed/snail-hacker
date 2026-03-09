@@ -1,6 +1,4 @@
 import { CONFIG } from '../config.js';
-import SoundSynth from '../systems/SoundSynth.js';
-import { SOUND_OVERRIDES } from '../soundOverrides.js';
 
 const FLAVOR_TEXT = {
     1: ['Not bad for a snail.', 'Gerald flexes his antenna.', 'They keep coming.'],
@@ -65,8 +63,7 @@ export default class IntermissionScene extends Phaser.Scene {
     }
 
     create() {
-        this.soundSynth = new SoundSynth(SOUND_OVERRIDES);
-        this.soundSynth.preload();   // fetch audio files now; decode on first play()
+        this.soundSynth = this.registry.get('soundSynth');
         const cx           = 640;
 
         // In startup mode: if we've already collected all needed upgrades, go straight to game.

@@ -123,6 +123,18 @@ export default class SoundSynth {
         };
     }
 
+    /**
+     * Create the AudioContext and immediately decode all pre-fetched files.
+     * Call this on the first confirmed user gesture (e.g. a button click)
+     * so that decoded buffers are ready before the first play() or playLooped().
+     */
+    warmup() {
+        this._ctx_get();   // create (or resume) the AudioContext
+        for (const [name, override] of this._overrides) {
+            if (override.rawBuffers?.length) this._decode(name, override);
+        }
+    }
+
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     _ctx_get() {

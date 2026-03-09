@@ -4,6 +4,14 @@ import PauseScene from './scenes/PauseScene.js';
 import IntermissionScene from './scenes/IntermissionScene.js';
 import GameOverScene from './scenes/GameOverScene.js';
 import VictoryScene from './scenes/VictoryScene.js';
+import SoundSynth from './systems/SoundSynth.js';
+import { SOUND_OVERRIDES } from './soundOverrides.js';
+
+// Create and preload the shared SoundSynth before the game starts so HTTP
+// fetches run during the menu. warmup() is called on the START button click
+// (user gesture) to create the AudioContext and decode all pre-fetched files.
+const soundSynth = new SoundSynth(SOUND_OVERRIDES);
+soundSynth.preload();
 
 const config = {
     type: Phaser.CANVAS,
@@ -31,3 +39,4 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+game.registry.set('soundSynth', soundSynth);

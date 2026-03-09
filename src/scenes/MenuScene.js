@@ -80,6 +80,8 @@ export default class MenuScene extends Phaser.Scene {
         startText.on('pointerover', () => startText.setColor('#00ff88'));
         startText.on('pointerout',  () => startText.setColor('#ffffff'));
         startText.on('pointerdown', () => {
+            // User gesture — create AudioContext and decode all pre-fetched audio.
+            this.registry.get('soundSynth')?.warmup();
             const startWave = CONFIG.DEV_MODE ? Math.max(1, CONFIG.DEV_START_WAVE || 1) : 1;
             if (startWave > 1) {
                 this.scene.start('IntermissionScene', {
