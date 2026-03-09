@@ -5,6 +5,7 @@ import BasicAlien from '../entities/aliens/BasicAlien.js';
 import FastAlien from '../entities/aliens/FastAlien.js';
 import TankAlien from '../entities/aliens/TankAlien.js';
 import BomberAlien from '../entities/aliens/BomberAlien.js';
+import ShieldAlien from '../entities/aliens/ShieldAlien.js';
 import HackingStation from '../entities/HackingStation.js';
 import GrabHandSystem from '../systems/GrabHandSystem.js';
 import Terminal from '../entities/Terminal.js';
@@ -934,6 +935,7 @@ export default class GameScene extends Phaser.Scene {
             case 'fast':   alien = new FastAlien(this, x, y);   break;
             case 'tank':   alien = new TankAlien(this, x, y);   break;
             case 'bomber': alien = new BomberAlien(this, x, y); break;
+            case 'shield': alien = new ShieldAlien(this, x, y); break;
             default:       alien = new BasicAlien(this, x, y);
         }
         if (this.slowFieldActive) {

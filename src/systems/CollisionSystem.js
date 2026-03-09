@@ -7,6 +7,7 @@ const BURST_COLORS = {
     fast:   0xaa44ff,
     tank:   0x7799aa,
     bomber: 0xff7722,
+    shield: 0x00eeff,
 };
 
 /**
@@ -101,6 +102,19 @@ export function checkProjectileCollisions(scene) {
             if (!alien.active) continue;
             const dist = Phaser.Math.Distance.Between(proj.x, proj.y, alien.x, alien.y);
             if (dist >= alien.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) continue;
+
+            // Shield check — deflect the projectile without damaging the alien
+            if (alien.shielded) {
+                proj.destroy();
+                // Deflect spark at impact point
+                const sx = proj.x, sy = proj.y;
+                const spark = scene.add.arc(sx, sy, 5, 0, 360, false, 0x00eeff, 0.9).setDepth(58);
+                scene.tweens.add({
+                    targets: spark, scaleX: 3, scaleY: 3, alpha: 0,
+                    duration: 220, ease: 'Power2.easeOut', onComplete: () => spark.destroy(),
+                });
+                break;
+            }
 
             proj.destroy();
             const isBomber = alien.alienType === 'bomber';
