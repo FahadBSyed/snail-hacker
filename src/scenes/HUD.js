@@ -34,16 +34,18 @@ export default class HUD {
             fontSize: '18px', fontFamily: 'monospace', color: '#ffffff',
         }).setOrigin(0.5, 0).setDepth(100);
 
-        // ── Ammo — top-right (individual bullet icons) ────────────────────────
-        this.ammoBullets = [];
-        const bulletGap     = 12;
-        const bulletsStartX = 1270 - (ammoMax - 1) * bulletGap;
-        for (let i = 0; i < ammoMax; i++) {
-            const bx = bulletsStartX + i * bulletGap;
-            this.ammoBullets.push(
-                scene.add.rectangle(bx, 18, 7, 14, 0xffdd44, 1).setDepth(100),
-            );
-        }
+        // ── Ammo — top-right (counter + bullet icon) ──────────────────────────
+        this._ammoMax = ammoMax;
+
+        // Small procedural bullet icon
+        const bulletGfx = scene.add.graphics().setDepth(100);
+        this._drawBulletIcon(bulletGfx, 1252, 18);
+        this._bulletIcon = bulletGfx;
+
+        this.ammoCounter = scene.add.text(1244, 10, `${ammoMax}/${ammoMax}`, {
+            fontSize: '14px', fontFamily: 'monospace', color: '#ffdd44',
+        }).setOrigin(1, 0).setDepth(100);
+
         this.lowAmmoLabel = scene.add.text(1270, 38, '! LOW AMMO !', {
             fontSize: '10px', fontFamily: 'monospace', color: '#ff4444',
         }).setOrigin(1, 0).setDepth(100).setVisible(false);
@@ -54,13 +56,25 @@ export default class HUD {
         }).setOrigin(1, 0).setDepth(100);
     }
 
+    /** Draw a small bullet icon (casing + tip) centred on (cx, cy). */
+    _drawBulletIcon(g, cx, cy) {
+        g.clear();
+        // Casing
+        g.fillStyle(0xffdd44, 1);
+        g.fillRect(cx - 3, cy - 5, 6, 9);
+        // Tip (triangle)
+        g.fillTriangle(cx - 3, cy - 5, cx + 3, cy - 5, cx, cy - 10);
+        // Rim highlight
+        g.fillStyle(0xffffff, 0.35);
+        g.fillRect(cx - 3, cy + 2, 6, 2);
+    }
+
     updateAmmo(ammo) {
-        this.ammoBullets.forEach((b, i) => {
-            const loaded = i < ammo;
-            b.fillColor = loaded ? 0xffdd44 : 0x444444;
-            b.fillAlpha = loaded ? 1.0 : 0.4;
-        });
-        this.lowAmmoLabel.setVisible(ammo <= 2 && ammo > 0);
+        const low = ammo <= 2 && ammo > 0;
+        const color = low ? '#ff4444' : '#ffdd44';
+        this.ammoCounter.setText(`${ammo}/${this._ammoMax}`).setColor(color);
+        this._bulletIcon.setTint(low ? 0xff4444 : 0xffffff);
+        this.lowAmmoLabel.setVisible(low);
     }
 
     updateHealth(health, maxHealth) {

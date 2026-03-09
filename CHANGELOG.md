@@ -153,6 +153,11 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 
 ## Session 8 — 2026-03-09
 
+### HUD Ammo — Counter Instead of Individual Icons
+- Replaced the row of individual bullet rectangles with a `current/max` text counter (e.g. `20/30`) plus a small procedural bullet icon (casing + triangular tip) to its right.
+- Counter and icon both turn red when ammo is ≤ 2, matching the existing `! LOW AMMO !` warning.
+- `hud._ammoMax` is updated in `GameScene` when the AMMO_BOOST passive upgrade applies so the denominator always reflects the current magazine size.
+
 ### Tank Alien — 50% Bigger Sprite
 - `TankAlien._initSprite()` now calls `this.sprite.setScale(1.5)` after the base sprite is created, making the tank visually 50% larger than other alien types without touching any SVG assets or CONFIG values.
 
