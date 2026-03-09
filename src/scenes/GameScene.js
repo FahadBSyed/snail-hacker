@@ -135,7 +135,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'AMMO_BOOST':
                     this.ammoMax = Math.round(CONFIG.PLAYER.MAX_AMMO * 1.5);
                     this.ammo    = this.ammoMax;
-                    this.hud._ammoMax = this.ammoMax;
+                    // hud doesn't exist yet — ammoMax is passed to its constructor below
                     break;
                 case 'LASER':
                     this._laserMode = true;
