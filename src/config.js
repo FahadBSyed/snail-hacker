@@ -3,6 +3,7 @@ const CONFIG_VERSION = 3;  // increment whenever DEFAULTS change in a breaking w
 
 export const DEFAULTS = {
     DEV_MODE: true,
+    DEV_START_WAVE: 1,   // DEV_MODE only — jump to this wave (1 = normal start; >1 picks upgrades first)
     _version: CONFIG_VERSION,
 
     PLAYER: {

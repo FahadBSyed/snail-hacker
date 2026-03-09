@@ -232,6 +232,12 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 ### Palette Swap Documentation
 - **`assets/sprites/PALETTE_SWAPS.md`** — New reference file listing all 5 alien palettes (frog/basic = violet, fast = purple, tank = grey/steel, bomber = orange, shield = cyan/ice-blue) with per-element colour tables. The shared saucer geometry is described once at the top.
 
+### DEV: Start at Arbitrary Wave with Pre-Game Upgrades
+- `CONFIG.DEV_START_WAVE` (default 1, DEV_MODE only) — set to any wave number to jump directly there. Starting at wave N grants N−1 pre-game upgrade picks.
+- `MenuScene` — on START, checks `CONFIG.DEV_MODE && CONFIG.DEV_START_WAVE > 1`; if so, routes to `IntermissionScene` in startup mode instead of directly to `GameScene`.
+- `IntermissionScene` now accepts `_startupMode: true` and `_targetWave: N` in scene data. In startup mode it shows a "STARTING AT WAVE N — PRE-GAME SETUP" header with a pick counter (e.g. "UPGRADE 2 of 3") and progress dots. After each pick it loops back to itself until all N−1 upgrades are chosen, then starts `GameScene` at wave N with full health.
+- `DEV_START_WAVE` also appears automatically in the in-browser balance config editor (it is a top-level numeric value).
+
 ### ShieldAlien — Shield Hit Feedback + Wider Drop Distance
 - `ShieldAlien.flashShield()` — bright cyan/white flash ring expands + fades at the shield radius (250ms); rim tween kicked to full brightness for the duration.
 - `SoundSynth._shieldReflect()` — metallic ping (two sine harmonics 1800→900 Hz, 3200→1600 Hz) + brief highpass noise zip, like a bullet bouncing off.

@@ -79,7 +79,17 @@ export default class MenuScene extends Phaser.Scene {
 
         startText.on('pointerover', () => startText.setColor('#00ff88'));
         startText.on('pointerout',  () => startText.setColor('#ffffff'));
-        startText.on('pointerdown', () => this.scene.start('GameScene'));
+        startText.on('pointerdown', () => {
+            const startWave = CONFIG.DEV_MODE ? Math.max(1, CONFIG.DEV_START_WAVE || 1) : 1;
+            if (startWave > 1) {
+                this.scene.start('IntermissionScene', {
+                    wave: 0, score: 0, upgrades: [],
+                    _startupMode: true, _targetWave: startWave,
+                });
+            } else {
+                this.scene.start('GameScene');
+            }
+        });
 
         // Balance config editor button — only shown in DEV_MODE
         if (CONFIG.DEV_MODE) {

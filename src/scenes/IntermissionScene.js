@@ -55,14 +55,24 @@ export default class IntermissionScene extends Phaser.Scene {
         this.snailHealth = data.snailHealth !== undefined ? data.snailHealth
                          : data.stationHealth !== undefined ? data.stationHealth
                          : CONFIG.SNAIL.MAX_HEALTH;
-        this.upgrades    = data.upgrades    || [];
-        this._advanced   = false;
+        this.upgrades       = data.upgrades    || [];
+        this._advanced      = false;
         this.countdownTimer = null;
+        // Pre-game setup mode: pick upgrades before starting at a later wave
+        this._startupMode = data._startupMode || false;
+        this._targetWave  = data._targetWave  || 1;
     }
 
     create() {
         this.soundSynth = new SoundSynth();
         const cx           = 640;
+
+        // In startup mode: if we've already collected all needed upgrades, go straight to game.
+        if (this._startupMode && this.upgrades.length >= this._targetWave - 1) {
+            this._advance();
+            return;
+        }
+
         const healedHealth = Math.min(CONFIG.SNAIL.MAX_HEALTH, this.snailHealth + CONFIG.INTERMISSION.HEAL_AMOUNT);
         const nextWave     = this.wave + 1;
         const flavors      = FLAVOR_TEXT[this.wave] || ['The fight continues.', 'Rest while you can.'];
@@ -76,6 +86,13 @@ export default class IntermissionScene extends Phaser.Scene {
             this.add.circle(sx, sy, sz, 0xffffff, Phaser.Math.FloatBetween(0.2, 0.6));
         }
 
+        if (this._startupMode) {
+            // Pre-game upgrade selection — always show upgrade picker
+            const available = UPGRADE_POOL.filter(t => !this.upgrades.some(u => u.type === t));
+            this._buildStartupUpgradeLayout(cx, available);
+            return;
+        }
+
         // Determine available upgrades and whether this is an upgrade selection wave.
         const available     = UPGRADE_POOL.filter(t => !this.upgrades.some(u => u.type === t));
         const isUpgradeWave = available.length > 0;
@@ -85,6 +102,43 @@ export default class IntermissionScene extends Phaser.Scene {
         } else {
             this._buildNormalLayout(cx, healedHealth, nextWave, flavors);
         }
+    }
+
+    // ── Pre-game startup upgrade selection ────────────────────────────────────
+
+    _buildStartupUpgradeLayout(cx, available) {
+        const pickNum  = this.upgrades.length + 1;
+        const pickTotal = this._targetWave - 1;
+
+        // Header
+        this.add.rectangle(cx, 78, 700, 2, 0x00ffcc, 0.4);
+        this.add.text(cx, 52, `— STARTING AT WAVE ${this._targetWave} —`, {
+            fontSize: '26px', fontFamily: 'monospace', color: '#00ffcc',
+        }).setOrigin(0.5);
+        this.add.rectangle(cx, 84, 700, 2, 0x00ffcc, 0.4);
+
+        this.add.text(cx, 115, `PRE-GAME SETUP — UPGRADE ${pickNum} of ${pickTotal}`, {
+            fontSize: '15px', fontFamily: 'monospace', color: '#776688',
+        }).setOrigin(0.5);
+
+        // Progress dots
+        const dotSpacing = 18;
+        const dotsStartX = cx - (pickTotal - 1) * dotSpacing / 2;
+        for (let i = 0; i < pickTotal; i++) {
+            const filled = i < this.upgrades.length;
+            const color  = filled ? 0xaa44ff : 0x334455;
+            this.add.circle(dotsStartX + i * dotSpacing, 143, 5, color, filled ? 1 : 0.6);
+        }
+
+        // Upgrade section header
+        this.add.rectangle(cx, 180, 700, 1, 0xaa44ff, 0.4);
+        this.add.text(cx, 205, 'CHOOSE STARTING UPGRADE', {
+            fontSize: '24px', fontFamily: 'monospace', color: '#cc88ff',
+        }).setOrigin(0.5);
+
+        const offered = Phaser.Utils.Array.Shuffle(available.slice())
+            .slice(0, CONFIG.UPGRADES.CARDS_OFFERED);
+        this._showUpgradeCards(offered, cx, 390);
     }
 
     // ── Normal (non-upgrade) layout ───────────────────────────────────────────
@@ -308,6 +362,26 @@ export default class IntermissionScene extends Phaser.Scene {
         if (this._advanced) return;
         this._advanced = true;
         if (this.countdownTimer) this.countdownTimer.remove(false);
+
+        if (this._startupMode) {
+            if (this.upgrades.length < this._targetWave - 1) {
+                // Need more upgrades — loop back
+                this.scene.start('IntermissionScene', {
+                    wave: 0, score: 0, upgrades: this.upgrades,
+                    _startupMode: true, _targetWave: this._targetWave,
+                });
+            } else {
+                // All upgrades chosen — start at the target wave with full health
+                this.scene.start('GameScene', {
+                    wave:        this._targetWave,
+                    score:       0,
+                    snailHealth: CONFIG.SNAIL.MAX_HEALTH,
+                    upgrades:    this.upgrades,
+                });
+            }
+            return;
+        }
+
         this.scene.start('GameScene', {
             wave:        this.wave + 1,
             score:       this.score,
