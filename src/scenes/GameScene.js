@@ -69,7 +69,19 @@ export default class GameScene extends Phaser.Scene {
             this.load.svg(`alien-tank-${dir}`,    `assets/alien-tank-${dir}.svg`,    svgSize);
             this.load.svg(`alien-bomber-${dir}`,  `assets/alien-bomber-${dir}.svg`,  svgSize);
         }
-    }
+
+        // Station + terminal sprites
+        if (!this.textures.exists('station-mainframe')) {
+            this.load.svg('station-mainframe', 'assets/station-mainframe.svg', { width: 96, height: 96 });
+        }
+        if (!this.textures.exists('station-gun')) {
+            this.load.svg('station-gun', 'assets/station-gun.svg', { width: 48, height: 48 });
+        }
+        for (const key of ['terminal-reload', 'terminal-turret', 'terminal-shield', 'terminal-slow', 'terminal-repair']) {
+            if (!this.textures.exists(key)) {
+                this.load.svg(key, `assets/${key}.svg`, { width: 64, height: 64 });
+            }
+        }
 
     create() {
         // ── Alien planet surface background ──────────────────────────────────
@@ -139,6 +151,7 @@ export default class GameScene extends Phaser.Scene {
             this.hud.updateAmmo(this.ammo);
             this.cameras.main.shake(90, 0.005);
             this.soundSynth.play('shoot');
+            this.station.fireEffect();
         });
 
         // ── Battery / power state ─────────────────────────────────────────────
@@ -982,6 +995,10 @@ export default class GameScene extends Phaser.Scene {
 
         // Station proximity (shows/hides E prompt) — suppress during escape phase
         if (!this.escapePhase) this.station.updateProximity(this.snail);
+
+        // Gun tracking — rotate gun to face the current cursor position
+        const ptr = this.input.activePointer;
+        this.station.updateGunAngle(ptr.x, ptr.y);
 
         // Escape ship proximity — snail must reach it to end the wave
         if (this.escapePhase && !this.boardingShip && this.escapeShip && this.escapeShip.active) {
