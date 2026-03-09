@@ -151,6 +151,14 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 
 ---
 
+## Session 8 — 2026-03-09
+
+### Bug Fix — GameScene preload() Missing Closing Brace
+- `GameScene.preload()` was missing its closing `}` after the terminal sprite loading loop (lines 80–84). The parser hit the opening `{` of `create()` and threw `SyntaxError: Unexpected token '{'`, preventing the game from loading entirely.
+- Fixed by inserting the missing `}` between the terminal loop and the `create()` method declaration.
+
+---
+
 ## Session 7 — 2026-03-08
 
 ### Drone — Fly-to-Terminal Animation
