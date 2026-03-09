@@ -106,13 +106,24 @@ export default class SoundSynth {
                 Promise.all(
                     override.entries.map(({ url, volume }) =>
                         fetch(url)
-                            .then(r => r.arrayBuffer())
+                            .then(r => {
+                                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                                return r.arrayBuffer();
+                            })
                             .then(ab => ctx.decodeAudioData(ab))
                             .then(buf => ({ buf, volume }))
-                            .catch(() => null)
+                            .catch(err => {
+                                console.warn(`[SoundSynth] failed to load override "${name}" → ${url}:`, err.message ?? err);
+                                return null;
+                            })
                     )
                 ).then(results => {
                     override.buffers = results.filter(Boolean);
+                    if (override.buffers.length) {
+                        console.log(`[SoundSynth] loaded ${override.buffers.length} file(s) for "${name}"`);
+                    } else {
+                        console.warn(`[SoundSynth] all files failed for "${name}" — using procedural synth`);
+                    }
                 });
             }
             // Fall through to procedural synth while loading (or if all files failed)

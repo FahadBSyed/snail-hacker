@@ -237,6 +237,7 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 - `SoundSynth` constructor now accepts an optional `overrides` map. Entries are normalised to `{ url, volume }` internally. Files are fetched and decoded in the background on first `play()` call; the procedural synth plays as fallback until loading completes or permanently if loading fails. Per-file `volume` is multiplied by master volume at playback.
 - `GameScene` and `IntermissionScene` both import and pass `SOUND_OVERRIDES` to their `SoundSynth` instance.
 - `assets/sounds/` directory created with a `README.md` documenting all overrideable sound names and the `{ url, volume }` entry format.
+- SoundSynth now logs `console.warn` for each file that fails to fetch or decode (HTTP status, decode error) and a summary warning when all files for a name fail. Successful loads log at `console.log`. Previously all errors were swallowed silently.
 
 ### DEV: Start at Arbitrary Wave with Pre-Game Upgrades
 - `CONFIG.DEV_START_WAVE` (default 1, DEV_MODE only) — set to any wave number to jump directly there. Starting at wave N grants N−1 pre-game upgrade picks.
