@@ -164,9 +164,17 @@ export default class GameScene extends Phaser.Scene {
             });
             this.activeTerminalMinigame = mg;
         };
+        const rhythmLauncher = (_term, onSuccess, onFailure) => {
+            const mg = new RhythmMinigame(this, {
+                onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
+                onFailure: () => { this.activeTerminalMinigame = null; onFailure(); },
+            });
+            this.activeTerminalMinigame = mg;
+        };
         // Store launchers so _spawnUpgradeTerminals can use them.
         this._sequenceLauncher = sequenceLauncher;
         this._typingLauncher   = typingLauncher;
+        this._rhythmLauncher   = rhythmLauncher;
 
         // RELOAD — orbits the hacking station at a fixed radius; relocates on each success.
         // Picks an angle that won't overlap existing upgrade terminals.
@@ -336,7 +344,7 @@ export default class GameScene extends Phaser.Scene {
                         label:          'SHIELD',
                         cooldown:       CONFIG.TERMINALS.SHIELD_COOLDOWN,
                         color:          0x4488ff,
-                        launchMinigame: this._sequenceLauncher,
+                        launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => { this.soundSynth.play('shieldActivate'); this.snail.shield(CONFIG.TERMINALS.SHIELD_DURATION); },
                     });
                     break;
@@ -345,7 +353,7 @@ export default class GameScene extends Phaser.Scene {
                         label:          'SLOW',
                         cooldown:       CONFIG.TERMINALS.SLOW_COOLDOWN,
                         color:          0xaa44ff,
-                        launchMinigame: this._typingLauncher,
+                        launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateSlowField(),
                     });
                     break;
@@ -354,7 +362,7 @@ export default class GameScene extends Phaser.Scene {
                         label:          'REPAIR',
                         cooldown:       CONFIG.TERMINALS.REPAIR_COOLDOWN,
                         color:          0x44ff88,
-                        launchMinigame: this._sequenceLauncher,
+                        launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => {
                             this.snail.health = Math.min(
                                 this.snail.maxHealth,
