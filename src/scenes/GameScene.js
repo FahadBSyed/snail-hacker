@@ -20,7 +20,7 @@ import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
 import HUD from './HUD.js';
-import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions } from '../systems/CollisionSystem.js';
+import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions, BURST_COLORS } from '../systems/CollisionSystem.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -1058,10 +1058,15 @@ export default class GameScene extends Phaser.Scene {
             if (status === 'reached_snail' && !this.boardingShip) {
                 const isBomber = alien.alienType === 'bomber';
                 const bx = alien.x, by = alien.y;
+                const burstColor = BURST_COLORS[alien.alienType] || 0xff4444;
                 alien.destroy();
 
                 if (isBomber) {
                     checkBomberBlast(this, bx, by);
+                } else if (this.snail.shielded) {
+                    // Shield absorbs the hit — kill the alien, play shield sound, no damage
+                    this.soundSynth.play('shieldReflect');
+                    spawnDeathBurst(this, bx, by, burstColor);
                 } else {
                     const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                     this.hud.updateHealth(this.snail.health, this.snail.maxHealth);

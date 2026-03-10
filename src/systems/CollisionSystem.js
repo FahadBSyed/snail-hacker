@@ -2,7 +2,7 @@ import { CONFIG } from '../config.js';
 import HealthDrop from '../entities/HealthDrop.js';
 
 // ── Colour palette for death bursts ───────────────────────────────────────────
-const BURST_COLORS = {
+export const BURST_COLORS = {
     basic:  0xdd3333,
     fast:   0xaa44ff,
     tank:   0x7799aa,
