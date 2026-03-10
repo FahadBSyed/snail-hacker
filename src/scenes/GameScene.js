@@ -43,6 +43,78 @@ export default class GameScene extends Phaser.Scene {
     }
 
     preload() {
+        // ── Loading screen ─────────────────────────────────────────────────────
+        const W = this.scale.width, H = this.scale.height;
+        const cx = W / 2, cy = H / 2;
+        const BAR_W = 420, BAR_H = 16;
+        const barX = cx - BAR_W / 2, barY = cy + 30;
+
+        // Solid background so the menu doesn't show through
+        const loadBg = this.add.graphics();
+        loadBg.fillStyle(0x0a0a0f, 1);
+        loadBg.fillRect(0, 0, W, H);
+
+        // Title
+        this.add.text(cx, cy - 90, 'SNAIL HACKER', {
+            fontSize: '40px', fontFamily: 'monospace',
+            color: '#00ffcc',
+        }).setOrigin(0.5);
+
+        // Subtitle / flavour
+        this.add.text(cx, cy - 44, '[ BOOTING SYSTEMS ]', {
+            fontSize: '13px', fontFamily: 'monospace',
+            color: '#006655', letterSpacing: 4,
+        }).setOrigin(0.5);
+
+        // Progress bar outline
+        const barBorder = this.add.graphics();
+        barBorder.lineStyle(1, 0x00ffcc, 0.35);
+        barBorder.strokeRect(barX, barY, BAR_W, BAR_H);
+
+        // Corner brackets for a terminal look
+        const corner = (x, y, dx, dy) => {
+            barBorder.lineStyle(2, 0x00ffcc, 0.8);
+            barBorder.beginPath();
+            barBorder.moveTo(x + dx * 10, y);
+            barBorder.lineTo(x, y);
+            barBorder.lineTo(x, y + dy * 10);
+            barBorder.strokePath();
+        };
+        corner(barX - 4,          barY - 4,           1,  1);
+        corner(barX + BAR_W + 4,  barY - 4,          -1,  1);
+        corner(barX - 4,          barY + BAR_H + 4,   1, -1);
+        corner(barX + BAR_W + 4,  barY + BAR_H + 4,  -1, -1);
+
+        // Progress bar fill
+        const barFill = this.add.graphics();
+
+        // Percentage label
+        const pctText = this.add.text(cx, barY + BAR_H + 14, '0%', {
+            fontSize: '11px', fontFamily: 'monospace', color: '#00aa88',
+        }).setOrigin(0.5);
+
+        // Current-file status — scrolling terminal line
+        const fileText = this.add.text(cx, barY - 18, '', {
+            fontSize: '10px', fontFamily: 'monospace', color: '#004433',
+        }).setOrigin(0.5);
+
+        // Hook into loader events
+        this.load.on('progress', (v) => {
+            barFill.clear();
+            barFill.fillStyle(0x00ffcc, 0.65);
+            barFill.fillRect(barX + 1, barY + 1, (BAR_W - 2) * v, BAR_H - 2);
+            pctText.setText(`${Math.round(v * 100)}%`);
+        });
+
+        this.load.on('fileprogress', (file) => {
+            fileText.setText(file.key);
+        });
+
+        this.load.on('complete', () => {
+            pctText.setText('100%');
+            fileText.setText('READY');
+        });
+
         // Background for this wave (only load if not already cached)
         if (!this.textures.exists(this.bgKey)) {
             this.load.svg(this.bgKey, `assets/backgrounds/${this.bgKey}.svg`, { width: 1280, height: 720 });

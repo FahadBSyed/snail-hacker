@@ -256,6 +256,9 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 - `ShieldAlien.takeDamage()` override returns `false` immediately while `this.shielded` is true, blocking all damage sources (projectiles, bomber splash, cannon auto-fire) — not just the projectile deflection already handled in `CollisionSystem`.
 - `CONFIG.ALIENS.SHIELD.HEALTH` reduced 15 → 10 so it dies in one shot once the shield drops (matches `PROJECTILE_HIT_ALIEN: 10`).
 
+### Loading Screen
+- `src/scenes/GameScene.js` — loading UI drawn at the start of `preload()` using Phaser's loader events. Shows "SNAIL HACKER / BOOTING SYSTEMS", a cyan progress bar with terminal corner-bracket decoration, a percentage counter, and a scrolling file-key status line. Hooks into `this.load.on('progress')`, `'fileprogress'`, and `'complete'`. Naturally replaced by `create()` once all assets are ready.
+
 ### Mucus Trail Particle Effect
 - `src/systems/SlimeTrail.js` — new system; every 90 ms while Gerald is `MOVING`, spawns a procedural Graphics decal behind his foot. Each decal is a rotated ellipse (10–14 × 4–6 px, `0xA8C400`) plus a smaller satellite circle (`0x90B000`) offset backward, with random slight rotation and alpha (0.45–0.60). Placed at depth −0.5 so it renders above the background but beneath all entities. A Phaser `Quad.easeIn` tween fades the decal to zero over 3.5 s, then destroys the Graphics object.
 - `src/scenes/GameScene.js` — imports `SlimeTrail`, instantiates it after the snail, and calls `slimeTrail.update(snail, delta)` each frame.
