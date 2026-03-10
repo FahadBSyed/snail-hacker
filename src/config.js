@@ -103,6 +103,8 @@ export const DEFAULTS = {
         RHYTHM_MAX_MISSES:     1,     // allowed misses before failure
         RHYTHM_BEAT_TIMEOUT:   2500,  // ms before auto-miss per beat
         TYPING_MS_PER_CHAR:    1500,  // ms per character in typing minigame
+        FROGGER_TIME_LIMIT:   45000,  // ms before frogger minigame expires
+        FROGGER_CROSSINGS:        3,  // successful crossings needed to win
     },
 
     RELOAD: {

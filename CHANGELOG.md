@@ -2,6 +2,24 @@
 
 ## Session 9 — 2026-03-10
 
+### FroggerMinigame
+
+- **`src/minigames/FroggerMinigame.js`** — New minigame for the boss fight shield-break mechanic. Full Frogger-style game rendered inside a 456×398 panel centred on the screen:
+  - 9×7 grid; row 0 = goal (green), row 6 = start (blue), rows 1–5 = traffic lanes
+  - 5 traffic lanes with escalating speed/density toward the goal: lane 5 is 55 px/s, lane 1 is 200 px/s; direction alternates per lane; 2 cars per lane
+  - Cars rendered with body, windscreen highlight, headlights (leading end), tail-lights (trailing end), per-lane colour
+  - Frog avatar: green circle with yellow eyes + dark pupils always facing upward (toward goal); turns red on death
+  - WASD hop movement (one cell per press, clamped at edges); 300 ms grace delay on start
+  - Hit detection: 6 px inset hitbox on frog, 2 px inset on cars; checked every tick AND immediately after each hop
+  - Getting hit → 600 ms red "✗ HIT!" flash, reset to centre of start row
+  - Reaching goal row → score increments, 600 ms green "✓ SAFE!" flash, reset; `onSuccess` fires when score reaches `FROGGER_CROSSINGS`
+  - Timer bar counts down; `onFailure` fires on expiry
+  - Controls flash overlay for 1.8 s at start: semi-opaque grid cover, large ▲ arrow, "W A S D — HOP / REACH THE OTHER SIDE" label, then fades
+  - Score displayed as `○ ○ ○` → `● ● ●` dot-fill in the header
+  - Implements `cancel()` contract (called by TeleportSystem)
+- **`src/config.js`** — Added `MINIGAMES.FROGGER_TIME_LIMIT` (45 000 ms) and `MINIGAMES.FROGGER_CROSSINGS` (3)
+- **`src/systems/SoundSynth.js`** — Added `_frogHop()`: quiet 520→420 Hz sine blip (gain 0.14, 70 ms) played on each successful hop
+
 ### Boss Fight Design + Sprites
 
 - **Boss fight design locked** — Added Step 33 to `PLAN.md` documenting the full Overlord boss fight: 200 HP phase-shifting boss, crimson dreadnought saucer, Frogger minigame replaces HackMinigame for shield-break mechanic, four attack types (Black Hole teleport, EMP power loss, Terminal Lock EMP, Fast Alien burst), enrage at 50% HP, multi-stage death sequence, boss HP bar HUD addition.

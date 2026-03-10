@@ -329,6 +329,13 @@ export default class SoundSynth {
         this._osc(ctx, 'sine', 440, 880, t, 0.18, g);
     }
 
+    /** Frogger hop — soft short blip, quiet so it doesn't fatigue on repeated presses. */
+    _frogHop() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const g = this._gain(ctx, 0.14, t, 0.08);
+        this._osc(ctx, 'sine', 520, 420, t, 0.07, g);
+    }
+
     /** Rhythm minigame hit — bright short tone. */
     _rhythmHit() {
         const ctx = this._ctx_get(), t = ctx.currentTime;
