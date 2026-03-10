@@ -256,6 +256,12 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 - `ShieldAlien.takeDamage()` override returns `false` immediately while `this.shielded` is true, blocking all damage sources (projectiles, bomber splash, cannon auto-fire) — not just the projectile deflection already handled in `CollisionSystem`.
 - `CONFIG.ALIENS.SHIELD.HEALTH` reduced 15 → 10 so it dies in one shot once the shield drops (matches `PROJECTILE_HIT_ALIEN: 10`).
 
+### Auto-Turret Visual Redesign
+- `DefenseStation.drawStation()` completely redrawn in the oblique top-down aesthetic of the `station-gun` / `station-mainframe` SVG sprites.
+- **Base**: regular hexagon (flat-top, r=20) in gunmetal `#3a4450` outer / `#556070` inner, with a dark edge outline and a subtle `#00ffcc` accent ring at r=22 — echoes the hacking station's hex body and cyan glow.
+- **Barrel group**: boxy gun body (14×10 px) with lit top strip (`#7a8898`) and shadow right strip (`#3a4450`); scope housing to the right with `#00eeff` glowing lens; narrow barrel (6×18 px) with lit left edge (`#60707e`), three heat-vent marks, and a `#88aacc` muzzle-tip highlight — all matching the palette from `stationGun()` in `generate-station-sprites.js`.
+- Label text and cooldown arc colour changed from orange `#ff8844` / `0xff8844` to station cyan `#00ffcc` / `0x00ffcc` to match the new palette.
+
 ### Gerald Shield — Blocks Alien Contact Damage
 - When a non-bomber alien reaches Gerald while `snail.shielded` is true, the alien is destroyed without dealing damage. The `shieldReflect` sound plays (same as the shield alien's projectile deflect sound) and a full death burst fires with the alien's type colour — so the alien still visually explodes and the kill is registered.
 - `BURST_COLORS` is now exported from `CollisionSystem.js` so `GameScene` can look up the correct burst colour for the killed alien type.
