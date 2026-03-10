@@ -23,6 +23,7 @@ import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
+import Decoy from '../entities/Decoy.js';
 import HUD from './HUD.js';
 import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions, BURST_COLORS } from '../systems/CollisionSystem.js';
 
@@ -504,6 +505,15 @@ export default class GameScene extends Phaser.Scene {
                 case 'DRONE':
                     this._setupDrone();
                     break;
+                case 'DECOY':
+                    term = new Terminal(this, x, y, {
+                        label:          'DECOY',
+                        cooldown:       CONFIG.TERMINALS.DECOY_COOLDOWN,
+                        color:          0xff44cc,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => this._activateDecoy(),
+                    });
+                    break;
                 default:
                     break;
             }
@@ -647,6 +657,22 @@ export default class GameScene extends Phaser.Scene {
                 }
             }
         });
+    }
+
+    _activateDecoy() {
+        // Destroy any existing decoy first
+        if (this.decoy && this.decoy.active) this.decoy._expire();
+
+        // Pick a random position in the arena, away from center and edges
+        const angle = Math.random() * Math.PI * 2;
+        const dist  = 180 + Math.random() * 180; // 180–360 px from center
+        const dx    = Math.cos(angle) * dist;
+        const dy    = Math.sin(angle) * dist;
+        const x     = Phaser.Math.Clamp(640 + dx, 80, 1200);
+        const y     = Phaser.Math.Clamp(360 + dy, 80, 640);
+
+        this.decoy = new Decoy(this, x, y);
+        this.soundSynth.play('slowActivate'); // reuse a sci-fi activation sound
     }
 
     _startHack() {
@@ -1342,10 +1368,22 @@ export default class GameScene extends Phaser.Scene {
             return p.update(time, delta);
         });
 
-        // Aliens — move and check contact with snail
+        // Aliens — move and check contact with snail or decoy
         this.aliens = this.aliens.filter(alien => {
             if (!alien.active || alien._dying) return false;
             const status = alien.update(time, delta);
+
+            if (status === 'reached_decoy') {
+                const bx = alien.x, by = alien.y;
+                const burstColor = BURST_COLORS[alien.alienType] || 0xff4444;
+                alien.destroy();
+                spawnDeathBurst(this, bx, by, burstColor);
+                if (this.decoy && this.decoy.active) {
+                    this.decoy.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
+                }
+                return false;
+            }
+
             if (status === 'reached_snail' && !this.boardingShip) {
                 const isBomber = alien.alienType === 'bomber';
                 const bx = alien.x, by = alien.y;

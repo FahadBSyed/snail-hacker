@@ -89,6 +89,9 @@ export const DEFAULTS = {
         SLOW_DURATION:    25000,  // ms — how long SlowField lasts
         DRONE_FIRST_SHOT_MAX: 10000,  // ms — drone fires at a random time within this window each round
         DRONE_COOLDOWN:       60000,  // ms — cooldown between subsequent drone activations
+        DECOY_DURATION:       12000,  // ms — how long the decoy lure lasts
+        DECOY_COOLDOWN:       22000,  // ms — terminal cooldown after deploying decoy
+        DECOY_HEALTH:         60,     // HP — aliens chip away at this; 0 destroys decoy early
     },
 
     CANNON: {

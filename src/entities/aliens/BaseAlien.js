@@ -30,13 +30,14 @@ export default class BaseAlien extends Phaser.GameObjects.Container {
         return this.health <= 0;
     }
 
-    /** Straight-line movement toward the snail. Returns 'reached_snail' or 'alive'. */
+    /** Straight-line movement toward the decoy (if active) or snail. */
     update(time, delta) {
         const dt        = delta / 1000;
         const speedMult = this.scene.alienSpeedMultiplier || 1.0;
-        const snail     = this.scene.snail;
+        const decoy     = this.scene.decoy;
+        const target    = (decoy && decoy.active) ? decoy : this.scene.snail;
 
-        const angle = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
         this.x += Math.cos(angle) * this.speed * speedMult * dt;
         this.y += Math.sin(angle) * this.speed * speedMult * dt;
 
@@ -46,7 +47,10 @@ export default class BaseAlien extends Phaser.GameObjects.Container {
             this.sprite.setTexture(`${this.spriteKey}-${dir}`);
         }
 
-        const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
-        return dist < this.radius + 20 ? 'reached_snail' : 'alive';
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+        if (dist < this.radius + 20) {
+            return (decoy && decoy.active) ? 'reached_decoy' : 'reached_snail';
+        }
+        return 'alive';
     }
 }
