@@ -268,9 +268,12 @@ export default class FroggerMinigame {
             }
         }
 
-        // ── Column guide — dim vertical strip showing frog's horizontal lane ──
-        g.fillStyle(0xffffff, 0.07);
-        g.fillRect(GRID_OX + this.frogCol * CELL_W, GRID_OY, CELL_W, GRID_H);
+        // ── Adjacent column guides — show left/right landing spots ──
+        g.fillStyle(0xffffff, 0.09);
+        if (this.frogCol > 0)
+            g.fillRect(GRID_OX + (this.frogCol - 1) * CELL_W, GRID_OY, CELL_W, GRID_H);
+        if (this.frogCol < COLS - 1)
+            g.fillRect(GRID_OX + (this.frogCol + 1) * CELL_W, GRID_OY, CELL_W, GRID_H);
 
         // ── Frog ─────────────────────────────────────────────────────────────
         const fx = this._cellCX(this.frogCol);
