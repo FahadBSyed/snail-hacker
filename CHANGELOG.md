@@ -1,5 +1,19 @@
 # SNAIL HACKER — Changelog
 
+## Session 9 — 2026-03-10
+
+### Boss Fight Design + Sprites
+
+- **Boss fight design locked** — Added Step 33 to `PLAN.md` documenting the full Overlord boss fight: 200 HP phase-shifting boss, crimson dreadnought saucer, Frogger minigame replaces HackMinigame for shield-break mechanic, four attack types (Black Hole teleport, EMP power loss, Terminal Lock EMP, Fast Alien burst), enrage at 50% HP, multi-stage death sequence, boss HP bar HUD addition.
+- **`scripts/generate-boss-sprite.js`** — New generator for 8 directional boss sprites (`assets/alien-boss-{dir}.svg`). Produces a 96×96 (2×) unique saucer design distinct from all regular alien palette swaps:
+  - Crimson dreadnought disc with 4 depth layers (vs 3 on regular aliens)
+  - 3 weapon pods at 0°/120°/240° on the disc face (dark socket + glowing emitter)
+  - 12 rim lights alternating crimson/gold at 30° spacing (vs 6 at 60°)
+  - Dome radius 20px, triple engine glow
+  - Enhanced boss frog: red pupils, angry V-brows, arm stubs visible gripping controls, 3-spike gold crown with coloured jewels, snarl mouth instead of smile
+  - Crown band sits at frog body's top edge; spike tips poke just above the dome glass at all 8 orientations
+- **`assets/sprites/PALETTE_SWAPS.md`** — Added boss entry documenting all colours and the unique geometry differences.
+
 ## Session 1 — 2026-02-28
 
 ### Completed Steps

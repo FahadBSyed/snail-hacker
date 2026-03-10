@@ -77,3 +77,35 @@ There are **8 directional variants** per type (right, diag-right-down, down, dia
 | Rim lights | electric cyan range |
 
 The dome ring colour (`#00eeff`) intentionally matches the in-game shield ring graphic so the alien reads as "made of" its own shield material.
+
+---
+
+## alien-boss (BossAlien / The Overlord) — crimson dreadnought
+
+> Source: `scripts/generate-boss-sprite.js`
+> Canvas: **96×96** (2× the standard 48×48)
+
+| Element | Colour |
+|---------|--------|
+| Disc dark (outer rim) | `#2a0812` |
+| Disc mid | `#5c1828` |
+| Disc accent | `#8c2e42` |
+| Disc light (inner plateau) | `#c04455` |
+| Dome fill | `#140008` |
+| Dome ring | `#ff2244` |
+| Engine glow | `#ff1133` |
+| Rim lights (12) | alternating crimson `#ff3344` / gold `#ffcc00` |
+| Frog body | `#2eaa2e` / `#4acc4a` highlight |
+| Frog dark | `#155a15` |
+| Eye yellow | `#dde840` |
+| Pupils | `#cc1111` (red — menacing, distinguishes boss from standard frogs) |
+| Crown | `#ffcc22` gold / `#bb9900` shadow |
+| Crown jewels | `#ff3366` (centre), `#4488ff` (left), `#44ffaa` (right) |
+
+**Unique geometry** — not a palette swap of the regular alien saucer:
+- 4-layer disc (vs 3 layers on regular aliens) for extra depth
+- 3 weapon pods (dark socket + glowing emitter) at 0°, 120°, 240° on the disc face
+- 12 rim lights at 30° spacing (vs 6 at 60°)
+- Dome radius 20px (vs 11px on regular sprites at their native scale)
+- Triple engine glow (vs double)
+- Boss frog additions: angry V-brows, red pupils, arm stubs, 3-spike gold crown with jewels, snarl mouth
