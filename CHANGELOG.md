@@ -1,5 +1,14 @@
 # SNAIL HACKER — Changelog
 
+## Session 10b — 2026-03-10
+
+### Boss Fight — Bug Fixes
+
+- **`src/entities/aliens/BossAlien.js`** — `takeDamage` no longer blocks damage when `_phaseShifting`. The boss was immune during the entire 550ms exit tween (still visible on screen), making it appear undamageable after the shield drops. Now only `shielded` and `_dying` gate damage; the boss takes hits even while flying away.
+- **`src/config.js`** — `BOSS.ORBIT_RADIUS` split into `ORBIT_RADIUS_X: 280` (horizontal) and `ORBIT_RADIUS_Y: 110` (vertical). The circular orbit with r=350 placed the boss at y≤710, deep inside the FroggerMinigame panel (centered at y=600, top at y=504). The ellipse keeps the boss within y=250–470, well above the panel. `PHASE_SHIFT_HP` raised 50→100 (boss now needs 10 hits before phase-shifting, giving players a fair damage window). `ALIEN_BURST_COUNT: 3` added (spawn count read from config). `ATTACK_COOLDOWNS.ALIEN_BURST` reduced 10 000→7 000ms so the burst fires noticeably during a fight.
+- **`src/entities/aliens/BossAlien.js`** — Orbit calculation uses `ORBIT_RADIUS_X` / `ORBIT_RADIUS_Y` for both the live orbit and `_reenter()` target position.
+- **`src/scenes/GameScene.js`** — `_spawnBoss()` uses the new ellipse axes for the spawn position. Burst callback reads `CONFIG.BOSS.ALIEN_BURST_COUNT` (3) instead of a hard-coded 2.
+
 ## Session 10 — 2026-03-10
 
 ### Boss Fight — The Overlord (Wave 10)

@@ -61,9 +61,12 @@ export default class BossAlien extends Phaser.GameObjects.Container {
 
     // ── Damage ──────────────────────────────────────────────────────────────────
 
-    /** Returns true when health reaches 0. Blocked while shielded/shifting/dying. */
+    /** Returns true when health reaches 0. Blocked while shielded or dying only.
+     *  The boss remains vulnerable even during a phase-shift exit so that a
+     *  player who keeps shooting during the 550ms fly-away window still deals
+     *  damage. */
     takeDamage(amount) {
-        if (this.shielded || this._dying || this._phaseShifting) return false;
+        if (this.shielded || this._dying) return false;
 
         this.health       -= amount;
         this._damageAccum += amount;
@@ -182,8 +185,8 @@ export default class BossAlien extends Phaser.GameObjects.Container {
         const newAngle = Math.random() * Math.PI * 2;
         this._baseAngle = newAngle;
         this._time      = 0;
-        const targetX   = 640 + Math.cos(newAngle) * CONFIG.BOSS.ORBIT_RADIUS;
-        const targetY   = 360 + Math.sin(newAngle) * CONFIG.BOSS.ORBIT_RADIUS;
+        const targetX   = 640 + Math.cos(newAngle) * CONFIG.BOSS.ORBIT_RADIUS_X;
+        const targetY   = 360 + Math.sin(newAngle) * CONFIG.BOSS.ORBIT_RADIUS_Y;
 
         this.scene.tweens.add({
             targets:  this,
@@ -242,14 +245,16 @@ export default class BossAlien extends Phaser.GameObjects.Container {
         const orbitSpd = cfg.ORBIT_SPEED * (enraged ? cfg.ENRAGE_ORBIT_MULT : 1);
         const burstCd  = cfg.ATTACK_COOLDOWNS.ALIEN_BURST * (enraged ? cfg.ENRAGE_COOLDOWN_MULT : 1);
 
-        // Sinusoidal orbit: base angle drifts slowly, ±45° oscillation layered on top
+        // Sinusoidal orbit: base angle drifts slowly, ±45° oscillation layered on top.
+        // Uses an ellipse (ORBIT_RADIUS_X wide, ORBIT_RADIUS_Y tall) so the boss
+        // stays above the FroggerMinigame panel in the bottom third.
         this._time      += dt;
         this._baseAngle += orbitSpd * 0.35 * dt;
         const offset     = Math.sin(this._time * orbitSpd) * (Math.PI / 4);
         const angle      = this._baseAngle + offset;
 
-        this.x = 640 + Math.cos(angle) * cfg.ORBIT_RADIUS;
-        this.y = 360 + Math.sin(angle) * cfg.ORBIT_RADIUS;
+        this.x = 640 + Math.cos(angle) * cfg.ORBIT_RADIUS_X;
+        this.y = 360 + Math.sin(angle) * cfg.ORBIT_RADIUS_Y;
 
         // Face toward station
         const faceAngle = Phaser.Math.Angle.Between(this.x, this.y, 640, 360);

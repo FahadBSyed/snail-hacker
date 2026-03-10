@@ -891,13 +891,13 @@ export default class GameScene extends Phaser.Scene {
 
     _spawnBoss() {
         const angle = 0; // enter from the right
-        const bx = 640 + Math.cos(angle) * CONFIG.BOSS.ORBIT_RADIUS;
-        const by = 360 + Math.sin(angle) * CONFIG.BOSS.ORBIT_RADIUS;
+        const bx = 640 + Math.cos(angle) * CONFIG.BOSS.ORBIT_RADIUS_X;
+        const by = 360 + Math.sin(angle) * CONFIG.BOSS.ORBIT_RADIUS_Y;
         this.boss = new BossAlien(this, bx, by, {
             onAlienBurst: (x, y) => {
-                this.spawnAlien('fast', x, y);
-                this.spawnAlien('fast', x, y);
-                this.logDebug('Boss fires alien burst!');
+                const count = CONFIG.BOSS.ALIEN_BURST_COUNT;
+                for (let i = 0; i < count; i++) this.spawnAlien('fast', x, y);
+                this.logDebug(`Boss fires alien burst! (${count} FastAliens)`);
             },
         });
         this.hud.showBossBar(this.boss.health, CONFIG.BOSS.HP);
