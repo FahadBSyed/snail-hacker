@@ -58,14 +58,18 @@ export function checkBomberBlast(scene, bx, by) {
 
     // Snail in radius?
     if (Phaser.Math.Distance.Between(bx, by, scene.snail.x, scene.snail.y) < blastRadius) {
-        const died = scene.snail.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_SNAIL);
-        scene.hud.updateHealth(scene.snail.health, scene.snail.maxHealth);
-        scene.soundSynth.play('damage');
-        if (died) {
-            if (scene.waveManager) scene.waveManager.active = false;
-            if (scene.activeHack)  { scene.activeHack.cancel(); scene.activeHack = null; }
-            scene.scene.start('GameOverScene', { wave: scene.wave, score: scene.score });
-            return;
+        if (scene.snail.shielded) {
+            scene.soundSynth.play('shieldReflect');
+        } else {
+            const died = scene.snail.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_SNAIL);
+            scene.hud.updateHealth(scene.snail.health, scene.snail.maxHealth);
+            scene.soundSynth.play('damage');
+            if (died) {
+                if (scene.waveManager) scene.waveManager.active = false;
+                if (scene.activeHack)  { scene.activeHack.cancel(); scene.activeHack = null; }
+                scene.scene.start('GameOverScene', { wave: scene.wave, score: scene.score });
+                return;
+            }
         }
     }
 

@@ -259,7 +259,7 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 ### Gerald Shield — Blocks Alien Contact Damage
 - When a non-bomber alien reaches Gerald while `snail.shielded` is true, the alien is destroyed without dealing damage. The `shieldReflect` sound plays (same as the shield alien's projectile deflect sound) and a full death burst fires with the alien's type colour — so the alien still visually explodes and the kill is registered.
 - `BURST_COLORS` is now exported from `CollisionSystem.js` so `GameScene` can look up the correct burst colour for the killed alien type.
-- Bomber aliens still bypass the shield (their AoE blast triggers separately before the damage step).
+- Bomber AoE blast is also blocked by the shield: `checkBomberBlast` now checks `scene.snail.shielded` and plays `shieldReflect` instead of dealing damage and playing the damage sound.
 
 ### Bug Fix — Bomber Blast Not Killing Nearby Aliens
 - `checkBomberBlast` called `a.takeDamage()` but discarded the return value, so splash-damaged aliens that reached 0 HP kept walking. Fixed: when `takeDamage` returns true in the splash loop, the alien is marked `_dying`, score is incremented, a death burst fires after 120 ms, and the alien is destroyed. Chain bombers (a bomber killed by another bomber's blast) recursively call `checkBomberBlast` from their own position.
