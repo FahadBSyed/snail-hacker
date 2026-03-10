@@ -130,6 +130,21 @@ export const DEFAULTS = {
         BOARD_RADIUS:    40,   // px — snail must be within this distance to board the ship
         ASCENT_DURATION: 1200, // ms for the ship to fly off the top of the screen
     },
+
+    BOSS: {
+        HP:                  200,
+        PHASE_SHIFT_HP:       50,   // damage taken before each phase shift
+        ORBIT_RADIUS:        350,   // px from station center
+        ORBIT_SPEED:         0.4,   // rad/s base oscillation speed
+        ENRAGE_HP:           100,   // HP threshold for enrage
+        ENRAGE_ORBIT_MULT:   1.5,
+        ENRAGE_COOLDOWN_MULT: 0.7,
+        SHIELD_DROP_WORDS:     3,   // frogger crossings required to drop shield
+        SHIELD_DOWN_DURATION: 5000, // ms shield stays down after breaking
+        ATTACK_COOLDOWNS: {
+            ALIEN_BURST: 10000,     // ms between alien burst attacks
+        },
+    },
 };
 
 // ─── Persistence ────────────────────────────────────────────────────────────

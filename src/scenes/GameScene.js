@@ -6,6 +6,7 @@ import FastAlien from '../entities/aliens/FastAlien.js';
 import TankAlien from '../entities/aliens/TankAlien.js';
 import BomberAlien from '../entities/aliens/BomberAlien.js';
 import ShieldAlien from '../entities/aliens/ShieldAlien.js';
+import BossAlien from '../entities/aliens/BossAlien.js';
 import HackingStation from '../entities/HackingStation.js';
 import GrabHandSystem from '../systems/GrabHandSystem.js';
 import SlimeTrail from '../systems/SlimeTrail.js';
@@ -152,6 +153,7 @@ export default class GameScene extends Phaser.Scene {
             this.load.svg(`alien-tank-${dir}`,    `assets/alien-tank-${dir}.svg`,    svgSize);
             this.load.svg(`alien-bomber-${dir}`,  `assets/alien-bomber-${dir}.svg`,  svgSize);
             this.load.svg(`alien-shield-${dir}`,  `assets/alien-shield-${dir}.svg`,  svgSize);
+            this.load.svg(`alien-boss-${dir}`,    `assets/alien-boss-${dir}.svg`,    { width: 96, height: 96 });
         }
 
         // Station + terminal sprites
@@ -193,6 +195,9 @@ export default class GameScene extends Phaser.Scene {
         this.hackProgress  = 0;      // words completed this wave (persists across cancels)
         this.hackThreshold = this._wordsForWave(this.startWave);
         this._hackMode     = 'typing'; // alternates to 'math' on each battery spawn
+
+        // ── Boss ──────────────────────────────────────────────────────────────
+        this.boss = null;
 
         // ── Alien speed multiplier / slow field ───────────────────────────────
         this.alienSpeedMultiplier = 1.0;
@@ -419,6 +424,7 @@ export default class GameScene extends Phaser.Scene {
                     this.waveManager.active = true;
                     this.soundSynth.play('waveBegin');
                     this.logDebug('Drop-in complete — player in control, spawning active');
+                    if (wave === 10) this._spawnBoss();
                 });
             },
             onWaveEnd: (wave) => {
@@ -431,7 +437,7 @@ export default class GameScene extends Phaser.Scene {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     _wordsForWave(wave) {
-        if (wave === 10) return CONFIG.MINIGAMES.FROGGER_CROSSINGS;
+        if (wave === 10) return CONFIG.BOSS.SHIELD_DROP_WORDS;
         return CONFIG.HACK.BASE_WORDS + (wave - 1) * CONFIG.HACK.WORDS_GROWTH;
     }
 
@@ -646,20 +652,35 @@ export default class GameScene extends Phaser.Scene {
         this.snail.hackingActive = true;
         this.snail.setState('HACKING');
 
-        // ── Wave 10: Frogger minigame instead of typing ────────────────────────
+        // ── Wave 10: Frogger minigame breaks boss shield ───────────────────────
         if (this.wave === 10) {
             this.activeHack = new FroggerMinigame(this, {
-                pointsNeeded: this.hackThreshold,  // = FROGGER_CROSSINGS (3)
+                pointsNeeded: this.hackThreshold,  // = BOSS.SHIELD_DROP_WORDS (3)
                 onCrossing: (count) => {
                     this.hackProgress = count;
-                    this.hud.updateHack(this.hackProgress, this.hackThreshold);
+                    this.hud.updateHack(this.hackProgress, this.hackThreshold, 'SHIELD');
                     this.station.setHackProgress(this.hackProgress / this.hackThreshold);
                 },
                 onSuccess: () => {
                     this.activeHack = null;
                     this.snail.hackingActive = false;
                     this.snail.setState('IDLE');
-                    this._completeWave();
+                    // Drop the boss shield; it auto-re-raises after SHIELD_DOWN_DURATION
+                    if (this.boss && this.boss.active && !this.boss._dying) {
+                        this.boss.dropShield();
+                        this.soundSynth.play('shieldReflect');
+                        this.logDebug('Boss shield broken! Shield down for 5s.');
+                        this.time.delayedCall(CONFIG.BOSS.SHIELD_DOWN_DURATION, () => {
+                            if (this.boss && this.boss.active && !this.boss._dying) {
+                                this.boss.raiseShield();
+                                this.logDebug('Boss shield back up.');
+                            }
+                        });
+                    }
+                    // Reset progress bar so player can break shield again
+                    this.hackProgress = 0;
+                    this.hud.updateHack(0, this.hackThreshold, 'SHIELD');
+                    this.station.setHackProgress(0);
                 },
                 onFailure: () => {
                     this.activeHack = null;
@@ -866,6 +887,73 @@ export default class GameScene extends Phaser.Scene {
         this._startEscapePhase();
     }
 
+    // ── Boss fight ────────────────────────────────────────────────────────────
+
+    _spawnBoss() {
+        const angle = 0; // enter from the right
+        const bx = 640 + Math.cos(angle) * CONFIG.BOSS.ORBIT_RADIUS;
+        const by = 360 + Math.sin(angle) * CONFIG.BOSS.ORBIT_RADIUS;
+        this.boss = new BossAlien(this, bx, by, {
+            onAlienBurst: (x, y) => {
+                this.spawnAlien('fast', x, y);
+                this.spawnAlien('fast', x, y);
+                this.logDebug('Boss fires alien burst!');
+            },
+        });
+        this.hud.showBossBar(this.boss.health, CONFIG.BOSS.HP);
+        this.logDebug('The Overlord has arrived!');
+    }
+
+    _bossDeath() {
+        if (!this.boss || !this.boss.active) return;
+        this.boss._dying = true;
+        this.boss._phaseShifting = false;
+
+        const bx = this.boss.x;
+        const by = this.boss.y;
+
+        // Heavy screen shake
+        this.cameras.main.shake(600, 0.02);
+
+        // Three staggered expanding rings
+        for (let i = 0; i < 3; i++) {
+            this.time.delayedCall(i * 150, () => {
+                const ring = this.add.arc(bx, by, this.boss ? this.boss.radius : 36, 0, 360, false, 0xff2200, 0).setDepth(60);
+                ring.setStrokeStyle(4, 0xff4400, 1);
+                this.tweens.add({
+                    targets: ring, scaleX: 5, scaleY: 5, alpha: 0,
+                    duration: 500, ease: 'Power2.easeOut',
+                    onComplete: () => ring.destroy(),
+                });
+            });
+        }
+
+        // Rapid white flash (8 flashes over 800ms)
+        const flashTimer = this.time.addEvent({
+            delay: 100, repeat: 7,
+            callback: () => {
+                if (this.boss && this.boss.active) {
+                    this.boss.alpha = this.boss.alpha < 0.5 ? 1 : 0.15;
+                }
+            },
+        });
+
+        // Final explosion + wave end
+        this.time.delayedCall(900, () => {
+            if (this.boss && this.boss.active) {
+                spawnDeathBurst(this, bx, by, 0xff2200);
+                spawnDeathBurst(this, bx, by, 0xff8800);
+                this.cameras.main.flash(500, 255, 100, 0);
+                this.boss.destroy();
+                this.boss = null;
+            }
+            this.hud.hideBossBar();
+            this.score += 50;
+            this.hud.updateScore(this.score);
+            this._completeWave();
+        });
+    }
+
     _startEscapePhase() {
         this.escapePhase = true;
 
@@ -1057,8 +1145,11 @@ export default class GameScene extends Phaser.Scene {
         return           { x: 1300, y: Phaser.Math.Between(50, maxY) };
     }
 
-    spawnAlien(type = 'basic') {
-        const { x, y } = this._randomEdgePosition();
+    spawnAlien(type = 'basic', spawnX, spawnY) {
+        const pos = (spawnX !== undefined)
+            ? { x: spawnX, y: spawnY }
+            : this._randomEdgePosition();
+        const { x, y } = pos;
         let alien;
         switch (type) {
             case 'fast':   alien = new FastAlien(this, x, y);   break;
@@ -1198,6 +1289,35 @@ export default class GameScene extends Phaser.Scene {
             }
             return true;
         });
+
+        // Boss update + projectile collision (boss is NOT in this.aliens)
+        if (this.boss && this.boss.active && !this.boss._dying) {
+            this.boss.update(time, delta);
+
+            // Projectile vs boss
+            this.projectiles = this.projectiles.filter(proj => {
+                if (!proj.active) return true;
+                const dist = Phaser.Math.Distance.Between(proj.x, proj.y, this.boss.x, this.boss.y);
+                if (dist < this.boss.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
+                    proj.destroy();
+                    if (this.boss.shielded) {
+                        this.boss.flashShield();
+                        this.soundSynth.play('shieldReflect');
+                    } else {
+                        // Red hit flash at boss position
+                        const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
+                        this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
+                        // Wobble
+                        this.tweens.add({ targets: this.boss, x: this.boss.x + 6, duration: 50, yoyo: true, repeat: 1 });
+                        const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                        if (this.hud) this.hud.updateBossBar(this.boss.health);
+                        if (dead) this._bossDeath();
+                    }
+                    return false;
+                }
+                return true;
+            });
+        }
 
         // Collision checks (projectile vs alien)
         checkProjectileCollisions(this);

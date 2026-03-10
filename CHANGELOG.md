@@ -1,5 +1,47 @@
 # SNAIL HACKER — Changelog
 
+## Session 10 — 2026-03-10
+
+### Boss Fight — The Overlord (Wave 10)
+
+- **`src/entities/aliens/BossAlien.js`** — New boss entity. Does not extend BaseAlien (has fully custom movement and damage logic):
+  - 200 HP; collision radius 36px; uses `alien-boss-{dir}` sprites loaded at 96×96
+  - **Orbit movement**: base angle drifts at `ORBIT_SPEED × 0.35` rad/s; a `±45°` sinusoidal oscillation is layered on top for a wave-pattern path around the station at `ORBIT_RADIUS` (350px)
+  - **Enrage at ≤100 HP**: orbit speed ×1.5, alien-burst cooldown ×0.7
+  - **Shield mechanic**: spawns with a crimson/gold rotating two-arc energy ring (`_drawShield`); all projectile hits are blocked while `shielded` is true — `flashShield()` fires a brief burst ring and plays `shieldReflect`. `dropShield()` / `raiseShield()` called externally by GameScene
+  - **Phase shift**: after accumulating every `PHASE_SHIFT_HP` (50) damage, boss flies off-screen (550ms `Power2.easeIn`), pauses 1.5s, then re-enters from a random new edge and tweens back to orbit (800ms). Phase shift re-raises the shield if it was dropped
+  - **Alien burst attack**: fires every `ATTACK_COOLDOWNS.ALIEN_BURST` (10 000ms), calls `onAlienBurst(x, y)` callback; GameScene spawns 2 FastAliens at boss position
+  - `takeDamage(amount)` returns false while shielded, phase-shifting, or dying; accumulates damage for phase-shift threshold
+
+- **`src/systems/WaveManager.js`** — Wave 10 config changed to `types: []`; `update()` now returns early when `cfg.types.length === 0` (boss wave — all alien spawning suppressed; boss manages its own attacks)
+
+- **`src/scenes/GameScene.js`**:
+  - Imports `BossAlien`
+  - Loads `alien-boss-{dir}` sprites at 96×96 in `preload()` (one per 8 directions, in the existing dir loop)
+  - `this.boss = null` initialised in `create()`
+  - `_wordsForWave(10)` now returns `CONFIG.BOSS.SHIELD_DROP_WORDS` (was `FROGGER_CROSSINGS`; both default to 3)
+  - `onWaveStart` drop-in callback calls `_spawnBoss()` on wave 10
+  - `_spawnBoss()`: places boss at right side of orbit radius, wires `onAlienBurst` → `spawnAlien('fast', x, y) × 2`, calls `hud.showBossBar()`
+  - `_startHack()` wave-10 branch: `onSuccess` now drops boss shield + schedules `raiseShield()` after `SHIELD_DOWN_DURATION` (5000ms); resets `hackProgress` to 0 and bar to "SHIELD: 0/3" so the player can break it again. Does **not** call `_completeWave()` (wave ends only when boss dies)
+  - Hack label in `onCrossing` changed to `'SHIELD'` so HUD reads "SHIELD: 1/3" etc.
+  - Boss update + projectile collision block added in `update()` before `checkProjectileCollisions` — boss is intentionally **not** in `this.aliens`, so CollisionSystem does not handle it. Hit: red flash arc, wobble tween, `takeDamage`, `hud.updateBossBar`. Kill: `_bossDeath()`
+  - `_bossDeath()`: sets `_dying`; heavy screen shake (600ms, 0.02 intensity); three staggered expanding rings; 8-flash rapid alpha pulse; 900ms later: two `spawnDeathBurst` calls (crimson + orange), `cameras.main.flash` (orange), boss destroyed, HUD bar hidden, +50 score, `_completeWave()`
+  - `spawnAlien(type, spawnX?, spawnY?)`: accepts optional position for boss alien-burst spawns (falls back to `_randomEdgePosition()` when omitted)
+
+- **`src/scenes/HUD.js`**:
+  - `updateHack(progress, threshold, label = 'HACK')`: optional third arg overrides the "HACK" prefix (used by wave 10 to show "SHIELD")
+  - `showBossBar(hp, maxHp)`: creates a 400px wide boss HP bar at top-center (y=50) with "THE OVERLORD" label above it. Red fill, current/max numeric label inside
+  - `updateBossBar(hp)`: updates fill width + HP text; briefly flashes fill white (120ms) on each hit
+  - `hideBossBar()`: destroys all boss-bar Phaser objects
+
+- **`src/config.js`** — Added `BOSS` section to `DEFAULTS`:
+  ```
+  HP: 200, PHASE_SHIFT_HP: 50, ORBIT_RADIUS: 350, ORBIT_SPEED: 0.4,
+  ENRAGE_HP: 100, ENRAGE_ORBIT_MULT: 1.5, ENRAGE_COOLDOWN_MULT: 0.7,
+  SHIELD_DROP_WORDS: 3, SHIELD_DOWN_DURATION: 5000,
+  ATTACK_COOLDOWNS: { ALIEN_BURST: 10000 }
+  ```
+
 ## Session 9 — 2026-03-10
 
 ### FroggerMinigame wired to Wave 10
