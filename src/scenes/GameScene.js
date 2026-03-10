@@ -792,6 +792,31 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
+        // Boss hit check (laser mode)
+        if (this.boss && this.boss.active && !this.boss._dying) {
+            const rx    = this.boss.x - sx;
+            const ry    = this.boss.y - sy;
+            const along = rx * cos + ry * sin;
+            if (along > 0 && along <= tMax) {
+                const perp = Math.abs(rx * sin - ry * cos);
+                if (perp <= this.boss.radius) {
+                    if (this.boss.shielded) {
+                        this.boss.flashShield();
+                        this.soundSynth.play('shieldReflect');
+                    } else {
+                        const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
+                        this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
+                        this.boss.sprite.setAlpha(0.2);
+                        this.time.delayedCall(80, () => { if (this.boss?.sprite) this.boss.sprite.setAlpha(1); });
+                        const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                        console.log(`[boss] laser hit! hp=${this.boss.health} dead=${dead}`);
+                        if (this.hud) this.hud.updateBossBar(this.boss.health);
+                        if (dead) this._bossDeath();
+                    }
+                }
+            }
+        }
+
         // Laser beam visual — outer glow + inner beam + bright core, quick fade
         const gfx = this.add.graphics().setDepth(200);
         gfx.lineStyle(10, 0xff2200, 0.2);
@@ -1304,6 +1329,9 @@ export default class GameScene extends Phaser.Scene {
             this.boss.update(time, delta);
 
             // Projectile vs boss
+            if (this.projectiles.length > 0) {
+                console.log(`[boss] checking ${this.projectiles.length} proj vs boss @ (${Math.round(this.boss.x)},${Math.round(this.boss.y)}) shielded=${this.boss.shielded}`);
+            }
             this.projectiles = this.projectiles.filter(proj => {
                 if (!proj.active) return false;
                 const dist = Phaser.Math.Distance.Between(proj.x, proj.y, this.boss.x, this.boss.y);
