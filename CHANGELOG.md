@@ -256,6 +256,13 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 - `ShieldAlien.takeDamage()` override returns `false` immediately while `this.shielded` is true, blocking all damage sources (projectiles, bomber splash, cannon auto-fire) — not just the projectile deflection already handled in `CollisionSystem`.
 - `CONFIG.ALIENS.SHIELD.HEALTH` reduced 15 → 10 so it dies in one shot once the shield drops (matches `PROJECTILE_HIT_ALIEN: 10`).
 
+### Gerald Walk & Idle Animations
+- `scripts/generate-walk-idle-sprites.js` — new generator producing 72 SVG frames:
+  - **Walk** (24 files, 6 frames × 4 dirs): sine-wave ripple along the underside of the body (muscular foot wave); eye stalks bob vertically with each stride. Right/left use a wavy closed path replacing the body ellipse; up view bobs the whole shell; down view ripples and sways stalks.
+  - **Idle** (48 files, 12 frames × 4 dirs): eye stalks drift side-to-side in a slow sinusoidal pattern; single blink at frame 6 (half-close → closed → half-open across frames 5–7).
+- `src/scenes/GameScene.js` — preload now loads all walk/idle frame textures alongside existing hit frames.
+- `src/entities/Snail.js` — `registerAnims` creates `snail-walk-{dir}` (10 fps, loop) and `snail-idle-{dir}` (8 fps, loop) animations. Added `_playCurrentAnim()` to select walk vs idle based on state, called from `setFacing`, `setState`, and after damage invincibility expires. Constructor starts idle immediately. Removed unused `DIR_TEXTURES` const.
+
 ### Gerald Sprite — Eyes Moved to Eye-Stalk Tips
 - `generate-snail-sprites.js` — all 4 directional sprites updated. Antenna tip circles changed from `BODY` yellow to `EYE` black with white highlights. Old floating eye element (on the body near the face) removed from right/left and down views. Up view (rear) now shows dark eye-stalk tips too.
 - `generate-damage-sprites.js` — same fix across all 64 hit-animation frames. The separate eye interpolation blocks (which tracked wrong body positions) are removed; eyes now live on the antenna tip circles and retract naturally with the antennae as Gerald withdraws into his shell. Regenerated all 68 SVGs.

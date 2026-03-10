@@ -53,8 +53,16 @@ export default class GameScene extends Phaser.Scene {
         this.load.svg('snail-left',  'assets/snail-left.svg',  svgSize);
         this.load.svg('snail-up',    'assets/snail-up.svg',    svgSize);
         this.load.svg('snail-down',  'assets/snail-down.svg',  svgSize);
-        // Damage / invincibility animation frames
+        // Walk, idle and damage animation frames
         for (const dir of ['right', 'left', 'up', 'down']) {
+            for (let i = 0; i < 6; i++) {
+                const f = `f${String(i).padStart(2, '0')}`;
+                this.load.svg(`snail-walk-${dir}-${f}`, `assets/snail-walk-${dir}-${f}.svg`, svgSize);
+            }
+            for (let i = 0; i < 12; i++) {
+                const f = `f${String(i).padStart(2, '0')}`;
+                this.load.svg(`snail-idle-${dir}-${f}`, `assets/snail-idle-${dir}-${f}.svg`, svgSize);
+            }
             for (let i = 0; i <= 15; i++) {
                 const f = `f${String(i).padStart(2, '0')}`;
                 this.load.svg(`snail-hit-${dir}-${f}`, `assets/snail-hit-${dir}-${f}.svg`, svgSize);
