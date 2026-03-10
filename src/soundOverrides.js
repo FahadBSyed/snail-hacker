@@ -21,7 +21,8 @@
  *   shoot, explosion, damage, shieldActivate, shieldReflect, slowActivate,
  *   slowTick, cannonFire, error, wordSuccess, rhythmHit, healthPickup,
  *   batteryPickup, grab, powerLoss, powerRegain, escape, waveComplete,
- *   waveBegin, waveStart, droneActivate, upgradeSelect
+ *   waveBegin, waveStart, droneActivate, upgradeSelect,
+ *   slithering  ← looped via playLooped(); procedural fallback built-in
  */
 export const SOUND_OVERRIDES = {
     error: [
@@ -69,4 +70,5 @@ export const SOUND_OVERRIDES = {
     ]
     // explosion: ['assets/sounds/explosion.mp3'],
     // shieldReflect: [{ url: 'assets/sounds/ricochet.wav', volume: 0.6 }],
+    // slithering: [{ url: 'assets/sounds/slithering.mp3', volume: 0.5 }],
 };
