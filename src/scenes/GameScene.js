@@ -212,7 +212,8 @@ export default class GameScene extends Phaser.Scene {
         this.projectiles = [];
 
         // ── Passive upgrades — applied every wave from the persistent list ───────
-        this._laserMode = false;
+        this._laserMode      = false;
+        this.ricochetEnabled = false;
         for (const upgrade of this.upgradesList) {
             switch (upgrade.type) {
                 case 'HEALTH_BOOST':
@@ -229,6 +230,9 @@ export default class GameScene extends Phaser.Scene {
                     break;
                 case 'LASER':
                     this._laserMode = true;
+                    break;
+                case 'RICOCHET':
+                    this.ricochetEnabled = true;
                     break;
             }
         }
@@ -779,7 +783,8 @@ export default class GameScene extends Phaser.Scene {
 
         // Hit all aliens along the ray
         const HIT_RADIUS = 18;
-        const BURST_COLORS = { basic: 0xdd3333, fast: 0xaa44ff, tank: 0x7799aa, bomber: 0xff7722 };
+        const hitSet = new Set();  // track hits for ricochet to avoid re-targeting
+        let ricochetOriginX = sx, ricochetOriginY = sy, ricochetBestAlong = 0;
         for (const alien of this.aliens) {
             if (!alien.active || alien._dying) continue;
             const rx    = alien.x - sx;
@@ -795,6 +800,14 @@ export default class GameScene extends Phaser.Scene {
                 alien.flashShield?.();
                 this.soundSynth.play('shieldReflect');
                 continue;
+            }
+
+            hitSet.add(alien);
+            // Track the farthest hit alien as ricochet origin
+            if (along > ricochetBestAlong) {
+                ricochetBestAlong = along;
+                ricochetOriginX = bx;
+                ricochetOriginY = by;
             }
 
             // Hit flash + wobble (same as projectile hit)
@@ -818,6 +831,11 @@ export default class GameScene extends Phaser.Scene {
                     alien.destroy();
                 });
             }
+        }
+
+        // Laser ricochet — fires from the farthest hit alien toward a new target
+        if (this.ricochetEnabled && hitSet.size > 0) {
+            this._fireLaserRicochet(ricochetOriginX, ricochetOriginY, 0, hitSet);
         }
 
         // Boss hit check (laser mode)
@@ -876,6 +894,65 @@ export default class GameScene extends Phaser.Scene {
         gfx.lineStyle(1, 0xffffff, 1);
         gfx.lineBetween(sx, sy, ex, ey);
         this.tweens.add({ targets: gfx, alpha: 0, duration: 150, onComplete: () => gfx.destroy() });
+    }
+
+    /**
+     * Recursive laser ricochet chain.
+     * Fires a secondary hitscan arc from (fromX, fromY) to the nearest valid
+     * alien not already in hitSet. Chains with halving probability.
+     */
+    _fireLaserRicochet(fromX, fromY, bounces, hitSet) {
+        const chance = CONFIG.RICOCHET.BASE_CHANCE * (CONFIG.RICOCHET.FALLOFF ** bounces);
+        if (Math.random() > chance) return;
+
+        // Find nearest valid alien not already hit, within search radius
+        let nearest = null;
+        let nearestDist = CONFIG.RICOCHET.SEARCH_RADIUS;
+        for (const a of this.aliens) {
+            if (!a.active || a._dying || a.shielded || hitSet.has(a)) continue;
+            const d = Phaser.Math.Distance.Between(fromX, fromY, a.x, a.y);
+            if (d < nearestDist) { nearest = a; nearestDist = d; }
+        }
+        if (!nearest) return;
+
+        hitSet.add(nearest);
+        const tx = nearest.x, ty = nearest.y;
+
+        // Cyan ricochet beam visual
+        const gfx = this.add.graphics().setDepth(200);
+        gfx.lineStyle(8, 0x44ffff, 0.15);
+        gfx.lineBetween(fromX, fromY, tx, ty);
+        gfx.lineStyle(2, 0x88ffff, 0.85);
+        gfx.lineBetween(fromX, fromY, tx, ty);
+        gfx.lineStyle(1, 0xffffff, 0.9);
+        gfx.lineBetween(fromX, fromY, tx, ty);
+        this.tweens.add({ targets: gfx, alpha: 0, duration: 200, onComplete: () => gfx.destroy() });
+
+        // Cyan hit flash + wobble
+        const hitFlash = this.add.arc(tx, ty, nearest.radius, 0, 360, false, 0x44ffff, 0.75).setDepth(58);
+        this.tweens.add({ targets: hitFlash, alpha: 0, duration: 200, onComplete: () => hitFlash.destroy() });
+        this.tweens.add({ targets: nearest, x: nearest.x + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+
+        const isBomber = nearest.alienType === 'bomber';
+        const bx = nearest.x, by = nearest.y;
+        const died = nearest.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+        if (died) {
+            this.score++;
+            this.hud.updateScore(this.score);
+            nearest._dying = true;
+            this.time.delayedCall(200, () => {
+                if (!nearest.active) return;
+                spawnDeathBurst(this, bx, by, BURST_COLORS[nearest.alienType] || 0xffffff);
+                if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                    this.healthDrops.push(new HealthDrop(this, bx, by));
+                }
+                if (isBomber) checkBomberBlast(this, bx, by);
+                nearest.destroy();
+            });
+        }
+
+        // Chain to next ricochet
+        this._fireLaserRicochet(tx, ty, bounces + 1, hitSet);
     }
 
     /** Called when hackProgress hits a POWER_LOSS_WORDS multiple. */

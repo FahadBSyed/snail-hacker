@@ -13,10 +13,10 @@ const FLAVOR_TEXT = {
 };
 
 // Passive upgrades apply instantly on selection — no terminal is spawned.
-const PASSIVE_UPGRADES = new Set(['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST']);
+const PASSIVE_UPGRADES = new Set(['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET']);
 
 const ACTIVE_POOL  = ['CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR', 'DRONE', 'DECOY'];
-const PASSIVE_POOL = ['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST'];
+const PASSIVE_POOL = ['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET'];
 
 // All upgrade types that can be offered.
 const UPGRADE_POOL = [...ACTIVE_POOL, ...PASSIVE_POOL];
@@ -36,6 +36,7 @@ function getUpgradeDefs() {
         REPAIR:       { label: 'REPAIR KIT',     color: 0x44ff88, desc: `Hack to restore\n+${repairHp} HP to Gerald's shell.` },
         DRONE:        { label: 'AUTO DRONE',     color: 0xffdd44, desc: `Drone fires within ${droneFirstSecs}s\nof each round, then every\n${droneCoolSecs}s after.` },
         DECOY:        { label: 'DECOY LURE',     color: 0xff44cc, desc: `Hack to deploy a lure\nthat draws all aliens\naway for ${Math.round(CONFIG.TERMINALS.DECOY_DURATION / 1000)}s.` },
+        RICOCHET:     { label: 'RICOCHET',        color: 0x44ffff, desc: `80% chance shots bounce\nto the nearest enemy.\nChance halves each hop.` },
         HEALTH_BOOST: { label: 'HEALTH BOOST',   color: 0xff6666, desc: `Gerald's max health\nincreases by 50%.` },
         AMMO_BOOST:   { label: 'AMMO BOOST',     color: 0xffcc44, desc: `Gun capacity increases\nby 50% more bullets\nbefore reload.` },
         LASER:        { label: 'HITSCAN LASER',  color: 0xff3333, desc: `Replaces bullets with\na piercing laser beam\nthat hits all enemies.` },

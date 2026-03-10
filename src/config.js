@@ -114,6 +114,12 @@ export const DEFAULTS = {
         DELAY: 2000,  // ms after typing RELOAD before ammo refills
     },
 
+    RICOCHET: {
+        BASE_CHANCE:   0.8,   // probability of first bounce
+        FALLOFF:       0.5,   // chance multiplier each successive bounce (0.8 → 0.4 → 0.2 …)
+        SEARCH_RADIUS: 400,   // px — max distance to find next ricochet target
+    },
+
     INTERMISSION: {
         HEAL_AMOUNT:       20,  // HP restored to snail between waves
         AUTO_ADVANCE_SECS: 5,   // seconds before auto-advancing
