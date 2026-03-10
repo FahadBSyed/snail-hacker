@@ -102,7 +102,9 @@ export default class FroggerMinigame {
 
     // ── UI construction ───────────────────────────────────────────────────────
     _createUI() {
-        this.container = this.scene.add.container(640, 360).setDepth(200);
+        // Anchored to the bottom third of the screen (y 480–720) so the main
+        // play area and boss projectiles remain visible above it.
+        this.container = this.scene.add.container(640, 600).setDepth(200);
 
         // Panel background
         const panel = this.scene.add.rectangle(0, 0, PANEL_W, PANEL_H, 0x04040f, 0.96)

@@ -1047,10 +1047,14 @@ export default class GameScene extends Phaser.Scene {
     // ── Alien spawning ─────────────────────────────────────────────────────────
 
     _randomEdgePosition() {
+        // On wave 10 the FroggerMinigame occupies the bottom third (y > 480),
+        // so clamp side-edge spawns to the top two-thirds to keep the boss
+        // and its projectiles out of that region.
+        const maxY = this.wave === 10 ? 460 : 670;
         const edge = Phaser.Math.Between(0, 2);
         if (edge === 0) return { x: Phaser.Math.Between(50, 1230), y: -20 };
-        if (edge === 1) return { x: -20,  y: Phaser.Math.Between(50, 670) };
-        return           { x: 1300, y: Phaser.Math.Between(50, 670) };
+        if (edge === 1) return { x: -20,  y: Phaser.Math.Between(50, maxY) };
+        return           { x: 1300, y: Phaser.Math.Between(50, maxY) };
     }
 
     spawnAlien(type = 'basic') {
