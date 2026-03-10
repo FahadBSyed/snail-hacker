@@ -56,13 +56,13 @@ export default class GameScene extends Phaser.Scene {
         loadBg.fillRect(0, 0, W, H);
 
         // Title
-        this.add.text(cx, cy - 90, 'SNAIL HACKER', {
+        const loadTitle = this.add.text(cx, cy - 90, 'SNAIL HACKER', {
             fontSize: '40px', fontFamily: 'monospace',
             color: '#00ffcc',
         }).setOrigin(0.5);
 
         // Subtitle / flavour
-        this.add.text(cx, cy - 44, '[ BOOTING SYSTEMS ]', {
+        const loadSubtitle = this.add.text(cx, cy - 44, '[ BOOTING SYSTEMS ]', {
             fontSize: '13px', fontFamily: 'monospace',
             color: '#006655', letterSpacing: 4,
         }).setOrigin(0.5);
@@ -114,7 +114,7 @@ export default class GameScene extends Phaser.Scene {
         this.load.on('complete', () => {
             // Destroy all loading screen objects so they don't persist behind
             // the game scene that create() will build.
-            [loadBg, barBorder, barFill, pctText, fileText].forEach(o => o.destroy());
+            [loadBg, loadTitle, loadSubtitle, barBorder, barFill, pctText, fileText].forEach(o => o.destroy());
         });
 
         // Background for this wave (only load if not already cached)
