@@ -15,11 +15,11 @@ const FLAVOR_TEXT = {
 // Passive upgrades apply instantly on selection — no terminal is spawned.
 const PASSIVE_UPGRADES = new Set(['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST']);
 
+const ACTIVE_POOL  = ['CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR', 'DRONE'];
+const PASSIVE_POOL = ['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST'];
+
 // All upgrade types that can be offered.
-const UPGRADE_POOL = [
-    'CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR', 'DRONE',
-    'HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST',
-];
+const UPGRADE_POOL = [...ACTIVE_POOL, ...PASSIVE_POOL];
 
 function getUpgradeDefs() {
     const cannonSecs = Math.round(CONFIG.CANNON.ACTIVE_DURATION / 1000);
@@ -93,7 +93,9 @@ export default class IntermissionScene extends Phaser.Scene {
         }
 
         // Determine available upgrades and whether this is an upgrade selection wave.
-        const available     = UPGRADE_POOL.filter(t => !this.upgrades.some(u => u.type === t));
+        // Odd waves offer actives; even waves offer passives.
+        const pool      = this.wave % 2 === 0 ? PASSIVE_POOL : ACTIVE_POOL;
+        const available = pool.filter(t => !this.upgrades.some(u => u.type === t));
         const isUpgradeWave = available.length > 0;
 
         if (isUpgradeWave) {
@@ -223,7 +225,8 @@ export default class IntermissionScene extends Phaser.Scene {
 
         // Upgrade section header
         this.add.rectangle(cx, 180, 700, 1, 0xaa44ff, 0.4);
-        this.add.text(cx, 205, 'UPGRADE AVAILABLE', {
+        const upgradeKind = this.wave % 2 === 0 ? 'PASSIVE UPGRADE' : 'ACTIVE UPGRADE';
+        this.add.text(cx, 205, upgradeKind, {
             fontSize: '24px', fontFamily: 'monospace', color: '#cc88ff',
         }).setOrigin(0.5);
         this.add.text(cx, 238, 'Choose an upgrade for the next wave:', {
