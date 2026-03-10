@@ -279,20 +279,20 @@ export default class FroggerMinigame {
         const fx = this._cellCX(this.frogCol);
         const fy = this._cellCY(this.frogRow);
 
-        // Body
+        // Body — radius 5 matches the tightened hitbox (9px inset each side)
         g.fillStyle(this.dead ? 0xff3333 : 0x33cc44, 1);
-        g.fillCircle(fx, fy, 7);
+        g.fillCircle(fx, fy, 5);
 
         if (!this.dead) {
             // Eyes
             g.fillStyle(0xdde840, 1);
-            g.fillCircle(fx - 3, fy - 4, 2.5);
-            g.fillCircle(fx + 3, fy - 4, 2.5);
+            g.fillCircle(fx - 2.5, fy - 3, 2);
+            g.fillCircle(fx + 2.5, fy - 3, 2);
 
             // Pupils
             g.fillStyle(0x111100, 1);
-            g.fillCircle(fx - 3, fy - 4, 1.2);
-            g.fillCircle(fx + 3, fy - 4, 1.2);
+            g.fillCircle(fx - 2.5, fy - 3, 1);
+            g.fillCircle(fx + 2.5, fy - 3, 1);
         }
     }
 
@@ -364,9 +364,11 @@ export default class FroggerMinigame {
         const lane = this.lanes.find(l => l.row === this.frogRow);
         if (!lane) return;
 
-        // Frog hitbox: 6 px inset on each side for a touch of forgiveness
-        const frogL = this.frogCol * CELL_W + 6;
-        const frogR = frogL + CELL_W - 12;
+        // Frog hitbox: 9 px inset each side → 8 px wide, matching the drawn circle.
+        // A car must overlap the inner ~30 % of the cell to register a hit,
+        // so cars just entering the frog's column from the edge don't kill.
+        const frogL = this.frogCol * CELL_W + 9;
+        const frogR = frogL + CELL_W - 18;
 
         for (const car of lane.cars) {
             // Car hitbox: 2 px inset
