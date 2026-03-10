@@ -70,7 +70,8 @@ export default class Snail extends Phaser.GameObjects.Container {
         // --- Sprite (animated) ---
         this.sprite = scene.add.sprite(0, 0, 'snail-idle-right-f00');
         this.add(this.sprite);
-        this._currentAnimKey = null;  // tracks playing anim to avoid redundant play() calls
+        this._currentAnimKey = null;   // tracks playing anim to avoid redundant play() calls
+        this._slitherHandle  = null;   // { stop() } returned by SoundSynth.playLooped('slithering')
 
         // --- Overhead state label ---
         this.stateLabel = scene.add.text(0, -30, 'IDLE', {
@@ -168,10 +169,30 @@ export default class Snail extends Phaser.GameObjects.Container {
 
     setState(newState) {
         if (this.state !== newState) {
+            const wasMoving = this.state === 'MOVING';
+            const isMoving  = newState === 'MOVING';
             this.state = newState;
             this.stateLabel.setText(newState);
+            if (isMoving  && !wasMoving) this._startSlither();
+            if (!isMoving && wasMoving)  this._stopSlither();
             this._playCurrentAnim();
         }
+    }
+
+    _startSlither() {
+        if (this._slitherHandle) return;
+        const synth = this.scene.registry.get('soundSynth');
+        this._slitherHandle = synth?.playLooped('slithering') ?? null;
+    }
+
+    _stopSlither(fadeOut = 0.30) {
+        this._slitherHandle?.stop(fadeOut);
+        this._slitherHandle = null;
+    }
+
+    destroy() {
+        this._stopSlither(0.05);
+        super.destroy();
     }
 
     update(time, delta) {

@@ -256,6 +256,10 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 - `ShieldAlien.takeDamage()` override returns `false` immediately while `this.shielded` is true, blocking all damage sources (projectiles, bomber splash, cannon auto-fire) — not just the projectile deflection already handled in `CollisionSystem`.
 - `CONFIG.ALIENS.SHIELD.HEALTH` reduced 15 → 10 so it dies in one shot once the shield drops (matches `PROJECTILE_HIT_ALIEN: 10`).
 
+### Slithering Sound Effect
+- `src/systems/SoundSynth.js` — extended `playLooped` to fall back to a procedural `_${name}_looped()` method when no file override is available. Added `_slithering_looped()`: looping 1-second white-noise buffer → bandpass filter (280 Hz, Q=3) → gain, with a 2.5 Hz LFO for a subtle rhythmic pulse that mirrors the foot-wave animation. Very quiet (0.12 × master volume). Returned handle has `stop(fadeOut)`.
+- `src/entities/Snail.js` — `setState` now starts the slither loop when entering `MOVING` and fades it out (300 ms) when leaving. `_startSlither` / `_stopSlither` helpers manage the handle. `destroy()` override stops the sound immediately on scene teardown.
+
 ### Gerald Walk & Idle Animations
 - `scripts/generate-walk-idle-sprites.js` — new generator producing 72 SVG frames:
   - **Walk** (24 files, 6 frames × 4 dirs): sine-wave ripple along the underside of the body (muscular foot wave); eye stalks bob vertically with each stride. Right/left use a wavy closed path replacing the body ellipse; up view bobs the whole shell; down view ripples and sways stalks.

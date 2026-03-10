@@ -94,33 +94,35 @@ export default class SoundSynth {
     /**
      * Play a sound on a continuous loop. Returns a handle `{ stop(fadeOut?) }`
      * where `fadeOut` is the fade-out duration in seconds (default 0.25).
-     * Returns null if no decoded buffer is available (no override defined, or
-     * files still loading) — callers should guard with `?.stop()`.
-     * Procedural synth sounds are not looped.
+     * First tries a decoded file override; if none is available falls back to
+     * a procedural `_${name}_looped()` method. Returns null if neither exists.
      */
     playLooped(name) {
         const override = this._overrides.get(name);
-        if (!override?.buffers?.length) return null;
-        const entry = override.buffers[Math.floor(Math.random() * override.buffers.length)];
-        const ctx = this._ctx_get(), t = ctx.currentTime;
-        const g = ctx.createGain();
-        g.gain.setValueAtTime(this.volume * entry.volume, t);
-        g.connect(ctx.destination);
-        const src = ctx.createBufferSource();
-        src.buffer = entry.buf;
-        src.loop = true;
-        src.connect(g);
-        src.start(t);
-        return {
-            stop: (fadeOut = 0.25) => {
-                try {
-                    const now = ctx.currentTime;
-                    g.gain.setValueAtTime(g.gain.value, now);
-                    g.gain.linearRampToValueAtTime(0, now + fadeOut);
-                    src.stop(now + fadeOut);
-                } catch (_) {}
-            },
-        };
+        if (override?.buffers?.length) {
+            const entry = override.buffers[Math.floor(Math.random() * override.buffers.length)];
+            const ctx = this._ctx_get(), t = ctx.currentTime;
+            const g = ctx.createGain();
+            g.gain.setValueAtTime(this.volume * entry.volume, t);
+            g.connect(ctx.destination);
+            const src = ctx.createBufferSource();
+            src.buffer = entry.buf;
+            src.loop = true;
+            src.connect(g);
+            src.start(t);
+            return {
+                stop: (fadeOut = 0.25) => {
+                    try {
+                        const now = ctx.currentTime;
+                        g.gain.setValueAtTime(g.gain.value, now);
+                        g.gain.linearRampToValueAtTime(0, now + fadeOut);
+                        src.stop(now + fadeOut);
+                    } catch (_) {}
+                },
+            };
+        }
+        // Fall back to procedural looped implementation
+        try { return this[`_${name}_looped`]?.() ?? null; } catch (_) { return null; }
     }
 
     /**
@@ -481,6 +483,65 @@ export default class SoundSynth {
         const ng  = this._gain(ctx, 0.18, t, 0.07);
         const hpf = this._filter(ctx, 'highpass', 3000, ng);
         this._noise(ctx, 0.06, hpf);
+    }
+
+    /**
+     * Gerald slithering — continuous soft looping sound for movement.
+     * Returns a { stop(fadeOut?) } handle; caller must call stop() when done.
+     *
+     * Graph: looping white-noise buffer → bandpass (~280 Hz) → gain
+     *        LFO (2.5 Hz sine) → gain.gain  [gentle amplitude ripple]
+     */
+    _slithering_looped() {
+        const ctx = this._ctx_get();
+        const t   = ctx.currentTime;
+        const sr  = ctx.sampleRate;
+
+        // 1-second white-noise buffer, set to loop for continuous playback
+        const noiseBuf = ctx.createBuffer(1, sr, sr);
+        const data     = noiseBuf.getChannelData(0);
+        for (let i = 0; i < sr; i++) data[i] = Math.random() * 2 - 1;
+        const noiseSrc = ctx.createBufferSource();
+        noiseSrc.buffer = noiseBuf;
+        noiseSrc.loop   = true;
+
+        // Bandpass centred ~280 Hz, Q=3 — muffled wet sliding tone
+        const bpf           = ctx.createBiquadFilter();
+        bpf.type            = 'bandpass';
+        bpf.frequency.value = 280;
+        bpf.Q.value         = 3;
+
+        // Master gain — quiet; volume scales with master
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(this.volume * 0.12, t);
+
+        // LFO at 2.5 Hz adds a subtle rhythmic pulse matching the foot-wave
+        const lfo           = ctx.createOscillator();
+        lfo.type            = 'sine';
+        lfo.frequency.value = 2.5;
+        const lfoGain       = ctx.createGain();
+        lfoGain.gain.value  = 0.035;   // ±3.5 % depth — barely perceptible
+        lfo.connect(lfoGain);
+        lfoGain.connect(gain.gain);
+        lfo.start(t);
+
+        noiseSrc.connect(bpf);
+        bpf.connect(gain);
+        gain.connect(ctx.destination);
+        noiseSrc.start(t);
+
+        return {
+            stop: (fadeOut = 0.30) => {
+                try {
+                    const now = ctx.currentTime;
+                    gain.gain.cancelScheduledValues(now);
+                    gain.gain.setValueAtTime(gain.gain.value, now);
+                    gain.gain.linearRampToValueAtTime(0, now + fadeOut);
+                    noiseSrc.stop(now + fadeOut);
+                    lfo.stop(now + fadeOut);
+                } catch (_) {}
+            },
+        };
     }
 
     /** New wave beginning — two sharp alert beeps. */
