@@ -38,11 +38,11 @@ const GRID_OY = -(PANEL_H / 2) + PADDING + HEADER_H; // –64
 
 // ── Lane definitions (row 1 = near goal = hardest; row 5 = near start = easiest) ──
 const LANE_CONFIGS = [
-    { row: 1, speed: 200, dir:  1, carW: 30, numCars: 2, color: 0xcc2211 },
-    { row: 2, speed: 155, dir: -1, carW: 28, numCars: 2, color: 0xcc6611 },
-    { row: 3, speed: 115, dir:  1, carW: 28, numCars: 2, color: 0xbbaa11 },
-    { row: 4, speed:  80, dir: -1, carW: 26, numCars: 2, color: 0x77aa11 },
-    { row: 5, speed:  55, dir:  1, carW: 26, numCars: 2, color: 0x1177bb },
+    { row: 1, speed: 115, dir:  1, carW: 22, numCars: 2, color: 0xcc2211 },
+    { row: 2, speed:  88, dir: -1, carW: 20, numCars: 2, color: 0xcc6611 },
+    { row: 3, speed:  65, dir:  1, carW: 20, numCars: 2, color: 0xbbaa11 },
+    { row: 4, speed:  46, dir: -1, carW: 18, numCars: 2, color: 0x77aa11 },
+    { row: 5, speed:  30, dir:  1, carW: 18, numCars: 2, color: 0x1177bb },
 ];
 
 export default class FroggerMinigame {
@@ -267,6 +267,10 @@ export default class FroggerMinigame {
                 g.fillRoundedRect(GRID_OX + car.x, bodyY, lane.carW, bodyH, 2);
             }
         }
+
+        // ── Column guide — dim vertical strip showing frog's horizontal lane ──
+        g.fillStyle(0xffffff, 0.07);
+        g.fillRect(GRID_OX + this.frogCol * CELL_W, GRID_OY, CELL_W, GRID_H);
 
         // ── Frog ─────────────────────────────────────────────────────────────
         const fx = this._cellCX(this.frogCol);
