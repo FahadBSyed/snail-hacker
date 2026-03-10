@@ -292,6 +292,102 @@ snail-hacker/
 - **feColorMatrix white tint** — Instead of a white rectangle overlay, an SVG `<filter>` with `feColorMatrix` linearly interpolates every pixel toward white (`new = src*(1-w) + w`). Tint weight per frame: f00=0.75, f01=0.45, f02=0.25, f03=0.10, shell-pulse even frames=0.45. Gerald's actual colours bleach and recover; no covering square.
 - **Wired into game** — `GameScene.preload()` loads all 64 frames; `anims.create()` registers `snail-hit-{dir}` at 8 fps. `Snail.takeDamage()` plays the animation; the i-frame white-rectangle overlay was removed as the sprite animation now carries all visual feedback.
 
+### Step 33: Boss Fight — The Overlord *(design locked, not yet implemented)*
+
+Wave 10 triggers a boss fight instead of a normal alien wave. No normal aliens spawn during the boss fight (fast alien bursts are the exception — see below).
+
+#### Boss Entity (`src/entities/aliens/BossAlien.js`)
+
+- **Scale** — 2× the size of TankAlien. Distinct sprite; generate via a new `scripts/generate-boss-sprite.js`.
+- **HP** — 200. Requires ~20 unshielded hits to kill. Config: `CONFIG.BOSS.HP`.
+- **Phase-shift on damage threshold** — Each time the boss takes `CONFIG.BOSS.PHASE_SHIFT_HP` damage (default 50), it flies off-screen at high speed in a random direction, pauses 1.5s off-screen, then re-enters from a different random edge. While off-screen, it cannot be targeted. Phase-shift also resets its shield if the shield was down.
+- **Movement** — Orbits the station at a fixed radius (`CONFIG.BOSS.ORBIT_RADIUS`, default 350px), oscillating its angle ±45° from its current position using a sinusoidal pattern. Never approaches the station. Config: `CONFIG.BOSS.ORBIT_SPEED`.
+- **Enrage at 50% HP** — Below 100 HP (`CONFIG.BOSS.ENRAGE_HP`), orbit speed increases ×1.5 and all attack cooldowns decrease by 30%.
+
+#### Shield Mechanic
+
+- Boss spawns with shield active. Shield appearance mirrors `ShieldAlien` (rotating energy ring) but larger.
+- Shield blocks all projectiles while up.
+- **Shield drops** when P1 completes `CONFIG.BOSS.SHIELD_DROP_WORDS` words in the Frogger minigame (default 3 completions of the frogger run). Shield stays down for `CONFIG.BOSS.SHIELD_DOWN_DURATION` ms (default 5000ms), then the boss re-raises it.
+- **Hack progress bar reused** — The existing wave hack-progress bar (top-center HUD) is repurposed during the boss fight to show progress toward the next shield drop. Label changes to "SHIELD BREAK" with a fill from 0 → `SHIELD_DROP_WORDS` completions. Bar resets on each shield-up.
+- No power loss events during the boss fight (suppressed in `WaveManager`).
+
+#### Frogger Minigame (`src/minigames/FroggerMinigame.js`)
+
+Replaces the normal `HackMinigame` when the boss fight is active.
+
+- **Layout** — A vertical strip rendered at the station (same screen position as the normal hack minigame). 4 horizontal lanes of traffic. A cursor starts on the left side; P1 must move it to the right side using WASD.
+- **Traffic** — Each lane has 2–3 blockers moving left-to-right or right-to-left at different speeds. Contact with a blocker resets the cursor to the left side.
+- **Win condition** — Cursor reaches the right edge. Fires `onWordComplete()` (incrementing the shield-break counter). Cursor immediately resets for the next run.
+- **Cancel** — `cancel()` stops the minigame; called if snail is teleported mid-hack.
+- **Movement gates** — `snail.hackingActive = true` while playing; WASD drives the frogger cursor, not Gerald. Gerald is stationary.
+
+#### Boss Attacks
+
+All cooldowns are in `CONFIG.BOSS` and affected by enrage at 50% HP.
+
+| Attack | Description | Cooldown |
+|---|---|---|
+| **Black Hole** | Slow-moving dark projectile (`BossProjectile` type `blackhole`). Tracks toward Gerald. On contact with Gerald, teleports him to a random position far from the station (same mechanic as TeleportSystem but forced). Destroyable by P2 shots. | 8s |
+| **EMP** | Slow-moving yellow projectile. On contact with the station, triggers a power-loss event identical to normal battery power loss (spawns a battery, halts hack progress, switches hack mode). Destroyable by P2 shots. | 12s |
+| **Terminal Lock EMP** | Slow-moving red projectile. On contact with a terminal, forces that terminal into `COOLING_DOWN` state for `CONFIG.BOSS.TERMINAL_LOCK_DURATION` (default 15s). Targets a random non-RELOAD, non-REPAIR terminal. Terminal pulses red while locked. Destroyable by P2 shots. | 15s |
+| **Alien Burst** | Spawns 2 `FastAlien` enemies at the boss's current position. Gives P2 targets to shoot while P1 hacks. | 10s |
+
+Boss attacks are selected at random each cycle (weighted: Black Hole 25%, EMP 20%, Terminal Lock 20%, Alien Burst 35%). Boss cannot fire while phase-shifting.
+
+#### Boss HP Bar (HUD addition)
+
+- Prominent bar rendered at top-center **below** the wave label, replacing the wave counter during the boss fight.
+- Bar: wide (400px), red fill with boss name "THE OVERLORD" above it.
+- Shows current HP / max HP as a numeric label inside the bar.
+- Flashes white briefly on each hit.
+- `HUD.showBossBar(boss)` / `HUD.hideBossBar()` methods added.
+
+#### Death Sequence
+
+1. Final hit triggers `_dying` flag — boss stops moving and attacking.
+2. Screen shake (heavy, `cameras.main.shake(600, 0.02)`).
+3. Three expanding rings burst outward from boss center (0.5s each, staggered 150ms).
+4. Boss sprite flashes rapidly (white tint, 100ms interval, 8 flashes).
+5. Large debris burst (2× the normal alien death burst — more particles, mixed colors).
+6. `cameras.main.flash(500, 255, 100, 0)` — orange screen flash.
+7. Boss container destroyed. `GameScene` proceeds to the wave-complete / victory flow.
+
+#### New Files
+
+- `src/entities/aliens/BossAlien.js`
+- `src/minigames/FroggerMinigame.js`
+- `scripts/generate-boss-sprite.js`
+- `assets/alien-boss-{right,left,up,down,diag-*}.svg` (8 directional sprites)
+
+#### Config additions (`config.js` `DEFAULTS.BOSS`)
+
+```js
+BOSS: {
+  HP: 200,
+  PHASE_SHIFT_HP: 50,          // damage taken per phase shift trigger
+  ORBIT_RADIUS: 350,
+  ORBIT_SPEED: 0.4,            // radians/s base oscillation
+  ENRAGE_HP: 100,
+  ENRAGE_ORBIT_MULT: 1.5,
+  ENRAGE_COOLDOWN_MULT: 0.7,
+  SHIELD_DROP_WORDS: 3,        // frogger completions to drop shield
+  SHIELD_DOWN_DURATION: 5000,  // ms shield stays down
+  ATTACK_COOLDOWNS: {
+    BLACK_HOLE: 8000,
+    EMP: 12000,
+    TERMINAL_LOCK: 15000,
+    ALIEN_BURST: 10000,
+  },
+  TERMINAL_LOCK_DURATION: 15000,
+  BLACK_HOLE_SPEED: 120,
+  EMP_SPEED: 100,
+  TERMINAL_LOCK_SPEED: 100,
+  FROGGER_LANES: 4,
+  FROGGER_BLOCKERS_PER_LANE: 2,
+}
+```
+
 ---
 
 ## Key Tension Resolutions
