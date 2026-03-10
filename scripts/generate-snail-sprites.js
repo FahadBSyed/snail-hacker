@@ -80,17 +80,15 @@ function snailLeft() {
     <!-- slime trail hint -->
     <ellipse cx="16" cy="33" rx="4" ry="1.2" fill="${BODY}" opacity="0.3"/>
 
-    <!-- antenna left -->
+    <!-- antenna left — eye at tip -->
     <line x1="32" y1="26" x2="28" y2="14" stroke="${ANTENNA}" stroke-width="1.5" stroke-linecap="round"/>
-    <circle cx="28" cy="14" r="2" fill="${ANTENNA}"/>
+    <circle cx="28" cy="14" r="2" fill="${EYE}"/>
+    <circle cx="28.5" cy="13.3" r="0.6" fill="white"/>
 
-    <!-- antenna right -->
+    <!-- antenna right — eye at tip -->
     <line x1="36" y1="26" x2="38" y2="12" stroke="${ANTENNA}" stroke-width="1.5" stroke-linecap="round"/>
-    <circle cx="38" cy="12" r="2" fill="${ANTENNA}"/>
-
-    <!-- eye -->
-    <circle cx="37" cy="27" r="1.8" fill="${EYE}"/>
-    <circle cx="37.6" cy="26.4" r="0.6" fill="white"/>
+    <circle cx="38" cy="12" r="2" fill="${EYE}"/>
+    <circle cx="38.6" cy="11.3" r="0.6" fill="white"/>
   </g>
 `);
 }
