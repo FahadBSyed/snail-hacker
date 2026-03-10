@@ -1,5 +1,15 @@
 # SNAIL HACKER — Changelog
 
+## Session 10g — 2026-03-10
+
+### Boss Attacks: EMP + Terminal Lock EMP Projectiles
+
+- **`src/entities/BossProjectile.js`** — Extended to support three types (`blackhole`, `emp`, `terminallock`). Constructor now takes `(scene, x, y, type, opts)` where `opts.targetX/Y` is the fixed homing target, and `opts.targetTerminal` is the Terminal reference for terminal lock. Per-type draw methods: yellow rings for EMP, red/orange for terminal lock. Per-type speed from config.
+- **`src/config.js`** — Added `EMP_HP: 20`, `EMP_SPEED: 100`, `TERMINAL_LOCK_HP: 20`, `TERMINAL_LOCK_SPEED: 100`, `TERMINAL_LOCK_DURATION: 15000`, `ATTACK_COOLDOWNS.EMP: 12000`, `ATTACK_COOLDOWNS.TERMINAL_LOCK: 15000`.
+- **`src/entities/Terminal.js`** — `startCooldown()` stores the handle in `this._cooldownHandle` and cancels any previous one before starting. New `forceLock(duration)`: forces COOLING_DOWN, shows red "LOCKED!" overlay + pulsing screen glow, auto-unlocks after duration.
+- **`src/entities/aliens/BossAlien.js`** — Added `_empTimer`, `_terminalLockTimer`, `onEMP`, `onTerminalLockEMP`; both fire on their cooldowns (enrage-scaled).
+- **`src/scenes/GameScene.js`** — `onEMP` spawns an EMP toward the station; `onTerminalLockEMP` picks a random IDLE non-RELOAD/non-REPAIR terminal and fires a terminal lock EMP toward it (no-op if no eligible targets). Contact: EMP on station → `_triggerPowerLoss()`; terminal lock on terminal → `term.forceLock()`.
+
 ## Session 10f — 2026-03-10
 
 ### Boss Attack: Black Hole Projectile

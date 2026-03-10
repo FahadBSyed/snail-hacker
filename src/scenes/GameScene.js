@@ -958,8 +958,26 @@ export default class GameScene extends Phaser.Scene {
                 this.logDebug(`Boss fires alien burst! (${count} FastAliens)`);
             },
             onBlackHole: (bx, by) => {
-                this.bossProjectiles.push(new BossProjectile(this, bx, by));
+                this.bossProjectiles.push(new BossProjectile(this, bx, by, 'blackhole'));
                 this.logDebug('Boss fires black hole!');
+            },
+            onEMP: (bx, by) => {
+                this.bossProjectiles.push(new BossProjectile(this, bx, by, 'emp', {
+                    targetX: this.station.x, targetY: this.station.y,
+                }));
+                this.logDebug('Boss fires EMP!');
+            },
+            onTerminalLockEMP: (bx, by) => {
+                const eligible = this.terminals.filter(t =>
+                    t.active && t.terminalState === 'IDLE' &&
+                    t.label !== 'RELOAD' && t.label !== 'REPAIR',
+                );
+                if (eligible.length === 0) return;
+                const target = Phaser.Math.RND.pick(eligible);
+                this.bossProjectiles.push(new BossProjectile(this, bx, by, 'terminallock', {
+                    targetX: target.x, targetY: target.y, targetTerminal: target,
+                }));
+                this.logDebug(`Boss fires terminal lock EMP at ${target.label}!`);
             },
         });
         this.hud.showBossBar(this.boss.health, CONFIG.BOSS.HP);
@@ -1416,14 +1434,34 @@ export default class GameScene extends Phaser.Scene {
                 }
             }
 
-            // Black hole contacts Gerald → warp him
+            // Type-specific contact detection
             if (bp.active) {
-                const snailDist = Phaser.Math.Distance.Between(bp.x, bp.y, this.snail.x, this.snail.y);
-                if (snailDist < bp.radius + 12) {
-                    this._warpSnail();
-                    spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
-                    bp.destroy();
-                    return false;
+                if (bp.projType === 'blackhole') {
+                    const snailDist = Phaser.Math.Distance.Between(bp.x, bp.y, this.snail.x, this.snail.y);
+                    if (snailDist < bp.radius + 12) {
+                        this._warpSnail();
+                        spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
+                        bp.destroy();
+                        return false;
+                    }
+                } else if (bp.projType === 'emp') {
+                    const stationDist = Phaser.Math.Distance.Between(bp.x, bp.y, this.station.x, this.station.y);
+                    if (stationDist < bp.radius + CONFIG.STATION.RADIUS) {
+                        this._triggerPowerLoss();
+                        spawnDeathBurst(this, bp.x, bp.y, 0xffcc00);
+                        bp.destroy();
+                        return false;
+                    }
+                } else if (bp.projType === 'terminallock') {
+                    const term = bp._targetTerminal;
+                    if (!term || !term.active) { bp.destroy(); return false; }
+                    const termDist = Phaser.Math.Distance.Between(bp.x, bp.y, term.x, term.y);
+                    if (termDist < bp.radius + 28) {
+                        term.forceLock(CONFIG.BOSS.TERMINAL_LOCK_DURATION);
+                        spawnDeathBurst(this, bp.x, bp.y, 0xff4422);
+                        bp.destroy();
+                        return false;
+                    }
                 }
             }
 

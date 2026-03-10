@@ -146,12 +146,19 @@ export const DEFAULTS = {
         SHIELD_DROP_WORDS:     3,   // frogger crossings required to drop shield
         SHIELD_DOWN_DURATION: 5000, // ms shield stays down after breaking
         ALIEN_BURST_COUNT: 3,       // FastAliens spawned per burst attack
-        BLACK_HOLE_HP:     30,      // projectile hits required to destroy a black hole
-        BLACK_HOLE_SPEED:  80,      // px/s — slow homing toward Gerald
-        BLACK_HOLE_RADIUS: 14,      // collision + visual radius (px)
+        BLACK_HOLE_HP:           30,   // projectile hits required to destroy a black hole
+        BLACK_HOLE_SPEED:        80,   // px/s — slow homing toward Gerald
+        BLACK_HOLE_RADIUS:       14,   // collision + visual radius (px)
+        EMP_HP:                  20,   // shots to destroy an EMP projectile
+        EMP_SPEED:              100,   // px/s — homes toward the station
+        TERMINAL_LOCK_HP:        20,   // shots to destroy a terminal lock EMP
+        TERMINAL_LOCK_SPEED:    100,   // px/s — homes toward target terminal
+        TERMINAL_LOCK_DURATION: 15000, // ms terminal stays locked
         ATTACK_COOLDOWNS: {
-            ALIEN_BURST: 5000,      // ms between alien burst attacks
-            BLACK_HOLE:  8000,      // ms between black hole shots
+            ALIEN_BURST:    5000,   // ms between alien burst attacks
+            BLACK_HOLE:     8000,   // ms between black hole shots
+            EMP:           12000,   // ms between EMP shots
+            TERMINAL_LOCK: 15000,   // ms between terminal lock EMP shots
         },
     },
 };

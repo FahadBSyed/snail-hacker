@@ -31,11 +31,15 @@ export default class BossAlien extends Phaser.GameObjects.Container {
         this._damageAccum    = 0;
         this._time           = 0;
         this._baseAngle      = Math.atan2(y - 360, x - 640);
-        this._burstTimer     = 0;
-        this._blackHoleTimer = 0;
+        this._burstTimer        = 0;
+        this._blackHoleTimer    = 0;
+        this._empTimer          = 0;
+        this._terminalLockTimer = 0;
 
-        this.onAlienBurst  = opts.onAlienBurst  || null;
-        this.onBlackHole   = opts.onBlackHole   || null;
+        this.onAlienBurst      = opts.onAlienBurst      || null;
+        this.onBlackHole       = opts.onBlackHole       || null;
+        this.onEMP             = opts.onEMP             || null;
+        this.onTerminalLockEMP = opts.onTerminalLockEMP || null;
 
         // ── Sprite ──────────────────────────────────────────────────────────────
         this.sprite = scene.add.image(0, 0, 'alien-boss-right');
@@ -309,6 +313,22 @@ export default class BossAlien extends Phaser.GameObjects.Container {
         if (this._blackHoleTimer >= blackHoleCd) {
             this._blackHoleTimer = 0;
             if (this.onBlackHole) this.onBlackHole(this.x, this.y);
+        }
+
+        // EMP attack
+        const empCd = cfg.ATTACK_COOLDOWNS.EMP * (enraged ? cfg.ENRAGE_COOLDOWN_MULT : 1);
+        this._empTimer += delta;
+        if (this._empTimer >= empCd) {
+            this._empTimer = 0;
+            if (this.onEMP) this.onEMP(this.x, this.y);
+        }
+
+        // Terminal lock EMP attack
+        const termLockCd = cfg.ATTACK_COOLDOWNS.TERMINAL_LOCK * (enraged ? cfg.ENRAGE_COOLDOWN_MULT : 1);
+        this._terminalLockTimer += delta;
+        if (this._terminalLockTimer >= termLockCd) {
+            this._terminalLockTimer = 0;
+            if (this.onTerminalLockEMP) this.onTerminalLockEMP(this.x, this.y);
         }
     }
 }

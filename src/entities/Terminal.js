@@ -151,23 +151,71 @@ export default class Terminal extends Phaser.GameObjects.Container {
     }
 
     startCooldown(duration) {
+        // Cancel any in-flight cooldown timer before starting a new one
+        if (this._cooldownHandle) { this._cooldownHandle.cancel(); this._cooldownHandle = null; }
+
         this.terminalState = 'COOLING_DOWN';
+        this.cooldownOverlay.setFillStyle(0x000000, 0.55);
         this.cooldownOverlay.setVisible(true);
-        this.cooldownText.setVisible(true);
+        this.cooldownText.setColor('#888888').setVisible(true);
         this.snailNearby = false;
         this.drawTerminal(false);
 
-        startCooldown(
+        this._cooldownHandle = startCooldown(
             this.scene, duration, 100,
             (remaining) => {
                 this.cooldownText.setText(`${Math.ceil(remaining / 1000)}s`);
             },
             () => {
+                this._cooldownHandle = null;
                 this.terminalState = 'IDLE';
                 this.cooldownOverlay.setVisible(false);
                 this.cooldownText.setVisible(false);
             },
         );
+    }
+
+    /**
+     * Immediately lock this terminal into COOLING_DOWN for a fixed duration.
+     * Called when a Terminal Lock EMP projectile hits. Shows a red "LOCKED!" overlay.
+     * Safe to call even if the terminal is already cooling down.
+     */
+    forceLock(duration) {
+        if (this.terminalState === 'ACTIVE') return; // don't interrupt a running minigame
+
+        // Cancel the existing cooldown so its onComplete won't fire and override us
+        if (this._cooldownHandle) { this._cooldownHandle.cancel(); this._cooldownHandle = null; }
+
+        this.terminalState = 'COOLING_DOWN';
+        this.snailNearby = false;
+        this.ePrompt.setVisible(false);
+        this.drawTerminal(false);
+
+        // Red locked overlay
+        this.cooldownOverlay.setFillStyle(0x550000, 0.72).setVisible(true);
+        this.cooldownText.setText('LOCKED!').setColor('#ff4422').setVisible(true);
+        this.screenGlow.fillColor = 0xff2200;
+        this.screenGlow.fillAlpha = 0.6;
+
+        // Pulse the screen glow for the lock duration
+        const pulseTween = this.scene.tweens.add({
+            targets:  this.screenGlow,
+            fillAlpha: 0.15,
+            duration: 450,
+            yoyo:     true,
+            repeat:   -1,
+        });
+
+        // Unlock after duration
+        this.scene.time.delayedCall(duration, () => {
+            if (!this.active) return;
+            pulseTween.stop();
+            this.terminalState = 'IDLE';
+            this.cooldownOverlay.setFillStyle(0x000000, 0.55).setVisible(false);
+            this.cooldownText.setColor('#888888').setVisible(false);
+            this.screenGlow.fillColor = this.color;
+            this.screenGlow.fillAlpha = 0;
+        });
     }
 
     /**
