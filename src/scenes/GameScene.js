@@ -819,6 +819,28 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
+        // Boss projectile (black hole) hit check (laser mode)
+        this.bossProjectiles = this.bossProjectiles.filter(bp => {
+            if (!bp.active) return false;
+            const rx    = bp.x - sx;
+            const ry    = bp.y - sy;
+            const along = rx * cos + ry * sin;
+            if (along <= 0 || along > tMax) return true;
+            const perp = Math.abs(rx * sin - ry * cos);
+            if (perp > bp.radius + HIT_RADIUS) return true;
+
+            const dead = bp.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+            const flash = this.add.arc(bp.x, bp.y, bp.radius, 0, 360, false, 0xaa44ff, 0.75).setDepth(58);
+            this.tweens.add({ targets: flash, alpha: 0, duration: 180, onComplete: () => flash.destroy() });
+            this.soundSynth?.play('shieldReflect');
+            if (dead) {
+                spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
+                bp.destroy();
+                return false;
+            }
+            return true;
+        });
+
         // Laser beam visual — outer glow + inner beam + bright core, quick fade
         const gfx = this.add.graphics().setDepth(200);
         gfx.lineStyle(10, 0xff2200, 0.2);
