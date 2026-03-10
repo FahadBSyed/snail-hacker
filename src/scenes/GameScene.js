@@ -894,9 +894,17 @@ export default class GameScene extends Phaser.Scene {
         const bx = 640 + Math.cos(angle) * CONFIG.BOSS.ORBIT_RADIUS_X;
         const by = 360 + Math.sin(angle) * CONFIG.BOSS.ORBIT_RADIUS_Y;
         this.boss = new BossAlien(this, bx, by, {
-            onAlienBurst: (x, y) => {
-                const count = CONFIG.BOSS.ALIEN_BURST_COUNT;
-                for (let i = 0; i < count; i++) this.spawnAlien('fast', x, y);
+            onAlienBurst: (bx, by) => {
+                const count  = CONFIG.BOSS.ALIEN_BURST_COUNT;
+                const spread = CONFIG.BOSS.ALIEN_BURST_SPREAD;
+                // Spread aliens side-by-side perpendicular to the boss→station vector
+                const toStation = Phaser.Math.Angle.Between(bx, by, 640, 360);
+                const perp      = toStation + Math.PI / 2;
+                const halfOff   = (count - 1) / 2;
+                for (let i = 0; i < count; i++) {
+                    const off = (i - halfOff) * spread;
+                    this.spawnAlien('fast', bx + Math.cos(perp) * off, by + Math.sin(perp) * off);
+                }
                 this.logDebug(`Boss fires alien burst! (${count} FastAliens)`);
             },
         });

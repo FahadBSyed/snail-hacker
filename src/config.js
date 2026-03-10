@@ -134,8 +134,9 @@ export const DEFAULTS = {
     BOSS: {
         HP:                  200,
         PHASE_SHIFT_HP:      100,   // damage taken before each phase shift
-        ORBIT_RADIUS_X:      280,   // horizontal semi-axis (px)
-        ORBIT_RADIUS_Y:      110,   // vertical semi-axis — keeps boss above the Frogger panel (y≤470)
+        ORBIT_RADIUS_X:      400,   // horizontal semi-axis (px)
+        ORBIT_RADIUS_Y:      130,   // vertical semi-axis — keeps boss above the Frogger panel (y≤490)
+        ALIEN_BURST_SPREAD:   40,   // px between side-by-side burst aliens (perpendicular to attack vector)
         ORBIT_SPEED:         0.4,   // rad/s base oscillation speed
         ENRAGE_HP:           100,   // HP threshold for enrage
         ENRAGE_ORBIT_MULT:   1.5,
