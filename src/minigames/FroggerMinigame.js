@@ -21,9 +21,9 @@
 import { CONFIG } from '../config.js';
 
 // ── Layout ────────────────────────────────────────────────────────────────────
-const COLS     = 7;
+const COLS     = 14;  // doubled — sideways hop moves half a cell width visually
 const ROWS     = 7;   // row 0 = goal, row 6 = start, rows 1–5 = traffic
-const CELL_W   = 26;
+const CELL_W   = 13;  // halved — GRID_W stays 182 (14×13)
 const CELL_H   = 22;
 const GRID_W   = COLS * CELL_W;  // 182
 const GRID_H   = ROWS * CELL_H;  // 154
@@ -364,11 +364,9 @@ export default class FroggerMinigame {
         const lane = this.lanes.find(l => l.row === this.frogRow);
         if (!lane) return;
 
-        // Frog hitbox: 9 px inset each side → 8 px wide, matching the drawn circle.
-        // A car must overlap the inner ~30 % of the cell to register a hit,
-        // so cars just entering the frog's column from the edge don't kill.
-        const frogL = this.frogCol * CELL_W + 9;
-        const frogR = frogL + CELL_W - 18;
+        // Frog hitbox: 3 px inset each side → 7 px wide, matching the drawn circle.
+        const frogL = this.frogCol * CELL_W + 3;
+        const frogR = frogL + CELL_W - 6;
 
         for (const car of lane.cars) {
             // Car hitbox: 2 px inset

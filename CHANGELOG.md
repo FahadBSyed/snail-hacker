@@ -1,5 +1,11 @@
 # SNAIL HACKER — Changelog
 
+## Session 10e — 2026-03-10
+
+### FroggerMinigame: half-width sideways steps
+
+- **`src/minigames/FroggerMinigame.js`** — `COLS` doubled (7 → 14), `CELL_W` halved (26 → 13); `GRID_W` stays 182 px (14×13). Each A/D hop now moves the frog half the previous distance. Collision hitbox inset updated proportionally (9 → 3 px each side) to keep the 7 px hitbox aligned with the drawn 5 px-radius circle.
+
 ## Session 10d — 2026-03-10
 
 ### Boss tuning: minimum orbit distance + burst frequency
