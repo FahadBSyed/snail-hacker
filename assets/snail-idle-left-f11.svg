@@ -2,24 +2,26 @@
 
   <g transform="translate(48, 0) scale(-1, 1)">
 
-  <!-- shell -->
+  <!-- body hump (ellipse) -->
+  <ellipse cx="30" cy="26" rx="12" ry="6" fill="#E8D44D"/>
+  <!-- foot prism -->
+  <path d="M 18 30 L 42 30 L 42 34 L 18 34 Z" fill="#E8D44D"/>
+
+  <!-- slime trail -->
+  <ellipse cx="14" cy="36" rx="4" ry="1.2" fill="#E8D44D" opacity="0.25"/>
+
+  <!-- antenna left — eye at stalk tip -->
+  <line x1="32" y1="24" x2="26.8" y2="14.0" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- antenna right — eye at stalk tip -->
+  <line x1="36" y1="24" x2="36.8" y2="12.0" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- shell LAST — sits on top of body -->
   <circle cx="18" cy="24" r="12" fill="#8B5E3C"/>
   <circle cx="19" cy="24" r="8"  fill="#A0714F"/>
   <circle cx="20" cy="24" r="4"  fill="#BD8C64"/>
 
-  <!-- body -->
-  <ellipse cx="30" cy="30" rx="12" ry="5" fill="#E8D44D"/>
-
-  <!-- slime trail -->
-  <ellipse cx="16" cy="33" rx="4" ry="1.2" fill="#E8D44D" opacity="0.3"/>
-
-  <!-- antenna left — drifting eye -->
-  <line x1="32" y1="26" x2="26.8" y2="14.0" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round"/>
   <circle cx="26.8" cy="14.0" r="2.0" fill="#1a1a1a"/>
   <circle cx="27.3" cy="13.3" r="0.6" fill="white"/>
-
-  <!-- antenna right — drifting eye -->
-  <line x1="36" y1="26" x2="36.8" y2="12.0" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round"/>
   <circle cx="36.8" cy="12.0" r="2.0" fill="#1a1a1a"/>
   <circle cx="37.4" cy="11.3" r="0.6" fill="white"/>
   </g>
