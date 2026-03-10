@@ -4,10 +4,8 @@
   <circle cx="24" cy="20" r="5"  fill="#BD8C64"/>
   <ellipse cx="24" cy="29.4" rx="2.6" ry="2.1" fill="#E8D44D" opacity="0.20"/>
   <line x1="21.7" y1="29.1" x2="19.1" y2="33.4" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round" opacity="0.09"/>
-  <circle cx="19.1" cy="33.4" r="2" fill="#E8D44D" opacity="0.09"/>
+  <circle cx="19.1" cy="33.4" r="2" fill="#1a1a1a" opacity="0.09"/>
   <line x1="26.3" y1="29.1" x2="28.9" y2="33.4" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round" opacity="0.09"/>
-  <circle cx="28.9" cy="33.4" r="2" fill="#E8D44D" opacity="0.09"/>
-  <circle cx="22.1" cy="29.0" r="2" fill="#1a1a1a" opacity="0.09"/>
-  <circle cx="25.9" cy="29.0" r="2" fill="#1a1a1a" opacity="0.09"/>
+  <circle cx="28.9" cy="33.4" r="2" fill="#1a1a1a" opacity="0.09"/>
 
 </svg>

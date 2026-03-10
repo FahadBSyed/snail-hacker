@@ -106,24 +106,20 @@ function rightSnailInner(t) {
         const rx1  = f1(lerp(36, 26, t)), ry1 = f1(lerp(26, 25, t));
         const rx2  = f1(lerp(38, 24, t)), ry2 = f1(lerp(12, 22, t));
         const antOp = antVis < 0.999 ? ` opacity="${op}"` : '';
+        // Antenna tip dots are the eyes — drawn dark with a white highlight
         s += `  <line x1="${lx1}" y1="${ly1}" x2="${lx2}" y2="${ly2}" stroke="${BODY}" stroke-width="1.5" stroke-linecap="round"${antOp}/>\n`;
-        s += `  <circle cx="${lx2}" cy="${ly2}" r="2" fill="${BODY}"${antOp}/>\n`;
+        s += `  <circle cx="${lx2}" cy="${ly2}" r="2" fill="${EYE}"${antOp}/>\n`;
+        if (antVis > 0.5) {
+            const lhop = f2((antVis - 0.5) * 2);
+            const lhx = f1(parseFloat(lx2) + 0.5), lhy = f1(parseFloat(ly2) - 0.6);
+            s += `  <circle cx="${lhx}" cy="${lhy}" r="0.6" fill="white" opacity="${lhop}"/>\n`;
+        }
         s += `  <line x1="${rx1}" y1="${ry1}" x2="${rx2}" y2="${ry2}" stroke="${BODY}" stroke-width="1.5" stroke-linecap="round"${antOp}/>\n`;
-        s += `  <circle cx="${rx2}" cy="${ry2}" r="2" fill="${BODY}"${antOp}/>\n`;
-    }
-
-    // Eye — retracts toward shell
-    const eyeVis = clamp(1 - t * 1.6);
-    if (eyeVis > 0.001) {
-        const ex   = f1(lerp(37.0, 26.0, t));
-        const ey   = f1(lerp(27.0, 25.0, t));
-        const eyeOp = eyeVis < 0.999 ? ` opacity="${f2(eyeVis)}"` : '';
-        s += `  <circle cx="${ex}" cy="${ey}" r="1.8" fill="${EYE}"${eyeOp}/>\n`;
-        if (eyeVis > 0.5) {
-            const hx  = f1(lerp(37.6, 26.4, t));
-            const hy  = f1(lerp(26.4, 24.6, t));
-            const hop = f2((eyeVis - 0.5) * 2);
-            s += `  <circle cx="${hx}" cy="${hy}" r="0.6" fill="white" opacity="${hop}"/>\n`;
+        s += `  <circle cx="${rx2}" cy="${ry2}" r="2" fill="${EYE}"${antOp}/>\n`;
+        if (antVis > 0.5) {
+            const rhop = f2((antVis - 0.5) * 2);
+            const rhx = f1(parseFloat(rx2) + 0.6), rhy = f1(parseFloat(ry2) - 0.7);
+            s += `  <circle cx="${rhx}" cy="${rhy}" r="0.6" fill="white" opacity="${rhop}"/>\n`;
         }
     }
 
@@ -177,10 +173,11 @@ function upSnailInner(t) {
         const rx1  = f1(lerp(28, 25, t)), ry1 = f1(lerp(12, 17, t));
         const rx2  = f1(lerp(36, 26, t)), ry2 = f1(lerp( 4, 16, t));
         const antOp = antVis < 0.999 ? ` opacity="${op}"` : '';
+        // Eye-stalk tips visible from rear — dark dots, no highlights
         s += `  <line x1="${lx1}" y1="${ly1}" x2="${lx2}" y2="${ly2}" stroke="${BODY}" stroke-width="1.5" stroke-linecap="round"${antOp}/>\n`;
-        s += `  <circle cx="${lx2}" cy="${ly2}" r="2" fill="${BODY}"${antOp}/>\n`;
+        s += `  <circle cx="${lx2}" cy="${ly2}" r="2" fill="${EYE}"${antOp}/>\n`;
         s += `  <line x1="${rx1}" y1="${ry1}" x2="${rx2}" y2="${ry2}" stroke="${BODY}" stroke-width="1.5" stroke-linecap="round"${antOp}/>\n`;
-        s += `  <circle cx="${rx2}" cy="${ry2}" r="2" fill="${BODY}"${antOp}/>\n`;
+        s += `  <circle cx="${rx2}" cy="${ry2}" r="2" fill="${EYE}"${antOp}/>\n`;
     }
 
     return s;
@@ -233,24 +230,15 @@ function downSnailInner(t) {
         const rx1  = f1(lerp(28, 25, t)), ry1 = f1(lerp(32, 27, t));
         const rx2  = f1(lerp(34, 25, t)), ry2 = f1(lerp(42, 27, t));
         const antOp = antVis < 0.999 ? ` opacity="${op}"` : '';
+        // Antenna tips are the eyes — dark with white highlights
         s += `  <line x1="${lx1}" y1="${ly1}" x2="${lx2}" y2="${ly2}" stroke="${BODY}" stroke-width="1.5" stroke-linecap="round"${antOp}/>\n`;
-        s += `  <circle cx="${lx2}" cy="${ly2}" r="2" fill="${BODY}"${antOp}/>\n`;
+        s += `  <circle cx="${lx2}" cy="${ly2}" r="2" fill="${EYE}"${antOp}/>\n`;
         s += `  <line x1="${rx1}" y1="${ry1}" x2="${rx2}" y2="${ry2}" stroke="${BODY}" stroke-width="1.5" stroke-linecap="round"${antOp}/>\n`;
-        s += `  <circle cx="${rx2}" cy="${ry2}" r="2" fill="${BODY}"${antOp}/>\n`;
-    }
-
-    // Eyes — move up into shell
-    const eyeVis = clamp(1 - t * 1.6);
-    if (eyeVis > 0.001) {
-        const lx   = f1(lerp(21, 23, t)), ly = f1(lerp(33, 26, t));
-        const rx   = f1(lerp(27, 25, t)), ry = f1(lerp(33, 26, t));
-        const eyeOp = eyeVis < 0.999 ? ` opacity="${f2(eyeVis)}"` : '';
-        s += `  <circle cx="${lx}" cy="${ly}" r="2" fill="${EYE}"${eyeOp}/>\n`;
-        s += `  <circle cx="${rx}" cy="${ry}" r="2" fill="${EYE}"${eyeOp}/>\n`;
-        if (eyeVis > 0.5) {
-            const hlx = f1(lerp(21.5, 23.3, t)), hly = f1(lerp(32.3, 25.5, t));
-            const hrx = f1(lerp(27.5, 25.3, t)), hry = f1(lerp(32.3, 25.5, t));
-            const hop = f2((eyeVis - 0.5) * 2);
+        s += `  <circle cx="${rx2}" cy="${ry2}" r="2" fill="${EYE}"${antOp}/>\n`;
+        if (antVis > 0.5) {
+            const hop = f2((antVis - 0.5) * 2);
+            const hlx = f1(parseFloat(lx2) + 0.6), hly = f1(parseFloat(ly2) - 0.7);
+            const hrx = f1(parseFloat(rx2) + 0.6), hry = f1(parseFloat(ry2) - 0.7);
             s += `  <circle cx="${hlx}" cy="${hly}" r="0.7" fill="white" opacity="${hop}"/>\n`;
             s += `  <circle cx="${hrx}" cy="${hry}" r="0.7" fill="white" opacity="${hop}"/>\n`;
         }

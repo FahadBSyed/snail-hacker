@@ -256,6 +256,10 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 - `ShieldAlien.takeDamage()` override returns `false` immediately while `this.shielded` is true, blocking all damage sources (projectiles, bomber splash, cannon auto-fire) — not just the projectile deflection already handled in `CollisionSystem`.
 - `CONFIG.ALIENS.SHIELD.HEALTH` reduced 15 → 10 so it dies in one shot once the shield drops (matches `PROJECTILE_HIT_ALIEN: 10`).
 
+### Gerald Sprite — Eyes Moved to Eye-Stalk Tips
+- `generate-snail-sprites.js` — all 4 directional sprites updated. Antenna tip circles changed from `BODY` yellow to `EYE` black with white highlights. Old floating eye element (on the body near the face) removed from right/left and down views. Up view (rear) now shows dark eye-stalk tips too.
+- `generate-damage-sprites.js` — same fix across all 64 hit-animation frames. The separate eye interpolation blocks (which tracked wrong body positions) are removed; eyes now live on the antenna tip circles and retract naturally with the antennae as Gerald withdraws into his shell. Regenerated all 68 SVGs.
+
 ### Auto-Turret Behaviour Tweaks
 - **Shield-aware targeting**: turret now passes `alienFilter: (a) => !a.shielded` to `DefenseStation`, so it skips shield aliens whose energy ring is up and focuses fire on targetable enemies instead.
 - **Minigame**: turret terminal now uses `_rhythmLauncher` (same as SHIELD/SLOW/REPAIR) instead of `_sequenceLauncher`.
