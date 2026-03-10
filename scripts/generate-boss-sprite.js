@@ -46,8 +46,6 @@ const FROG_LIGHT = '#4acc4a';
 const FROG_DARK  = '#155a15';
 const EYE_YEL    = '#dde840';
 const PUPIL      = '#cc1111';   // menacing red pupils
-const CROWN_GOLD = '#ffcc22';
-const CROWN_DARK = '#bb9900';
 
 // 12 rim lights — alternating crimson and gold (evenly spaced at 30° intervals)
 const RIM_COLORS = [
@@ -62,9 +60,8 @@ const r2 = n => +n.toFixed(2);
 // Base pose faces +x (right). Entire group is rotated by travelDeg around the
 // dome centre so the frog always faces the direction of travel.
 //
-// Crown placement: the band sits at cy-15 (just above the body's top edge).
-// At dome top = DOME_CY - DOME_R = 20, the crown spikes (cy-24 = 16) poke
-// above the glass — visible as a regal protrusion in all 8 directions.
+// All elements are sized to stay within dome radius 20 of (DOME_CX, DOME_CY).
+// Verified: dist(dome_center, element_center) + element_radius ≤ 18.5 for all parts.
 function bossFrog(travelDeg) {
     const rot = `rotate(${travelDeg}, ${DOME_CX}, ${DOME_CY})`;
     const cx = DOME_CX, cy = DOME_CY;
@@ -73,62 +70,47 @@ function bossFrog(travelDeg) {
         `  <g transform="${rot}">`,
 
         // ── Body ──────────────────────────────────────────────────────────────
-        `    <circle cx="${cx}" cy="${cy}" r="14" fill="${FROG_GREEN}"/>`,
-        `    <ellipse cx="${r2(cx-2)}" cy="${cy}" rx="8" ry="10" fill="${FROG_LIGHT}" opacity="0.30"/>`,
+        // r=10, max reach from dome center = 10 ✓
+        `    <circle cx="${cx}" cy="${cy}" r="10" fill="${FROG_GREEN}"/>`,
+        `    <ellipse cx="${r2(cx-2)}" cy="${cy}" rx="6" ry="8" fill="${FROG_LIGHT}" opacity="0.30"/>`,
 
         // ── Head bump (leading side, +x in base pose) ─────────────────────────
-        `    <ellipse cx="${r2(cx+7)}" cy="${cy}" rx="12" ry="10" fill="${FROG_GREEN}"/>`,
-        `    <ellipse cx="${r2(cx+9)}" cy="${cy}" rx="7"  ry="6"  fill="${FROG_LIGHT}" opacity="0.22"/>`,
+        // rx=9 at cx+5=53 → rightmost x=62, dist from dome center = 14 ✓
+        `    <ellipse cx="${r2(cx+5)}" cy="${cy}" rx="9" ry="7.5" fill="${FROG_GREEN}"/>`,
+        `    <ellipse cx="${r2(cx+7)}" cy="${cy}" rx="5" ry="4"   fill="${FROG_LIGHT}" opacity="0.22"/>`,
 
-        // ── Arm stubs (stubby limbs gripping controls on trailing side) ───────
-        `    <ellipse cx="${r2(cx-4)}" cy="${r2(cy-11)}" rx="5" ry="3" fill="${FROG_DARK}"`,
-        `             transform="rotate(-35,${r2(cx-4)},${r2(cy-11)})"/>`,
-        `    <ellipse cx="${r2(cx-4)}" cy="${r2(cy+11)}" rx="5" ry="3" fill="${FROG_DARK}"`,
-        `             transform="rotate(35,${r2(cx-4)},${r2(cy+11)})"/>`,
-        `    <circle  cx="${r2(cx-8)}" cy="${r2(cy-13)}" r="2.5" fill="${FROG_GREEN}"/>`,
-        `    <circle  cx="${r2(cx-8)}" cy="${r2(cy+13)}" r="2.5" fill="${FROG_GREEN}"/>`,
+        // ── Arm stubs (trailing side, gripping controls) ──────────────────────
+        // centers at (cx-4, cy±9), max reach ≈ sqrt(4²+9²)+4 = 13.9 ✓
+        `    <ellipse cx="${r2(cx-4)}" cy="${r2(cy-9)}" rx="4" ry="2.5" fill="${FROG_DARK}"`,
+        `             transform="rotate(-35,${r2(cx-4)},${r2(cy-9)})"/>`,
+        `    <ellipse cx="${r2(cx-4)}" cy="${r2(cy+9)}" rx="4" ry="2.5" fill="${FROG_DARK}"`,
+        `             transform="rotate(35,${r2(cx-4)},${r2(cy+9)})"/>`,
+        `    <circle  cx="${r2(cx-7)}" cy="${r2(cy-11)}" r="1.8" fill="${FROG_GREEN}"/>`,
+        `    <circle  cx="${r2(cx-7)}" cy="${r2(cy+11)}" r="1.8" fill="${FROG_GREEN}"/>`,
 
-        // ── Upper eye ─────────────────────────────────────────────────────────
-        `    <circle cx="${r2(cx+13)}" cy="${r2(cy-12)}" r="7"   fill="${EYE_YEL}"/>`,
-        `    <circle cx="${r2(cx+14)}" cy="${r2(cy-11)}" r="3.5" fill="${PUPIL}"/>`,
-        `    <circle cx="${r2(cx+12)}" cy="${r2(cy-13.5)}" r="1.5" fill="white"/>`,
-        // Angry upper brow: slants down toward nose  ╲
-        `    <path d="M ${r2(cx+8)} ${r2(cy-20)} L ${r2(cx+17)} ${r2(cy-16)}"`,
-        `          stroke="${FROG_DARK}" stroke-width="2.8" stroke-linecap="round" fill="none"/>`,
+        // ── Upper eye — center (57, 32), dist=12.0, +r4.5 = 16.5 ✓ ──────────
+        `    <circle cx="${r2(cx+9)}"  cy="${r2(cy-8)}"  r="4.5" fill="${EYE_YEL}"/>`,
+        `    <circle cx="${r2(cx+10)}" cy="${r2(cy-7)}"  r="2.2" fill="${PUPIL}"/>`,
+        `    <circle cx="${r2(cx+8)}"  cy="${r2(cy-9.5)}" r="1"  fill="white"/>`,
+        // Angry upper brow — tip at (59, 26), dist = 17.8 ✓
+        `    <path d="M ${r2(cx+4)} ${r2(cy-14)} L ${r2(cx+11)} ${r2(cy-10)}"`,
+        `          stroke="${FROG_DARK}" stroke-width="2.2" stroke-linecap="round" fill="none"/>`,
 
-        // ── Lower eye ─────────────────────────────────────────────────────────
-        `    <circle cx="${r2(cx+13)}" cy="${r2(cy+12)}" r="7"   fill="${EYE_YEL}"/>`,
-        `    <circle cx="${r2(cx+14)}" cy="${r2(cy+13)}" r="3.5" fill="${PUPIL}"/>`,
-        `    <circle cx="${r2(cx+12)}" cy="${r2(cy+10.5)}" r="1.5" fill="white"/>`,
-        // Angry lower brow: slants up toward nose  ╱
-        `    <path d="M ${r2(cx+8)} ${r2(cy+20)} L ${r2(cx+17)} ${r2(cy+16)}"`,
-        `          stroke="${FROG_DARK}" stroke-width="2.8" stroke-linecap="round" fill="none"/>`,
+        // ── Lower eye — center (57, 48), symmetric ✓ ─────────────────────────
+        `    <circle cx="${r2(cx+9)}"  cy="${r2(cy+8)}"  r="4.5" fill="${EYE_YEL}"/>`,
+        `    <circle cx="${r2(cx+10)}" cy="${r2(cy+9)}"  r="2.2" fill="${PUPIL}"/>`,
+        `    <circle cx="${r2(cx+8)}"  cy="${r2(cy+6.5)}" r="1"  fill="white"/>`,
+        // Angry lower brow
+        `    <path d="M ${r2(cx+4)} ${r2(cy+14)} L ${r2(cx+11)} ${r2(cy+10)}"`,
+        `          stroke="${FROG_DARK}" stroke-width="2.2" stroke-linecap="round" fill="none"/>`,
 
-        // ── Nostrils ──────────────────────────────────────────────────────────
-        `    <circle cx="${r2(cx+7)}" cy="${r2(cy-3)}" r="2" fill="${FROG_DARK}"/>`,
-        `    <circle cx="${r2(cx+7)}" cy="${r2(cy+3)}" r="2" fill="${FROG_DARK}"/>`,
+        // ── Nostrils — dist ≈ 5.4 ✓ ──────────────────────────────────────────
+        `    <circle cx="${r2(cx+5)}" cy="${r2(cy-2.5)}" r="1.5" fill="${FROG_DARK}"/>`,
+        `    <circle cx="${r2(cx+5)}" cy="${r2(cy+2.5)}" r="1.5" fill="${FROG_DARK}"/>`,
 
-        // ── Snarl (open-mouthed, downward on lower-leading side) ──────────────
-        `    <path d="M ${r2(cx+8)} ${r2(cy+4)} Q ${r2(cx+15)} ${r2(cy+5.5)} ${r2(cx+12)} ${r2(cy+10)}"`,
-        `          stroke="${FROG_DARK}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,
-
-        // ── Crown (drawn last so it layers over body top edge) ────────────────
-        // Band
-        `    <rect x="${r2(cx-8)}" y="${r2(cy-15)}" width="16" height="4.5" rx="1"`,
-        `          fill="${CROWN_GOLD}" stroke="${CROWN_DARK}" stroke-width="0.8"/>`,
-        // Left spike
-        `    <polygon points="${r2(cx-6)},${r2(cy-15)} ${r2(cx-4)},${r2(cy-23)} ${r2(cx-2)},${r2(cy-15)}"`,
-        `             fill="${CROWN_GOLD}" stroke="${CROWN_DARK}" stroke-width="0.7"/>`,
-        // Centre spike (tallest)
-        `    <polygon points="${r2(cx-1)},${r2(cy-15)} ${r2(cx+1)},${r2(cy-24)} ${r2(cx+3)},${r2(cy-15)}"`,
-        `             fill="${CROWN_GOLD}" stroke="${CROWN_DARK}" stroke-width="0.7"/>`,
-        // Right spike
-        `    <polygon points="${r2(cx+4)},${r2(cy-15)} ${r2(cx+6)},${r2(cy-22)} ${r2(cx+8)},${r2(cy-15)}"`,
-        `             fill="${CROWN_GOLD}" stroke="${CROWN_DARK}" stroke-width="0.7"/>`,
-        // Jewels on band
-        `    <circle cx="${r2(cx+1)}" cy="${r2(cy-13.5)}" r="1.5" fill="#ff3366"/>`,
-        `    <circle cx="${r2(cx-5)}" cy="${r2(cy-13.5)}" r="1.2" fill="#4488ff"/>`,
-        `    <circle cx="${r2(cx+7)}" cy="${r2(cy-13.5)}" r="1.2" fill="#44ffaa"/>`,
+        // ── Snarl — all points within r=14 of dome center ✓ ─────────────────
+        `    <path d="M ${r2(cx+6)} ${r2(cy+3)} Q ${r2(cx+11)} ${r2(cy+4.5)} ${r2(cx+9)} ${r2(cy+8)}"`,
+        `          stroke="${FROG_DARK}" stroke-width="1.8" fill="none" stroke-linecap="round"/>`,
 
         `  </g>`,
     ].join('\n');

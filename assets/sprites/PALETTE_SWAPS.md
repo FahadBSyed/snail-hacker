@@ -108,4 +108,4 @@ The dome ring colour (`#00eeff`) intentionally matches the in-game shield ring g
 - 12 rim lights at 30° spacing (vs 6 at 60°)
 - Dome radius 20px (vs 11px on regular sprites at their native scale)
 - Triple engine glow (vs double)
-- Boss frog additions: angry V-brows, red pupils, arm stubs, 3-spike gold crown with jewels, snarl mouth
+- Boss frog additions: angry V-brows, red pupils, arm stubs, snarl mouth; all parts contained within dome radius
