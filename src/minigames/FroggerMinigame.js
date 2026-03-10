@@ -21,29 +21,28 @@
 import { CONFIG } from '../config.js';
 
 // ── Layout ────────────────────────────────────────────────────────────────────
-const COLS     = 9;
+const COLS     = 7;
 const ROWS     = 7;   // row 0 = goal, row 6 = start, rows 1–5 = traffic
-const CELL_W   = 48;
-const CELL_H   = 44;
-const GRID_W   = COLS * CELL_W;  // 432
-const GRID_H   = ROWS * CELL_H;  // 308
-const HEADER_H = 46;             // title + score dots + timer bar
-const FOOTER_H = 20;
-const PADDING  = 12;
-const PANEL_W  = GRID_W + 2 * PADDING;                      // 456
-const PANEL_H  = HEADER_H + GRID_H + FOOTER_H + 2 * PADDING; // 398
+const CELL_W   = 26;
+const CELL_H   = 22;
+const GRID_W   = COLS * CELL_W;  // 182
+const GRID_H   = ROWS * CELL_H;  // 154
+const HEADER_H = 26;             // title + score dots + timer bar
+const PADDING  = 6;
+const PANEL_W  = GRID_W + 2 * PADDING;              // 194
+const PANEL_H  = HEADER_H + GRID_H + 2 * PADDING;  // 192
 
 // Grid origin relative to container centre (640, 360)
-const GRID_OX = -GRID_W / 2;                                 // –216
-const GRID_OY = -(PANEL_H / 2) + PADDING + HEADER_H;        // –141
+const GRID_OX = -GRID_W / 2;                         // –91
+const GRID_OY = -(PANEL_H / 2) + PADDING + HEADER_H; // –64
 
 // ── Lane definitions (row 1 = near goal = hardest; row 5 = near start = easiest) ──
 const LANE_CONFIGS = [
-    { row: 1, speed: 200, dir:  1, carW: 58, numCars: 2, color: 0xcc2211 },
-    { row: 2, speed: 155, dir: -1, carW: 54, numCars: 2, color: 0xcc6611 },
-    { row: 3, speed: 115, dir:  1, carW: 52, numCars: 2, color: 0xbbaa11 },
-    { row: 4, speed:  80, dir: -1, carW: 50, numCars: 2, color: 0x77aa11 },
-    { row: 5, speed:  55, dir:  1, carW: 50, numCars: 2, color: 0x1177bb },
+    { row: 1, speed: 200, dir:  1, carW: 30, numCars: 2, color: 0xcc2211 },
+    { row: 2, speed: 155, dir: -1, carW: 28, numCars: 2, color: 0xcc6611 },
+    { row: 3, speed: 115, dir:  1, carW: 28, numCars: 2, color: 0xbbaa11 },
+    { row: 4, speed:  80, dir: -1, carW: 26, numCars: 2, color: 0x77aa11 },
+    { row: 5, speed:  55, dir:  1, carW: 26, numCars: 2, color: 0x1177bb },
 ];
 
 export default class FroggerMinigame {
@@ -103,7 +102,7 @@ export default class FroggerMinigame {
 
     // ── UI construction ───────────────────────────────────────────────────────
     _createUI() {
-        this.container = this.scene.add.container(640, 360).setDepth(200).setScale(0.5);
+        this.container = this.scene.add.container(640, 360).setDepth(200);
 
         // Panel background
         const panel = this.scene.add.rectangle(0, 0, PANEL_W, PANEL_H, 0x04040f, 0.96)
@@ -118,17 +117,17 @@ export default class FroggerMinigame {
         );
 
         // Score dots  ○ ○ ○ → ● ● ●
-        this.scoreText = this.scene.add.text(0, -PANEL_H / 2 + 29, this._scoreStr(), {
-            fontSize: '15px', fontFamily: 'monospace', color: '#ffffff',
-            letterSpacing: 6,
+        this.scoreText = this.scene.add.text(0, -PANEL_H / 2 + 17, this._scoreStr(), {
+            fontSize: '11px', fontFamily: 'monospace', color: '#ffffff',
+            letterSpacing: 4,
         }).setOrigin(0.5);
         this.container.add(this.scoreText);
 
         // Timer bar
-        const barY     = -PANEL_H / 2 + HEADER_H - 7;
-        const barW     = PANEL_W - 24;
-        this.timerBg   = this.scene.add.rectangle(0, barY, barW, 4, 0x221122).setOrigin(0.5);
-        this.timerFill = this.scene.add.rectangle(-barW / 2, barY, barW, 4, 0xff2244).setOrigin(0, 0.5);
+        const barY     = -PANEL_H / 2 + HEADER_H - 4;
+        const barW     = PANEL_W - 16;
+        this.timerBg   = this.scene.add.rectangle(0, barY, barW, 3, 0x221122).setOrigin(0.5);
+        this.timerFill = this.scene.add.rectangle(-barW / 2, barY, barW, 3, 0xff2244).setOrigin(0, 0.5);
         this.container.add(this.timerBg);
         this.container.add(this.timerFill);
         this._timerBarW = barW;
@@ -137,35 +136,10 @@ export default class FroggerMinigame {
         this.gfx = this.scene.add.graphics();
         this.container.add(this.gfx);
 
-        // Static labels — added AFTER gfx so they render on top
-        // Goal row: "▲ SAFE ZONE"
-        this.container.add(
-            this.scene.add.text(
-                0, GRID_OY + CELL_H / 2,
-                '▲  S A F E   Z O N E  ▲',
-                { fontSize: '9px', fontFamily: 'monospace', color: '#00ff88', alpha: 0.7 },
-            ).setOrigin(0.5).setAlpha(0.65),
-        );
-        // Start row: "START"
-        this.container.add(
-            this.scene.add.text(
-                0, GRID_OY + (ROWS - 1) * CELL_H + CELL_H / 2,
-                'S T A R T',
-                { fontSize: '9px', fontFamily: 'monospace', color: '#2288cc' },
-            ).setOrigin(0.5).setAlpha(0.55),
-        );
-
-        // Footer hint
-        this.container.add(
-            this.scene.add.text(0, PANEL_H / 2 - 10, 'W A S D — HOP  ·  REACH THE TOP', {
-                fontSize: '9px', fontFamily: 'monospace', color: '#444455',
-            }).setOrigin(0.5),
-        );
-
         // Result flash text (crossing celebration / death notice)
         this.resultText = this.scene.add.text(
             0, GRID_OY + GRID_H / 2,
-            '', { fontSize: '20px', fontFamily: 'monospace', fontStyle: 'bold', color: '#44ff88' },
+            '', { fontSize: '13px', fontFamily: 'monospace', fontStyle: 'bold', color: '#44ff88' },
         ).setOrigin(0.5);
         this.container.add(this.resultText);
 
@@ -188,17 +162,17 @@ export default class FroggerMinigame {
         this.flashGfx.fillRect(GRID_OX, GRID_OY, GRID_W, GRID_H);
 
         // Big upward arrow in the centre of the grid
-        const arrowY = GRID_OY + GRID_H / 2 - 56;
+        const arrowY = GRID_OY + GRID_H / 2 - 28;
         this.flashArrow = this.scene.add.text(0, arrowY, '▲', {
-            fontSize: '52px', fontFamily: 'monospace', color: '#33ff88',
+            fontSize: '26px', fontFamily: 'monospace', color: '#33ff88',
         }).setOrigin(0.5);
         this.container.add(this.flashArrow);
 
         // Instruction text below the arrow
         this.flashLabel = this.scene.add.text(
-            0, arrowY + 72,
-            'W A S D  —  HOP\nREACH THE OTHER SIDE',
-            { fontSize: '15px', fontFamily: 'monospace', color: '#ffffff', align: 'center' },
+            0, arrowY + 36,
+            'WASD — HOP\nREACH THE TOP',
+            { fontSize: '10px', fontFamily: 'monospace', color: '#ffffff', align: 'center' },
         ).setOrigin(0.5);
         this.container.add(this.flashLabel);
 
@@ -277,103 +251,39 @@ export default class FroggerMinigame {
             g.fillRect(GRID_OX, GRID_OY + row * CELL_H, GRID_W, CELL_H);
         }
 
-        // Goal row border — bright green outline
-        g.lineStyle(1.5, 0x00ff88, 0.55);
+        // Goal row border
+        g.lineStyle(1, 0x00ff88, 0.6);
         g.strokeRect(GRID_OX + 1, GRID_OY + 1, GRID_W - 2, CELL_H - 2);
-
-        // Start row border — muted blue outline
-        g.lineStyle(1, 0x2288cc, 0.35);
-        g.strokeRect(GRID_OX + 1, GRID_OY + (ROWS - 1) * CELL_H + 1, GRID_W - 2, CELL_H - 2);
-
-        // Road centreline dashes in each traffic lane
-        g.lineStyle(1, 0x443322, 0.5);
-        for (let row = 1; row <= 5; row++) {
-            const y = GRID_OY + row * CELL_H + CELL_H / 2;
-            for (let x = GRID_OX + 4; x < GRID_OX + GRID_W - 4; x += 22) {
-                g.lineBetween(x, y, x + 12, y);
-            }
-        }
-
-        // Direction arrows at far edges (subtle — one per lane)
-        for (const lane of this.lanes) {
-            const arrowY = GRID_OY + lane.row * CELL_H + CELL_H / 2;
-            const arrowX = lane.dir > 0
-                ? GRID_OX + GRID_W - 8   // right side → points right
-                : GRID_OX + 8;           // left side  → points left
-            g.fillStyle(lane.color, 0.25);
-            if (lane.dir > 0) {
-                g.fillTriangle(arrowX - 6, arrowY - 5, arrowX + 1, arrowY, arrowX - 6, arrowY + 5);
-            } else {
-                g.fillTriangle(arrowX + 6, arrowY - 5, arrowX - 1, arrowY, arrowX + 6, arrowY + 5);
-            }
-        }
 
         // ── Cars ─────────────────────────────────────────────────────────────
         for (const lane of this.lanes) {
-            const rowTop = GRID_OY + lane.row * CELL_H;
-            const bodyH  = CELL_H - 10;
-            const bodyY  = rowTop + 5;
+            const bodyY = GRID_OY + lane.row * CELL_H + 3;
+            const bodyH = CELL_H - 6;
 
             for (const car of lane.cars) {
-                const cx = GRID_OX + car.x;
-                const cw = lane.carW;
-
-                // Car body
                 g.fillStyle(lane.color, 1);
-                g.fillRoundedRect(cx, bodyY, cw, bodyH, 4);
-
-                // Windscreen highlight
-                g.fillStyle(0xffffff, 0.10);
-                g.fillRoundedRect(cx + 4, bodyY + 3, cw - 8, Math.floor(bodyH * 0.45), 2);
-
-                // Headlights at the leading end (based on travel direction)
-                const lightX = lane.dir > 0 ? cx + cw - 5 : cx + 2;
-                g.fillStyle(0xffffaa, 0.88);
-                g.fillCircle(lightX, bodyY + 5, 2.5);
-                g.fillCircle(lightX, bodyY + bodyH - 5, 2.5);
-
-                // Tail-lights at the trailing end
-                const tailX = lane.dir > 0 ? cx + 2 : cx + cw - 5;
-                g.fillStyle(0xff3300, 0.65);
-                g.fillCircle(tailX, bodyY + 5, 2);
-                g.fillCircle(tailX, bodyY + bodyH - 5, 2);
+                g.fillRoundedRect(GRID_OX + car.x, bodyY, lane.carW, bodyH, 2);
             }
         }
 
         // ── Frog ─────────────────────────────────────────────────────────────
         const fx = this._cellCX(this.frogCol);
         const fy = this._cellCY(this.frogRow);
-        const frogBody = this.dead ? 0xff3333 : 0x33cc44;
-        const frogDark = this.dead ? 0xaa1111 : 0x1a7a2a;
 
         // Body
-        g.fillStyle(frogBody, 1);
-        g.fillCircle(fx, fy, 13);
-
-        // Belly highlight
-        g.fillStyle(0xffffff, 0.12);
-        g.fillEllipse(fx - 2, fy + 1, 14, 10);
+        g.fillStyle(this.dead ? 0xff3333 : 0x33cc44, 1);
+        g.fillCircle(fx, fy, 7);
 
         if (!this.dead) {
-            // Eyes (looking toward the goal = up = –y direction)
+            // Eyes
             g.fillStyle(0xdde840, 1);
-            g.fillCircle(fx - 5, fy - 7, 4.5);
-            g.fillCircle(fx + 5, fy - 7, 4.5);
+            g.fillCircle(fx - 3, fy - 4, 2.5);
+            g.fillCircle(fx + 3, fy - 4, 2.5);
 
             // Pupils
             g.fillStyle(0x111100, 1);
-            g.fillCircle(fx - 5, fy - 6.5, 2);
-            g.fillCircle(fx + 5, fy - 6.5, 2);
-
-            // Eye shine
-            g.fillStyle(0xffffff, 1);
-            g.fillCircle(fx - 4, fy - 8, 0.9);
-            g.fillCircle(fx + 6, fy - 8, 0.9);
-
-            // Nostrils
-            g.fillStyle(frogDark, 1);
-            g.fillCircle(fx - 2, fy, 1.2);
-            g.fillCircle(fx + 2, fy, 1.2);
+            g.fillCircle(fx - 3, fy - 4, 1.2);
+            g.fillCircle(fx + 3, fy - 4, 1.2);
         }
     }
 
