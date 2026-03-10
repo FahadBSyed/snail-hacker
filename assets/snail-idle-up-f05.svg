@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+
+  <!-- foot prism (flat, idle) -->
+  <path d="M 19 38 L 29 38 L 29 42 L 19 42 Z" fill="#E8D44D"/>
+
+  <!-- shell -->
+  <circle cx="24" cy="26" r="13" fill="#8B5E3C"/>
+  <circle cx="24" cy="25" r="9"  fill="#A0714F"/>
+  <circle cx="24" cy="24" r="5"  fill="#BD8C64"/>
+
+  <!-- head body -->
+  <ellipse cx="24" cy="14" rx="6" ry="4" fill="#E8D44D"/>
+
+  <!-- slime trail -->
+  <ellipse cx="24" cy="43" rx="3" ry="1.5" fill="#E8D44D" opacity="0.25"/>
+
+  <!-- antenna left -->
+  <line x1="20" y1="12" x2="13.0" y2="4" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="13.0" cy="4" r="1.2" fill="#1a1a1a"/>
+
+  <!-- antenna right -->
+  <line x1="28" y1="12" x2="35.0" y2="4" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="35.0" cy="4" r="1.2" fill="#1a1a1a"/>
+
+</svg>

@@ -66,6 +66,16 @@ const PALETTES = {
         glowCol:   '#ff6600',
         rimColors: ['#ff4400', '#ffaa00', '#ff6600', '#ee3300', '#ffbb22', '#ff5500'],
     },
+    shield: {
+        prefix:    'alien-shield',
+        discDark:  '#082233',
+        discMid:   '#135a77',
+        discLight: '#1fa8cc',
+        domeFill:  '#001220',
+        domeRing:  '#00eeff',
+        glowCol:   '#00ccee',
+        rimColors: ['#00eeff', '#0099bb', '#22ddff', '#0077aa', '#55eeff', '#00bbdd'],
+    },
 };
 
 // ── Direction table ───────────────────────────────────────────────────────────
@@ -158,4 +168,4 @@ for (const [type, palette] of Object.entries(PALETTES)) {
     }
 }
 
-console.log('\nDone — 24 directional enemy SVGs generated.');
+console.log('\nDone — 32 directional enemy SVGs generated.');

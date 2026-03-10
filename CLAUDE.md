@@ -19,7 +19,7 @@
 
 ### The Goal
 
-Protect the central **Hacking Station** (cyan hexagon at screen center) from 10 escalating waves of aliens. Intermissions occur after waves 3, 6, and 9.
+Protect the central **Hacking Station** (cyan hexagon at screen center) from 10 escalating waves of aliens. Intermissions occur after every wave.
 
 ---
 
@@ -31,9 +31,23 @@ snail-hacker/
 ├── PLAN.md                       ← Full implementation plan — read before starting work
 ├── CHANGELOG.md                  ← Per-session progress log — check for current state
 ├── assets/
-│   └── snail-{right,left,up,down}.svg    ← Directional sprites (procedurally generated)
+│   ├── backgrounds/              ← bg-00.svg … bg-19.svg (procedural planet backdrops,
+│   │                                loaded per-wave in GameScene.preload())
+│   ├── alien-{frog,fast,tank,bomber,shield}-{dir}.svg  ← 8-directional saucer sprites per type
+│   │                                               (40 SVGs; dir = right/left/up/down/
+│   │                                               diag-right-up/diag-right-down/etc.)
+│   ├── sprites/
+│   │   └── PALETTE_SWAPS.md          ← Documents colour palettes for all alien sprite types
+│   ├── snail-{right,left,up,down}.svg    ← Base directional walk sprites
+│   └── snail-hit-{dir}-f{00..15}.svg    ← 64-frame Gerald damage animation
+│                                            (f00–f07 shell-withdraw, f08–f15 shell-pulse;
+│                                             feColorMatrix white-tint baked per frame)
 ├── scripts/
-│   └── generate-snail-sprites.js         ← One-shot SVG generation script
+│   ├── generate-snail-sprites.js          ← Base snail SVG generator
+│   ├── generate-alien-enemy-sprites.js    ← All 4 alien saucer types (32 SVGs)
+│   ├── generate-alien-saucer-sprites.js   ← Base saucer geometry shared by alien generator
+│   ├── generate-damage-sprites.js         ← Gerald hit animation frames (64 SVGs)
+│   └── generate-planet-backgrounds.js    ← Procedural planet/nebula backgrounds (20 SVGs)
 └── src/
     ├── main.js                   ← Phaser.Game config (1280×720, scene registration)
     ├── config.js                 ← All balance values: DEFAULTS, live CONFIG object,
@@ -45,35 +59,48 @@ snail-hacker/
     │   │                            create() setup, wave-flow helpers (_startEscapePhase,
     │   │                            _playDropInAnimation, _boardEscapeShip), gameplay
     │   │                            actions (_startHack, _activateSlowField, etc.),
+    │   │                            drone (_setupDrone, _droneFire, _renderDroneGfx),
     │   │                            alien spawning, and update()
     │   ├── HUD.js                ← All HUD display objects + update methods; created once
     │   │                            in GameScene.create() as this.hud = new HUD(scene, opts)
     │   ├── PauseScene.js         ← Overlay scene (ESC/P); resumes parent scene
-    │   ├── IntermissionScene.js  ← Between-wave: flavor text, station heal, 5s auto-advance
+    │   ├── IntermissionScene.js  ← Between-wave: flavor text, upgrade card selection,
+    │   │                            station heal, 5s auto-advance
     │   ├── GameOverScene.js      ← Station destroyed; shows wave + score, restart button
     │   └── VictoryScene.js       ← Wave 10 complete; score-based rating
     ├── entities/
-    │   ├── Snail.js              ← P1 avatar; WASD + hackingActive flag + directional sprites
+    │   ├── Snail.js              ← P1 avatar; WASD + hackingActive flag + directional
+    │   │                            sprites + 64-frame hit animation + shield()
     │   ├── Projectile.js         ← P2 bullet; fast Arc, self-destroys off-screen
     │   ├── HackingStation.js     ← Central hexagon; health, shield, heal, procedural draw
     │   ├── Terminal.js           ← Hackable console; IDLE/ACTIVE/COOLING_DOWN states,
-    │   │                            proximity detection, [E] prompt, cooldown timer
+    │   │                            proximity detection, [E] prompt, cooldown timer,
+    │   │                            droneActivate() for autonomous drone use
     │   ├── DefenseStation.js     ← Auto-turret (CANNON); fires at nearest alien when active
+    │   ├── EscapeShip.js         ← End-of-wave rescue saucer; hover-bob, boarding prompt
+    │   ├── Battery.js            ← Droppable power cell; P2 grab-hand pickup
+    │   ├── HealthDrop.js         ← Droppable health pickup for Gerald
     │   └── aliens/
-    │       ├── alienUtils.js     ← DIRS array + angleToDir(rad) shared by all alien types
-    │       ├── BaseAlien.js      ← Shared constructor, takeDamage, straight-line update
-    │       ├── BasicAlien.js     ← Extends BaseAlien; 60 px/s straight movement
-    │       ├── FastAlien.js      ← Extends BaseAlien; 150 px/s + sinusoidal zigzag override
-    │       ├── TankAlien.js      ← Extends BaseAlien; 38 px/s, 30 HP
-    │       └── BomberAlien.js    ← Extends BaseAlien; AoE blast on death or snail contact
+    │   │   ├── alienUtils.js     ← DIRS array + angleToDir(rad) shared by all alien types
+    │   │   ├── BaseAlien.js      ← Shared constructor, takeDamage, straight-line update
+    │   │   ├── BasicAlien.js     ← Extends BaseAlien; 60 px/s straight movement
+    │   │   ├── FastAlien.js      ← Extends BaseAlien; 150 px/s + sinusoidal zigzag override
+    │   │   ├── TankAlien.js      ← Extends BaseAlien; 38 px/s, 30 HP
+    │   │   ├── BomberAlien.js    ← Extends BaseAlien; AoE blast on death or snail contact
+    │   │   └── ShieldAlien.js    ← Extends BaseAlien; rotating energy ring blocks projectiles
+    │   │                            until within SHIELD_DROP_DIST of the snail
+    │   └── shared/
+    │       └── CooldownTimer.js  ← Reusable cooldown arc-fill + countdown text widget
     ├── systems/
     │   ├── CollisionSystem.js    ← Pure functions: checkProjectileCollisions(scene),
     │   │                            checkBomberBlast(scene, bx, by), spawnDeathBurst(scene, …)
-    │   ├── WaveManager.js        ← 10-wave spawn config; intermission after waves 3/6/9
+    │   ├── WaveManager.js        ← 10-wave spawn config; intermission after every wave
     │   ├── ReloadBuffer.js       ← Passive "RELOAD" detection from global keydown stream
     │   ├── SoundSynth.js         ← Procedural Web Audio sound effects; play(name) dispatch
-    │   └── TeleportSystem.js     ← Right-drag targeting line; teleports snail on release
+    │   ├── TeleportSystem.js     ← Right-drag targeting line; teleports snail on release
+    │   └── GrabHandSystem.js     ← P2 right-click grab mechanic for batteries and items
     └── minigames/
+        ├── HackMinigame.js       ← Central station word-typing hack; fills wave progress bar
         ├── SequenceMinigame.js   ← Type 4–6 random (non-WASD) keys in order within timer
         ├── RhythmMinigame.js     ← Hit a bouncing indicator inside a target zone, N beats
         └── TypingMinigame.js     ← Type a sci-fi word against a per-character timer
@@ -83,8 +110,18 @@ snail-hacker/
 
 ## Plan and Changelog
 
-- **`PLAN.md`** — Implementation plan across 24 steps in 3 phases, plus key tension resolutions (RELOAD-vs-WASD, teleport-cancels-minigame, minigame-suppresses-movement).
+- **`PLAN.md`** — Implementation plan across 28 steps in 3 phases, plus key tension resolutions (RELOAD-vs-WASD, teleport-cancels-minigame, minigame-suppresses-movement).
 - **`CHANGELOG.md`** — Per-session log of completed steps. Always check this to understand the current state of the codebase before making changes.
+
+### Keeping docs up to date
+
+After completing any change, **always** update the relevant markdown files before committing:
+
+1. **`CHANGELOG.md`** — Add or append to the current session's entry. Describe what changed and why (new features, bug fixes, config additions, file additions). Use the same heading style as existing entries (`### Feature Name` with bullet details).
+2. **`assets/sprites/PALETTE_SWAPS.md`** — Update whenever a new alien sprite type is added or an existing palette is changed.
+3. **Any other `*.md` files** in the repo — Update if the change affects the information they document.
+
+Do **not** modify `CLAUDE.md` itself unless the user explicitly asks.
 
 ---
 

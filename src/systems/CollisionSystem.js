@@ -2,11 +2,12 @@ import { CONFIG } from '../config.js';
 import HealthDrop from '../entities/HealthDrop.js';
 
 // ── Colour palette for death bursts ───────────────────────────────────────────
-const BURST_COLORS = {
+export const BURST_COLORS = {
     basic:  0xdd3333,
     fast:   0xaa44ff,
     tank:   0x7799aa,
     bomber: 0xff7722,
+    shield: 0x00eeff,
 };
 
 /**
@@ -57,22 +58,40 @@ export function checkBomberBlast(scene, bx, by) {
 
     // Snail in radius?
     if (Phaser.Math.Distance.Between(bx, by, scene.snail.x, scene.snail.y) < blastRadius) {
-        const died = scene.snail.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_SNAIL);
-        scene.hud.updateHealth(scene.snail.health, scene.snail.maxHealth);
-        scene.soundSynth.play('damage');
-        if (died) {
-            if (scene.waveManager) scene.waveManager.active = false;
-            if (scene.activeHack)  { scene.activeHack.cancel(); scene.activeHack = null; }
-            scene.scene.start('GameOverScene', { wave: scene.wave, score: scene.score });
-            return;
+        if (scene.snail.shielded) {
+            scene.soundSynth.play('shieldReflect');
+        } else {
+            const died = scene.snail.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_SNAIL);
+            scene.hud.updateHealth(scene.snail.health, scene.snail.maxHealth);
+            scene.soundSynth.play('damage');
+            if (died) {
+                if (scene.waveManager) scene.waveManager.active = false;
+                if (scene.activeHack)  { scene.activeHack.cancel(); scene.activeHack = null; }
+                scene.scene.start('GameOverScene', { wave: scene.wave, score: scene.score });
+                return;
+            }
         }
     }
 
     // Splash nearby aliens
     for (const a of scene.aliens) {
-        if (!a.active) continue;
+        if (!a.active || a._dying) continue;
         if (Phaser.Math.Distance.Between(bx, by, a.x, a.y) < blastRadius) {
-            a.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_ALIEN);
+            const killed = a.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_ALIEN);
+            if (killed) {
+                scene.score++;
+                scene.hud.updateScore(scene.score);
+                const ax = a.x, ay = a.y;
+                const burstColor = BURST_COLORS[a.alienType] || 0xff4444;
+                const wasChainBomber = a.alienType === 'bomber';
+                a._dying = true;
+                scene.time.delayedCall(120, () => {
+                    if (!a.active) return;
+                    spawnDeathBurst(scene, ax, ay, burstColor);
+                    if (wasChainBomber) checkBomberBlast(scene, ax, ay);
+                    a.destroy();
+                });
+            }
         }
     }
 
@@ -101,6 +120,21 @@ export function checkProjectileCollisions(scene) {
             if (!alien.active) continue;
             const dist = Phaser.Math.Distance.Between(proj.x, proj.y, alien.x, alien.y);
             if (dist >= alien.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) continue;
+
+            // Shield check — deflect the projectile without damaging the alien
+            if (alien.shielded) {
+                proj.destroy();
+                alien.flashShield?.();
+                scene.soundSynth?.play('shieldReflect');
+                // Deflect spark at impact point
+                const sx = proj.x, sy = proj.y;
+                const spark = scene.add.arc(sx, sy, 5, 0, 360, false, 0x00eeff, 0.9).setDepth(58);
+                scene.tweens.add({
+                    targets: spark, scaleX: 3, scaleY: 3, alpha: 0,
+                    duration: 220, ease: 'Power2.easeOut', onComplete: () => spark.destroy(),
+                });
+                break;
+            }
 
             proj.destroy();
             const isBomber = alien.alienType === 'bomber';

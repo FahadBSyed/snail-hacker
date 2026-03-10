@@ -14,12 +14,12 @@ const WAVE_CONFIGS = [
     { wave: 2,  spawnInterval: 1800, duration: 35000, types: ['basic', 'fast'] },
     { wave: 3,  spawnInterval: 1500, duration: 40000, types: ['basic', 'fast'] },
     { wave: 4,  spawnInterval: 1400, duration: 40000, types: ['basic', 'fast', 'tank'] },
-    { wave: 5,  spawnInterval: 1200, duration: 45000, types: ['basic', 'fast', 'tank', 'bomber'] },
-    { wave: 6,  spawnInterval: 1100, duration: 50000, types: ['basic', 'fast', 'tank', 'bomber'] },
-    { wave: 7,  spawnInterval: 1000, duration: 50000, types: ['fast', 'tank', 'bomber'] },
-    { wave: 8,  spawnInterval:  900, duration: 55000, types: ['fast', 'tank', 'bomber'] },
-    { wave: 9,  spawnInterval:  800, duration: 55000, types: ['fast', 'tank', 'bomber'] },
-    { wave: 10, spawnInterval:  700, duration: 65000, types: ['basic', 'fast', 'tank', 'bomber'] },
+    { wave: 5,  spawnInterval: 1200, duration: 45000, types: ['basic', 'fast', 'tank', 'bomber', 'shield'] },
+    { wave: 6,  spawnInterval: 1100, duration: 50000, types: ['basic', 'fast', 'tank', 'bomber', 'shield'] },
+    { wave: 7,  spawnInterval: 1000, duration: 50000, types: ['fast', 'tank', 'bomber', 'shield'] },
+    { wave: 8,  spawnInterval:  900, duration: 55000, types: ['fast', 'tank', 'bomber', 'shield'] },
+    { wave: 9,  spawnInterval:  800, duration: 55000, types: ['fast', 'tank', 'bomber', 'shield'] },
+    { wave: 10, spawnInterval:  700, duration: 65000, types: ['basic', 'fast', 'tank', 'bomber', 'shield'] },
 ];
 
 const INTERMISSION_AFTER = new Set([3, 6, 9]);

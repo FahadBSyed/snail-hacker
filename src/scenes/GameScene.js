@@ -5,20 +5,23 @@ import BasicAlien from '../entities/aliens/BasicAlien.js';
 import FastAlien from '../entities/aliens/FastAlien.js';
 import TankAlien from '../entities/aliens/TankAlien.js';
 import BomberAlien from '../entities/aliens/BomberAlien.js';
+import ShieldAlien from '../entities/aliens/ShieldAlien.js';
 import HackingStation from '../entities/HackingStation.js';
 import GrabHandSystem from '../systems/GrabHandSystem.js';
+import SlimeTrail from '../systems/SlimeTrail.js';
 import Terminal from '../entities/Terminal.js';
 import DefenseStation from '../entities/DefenseStation.js';
 import HackMinigame from '../minigames/HackMinigame.js';
+import MathMinigame from '../minigames/MathMinigame.js';
 import RhythmMinigame from '../minigames/RhythmMinigame.js';
 import SequenceMinigame from '../minigames/SequenceMinigame.js';
 import TypingMinigame from '../minigames/TypingMinigame.js';
 import Battery from '../entities/Battery.js';
+import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
-import SoundSynth from '../systems/SoundSynth.js';
 import HUD from './HUD.js';
-import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions } from '../systems/CollisionSystem.js';
+import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions, BURST_COLORS } from '../systems/CollisionSystem.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -40,6 +43,79 @@ export default class GameScene extends Phaser.Scene {
     }
 
     preload() {
+        // ── Loading screen ─────────────────────────────────────────────────────
+        const W = this.scale.width, H = this.scale.height;
+        const cx = W / 2, cy = H / 2;
+        const BAR_W = 420, BAR_H = 16;
+        const barX = cx - BAR_W / 2, barY = cy + 30;
+
+        // Solid background so the menu doesn't show through
+        const loadBg = this.add.graphics();
+        loadBg.fillStyle(0x0a0a0f, 1);
+        loadBg.fillRect(0, 0, W, H);
+
+        // Title
+        this.add.text(cx, cy - 90, 'SNAIL HACKER', {
+            fontSize: '40px', fontFamily: 'monospace',
+            color: '#00ffcc',
+        }).setOrigin(0.5);
+
+        // Subtitle / flavour
+        this.add.text(cx, cy - 44, '[ BOOTING SYSTEMS ]', {
+            fontSize: '13px', fontFamily: 'monospace',
+            color: '#006655', letterSpacing: 4,
+        }).setOrigin(0.5);
+
+        // Progress bar outline
+        const barBorder = this.add.graphics();
+        barBorder.lineStyle(1, 0x00ffcc, 0.35);
+        barBorder.strokeRect(barX, barY, BAR_W, BAR_H);
+
+        // Corner brackets for a terminal look
+        const corner = (x, y, dx, dy) => {
+            barBorder.lineStyle(2, 0x00ffcc, 0.8);
+            barBorder.beginPath();
+            barBorder.moveTo(x + dx * 10, y);
+            barBorder.lineTo(x, y);
+            barBorder.lineTo(x, y + dy * 10);
+            barBorder.strokePath();
+        };
+        corner(barX - 4,          barY - 4,           1,  1);
+        corner(barX + BAR_W + 4,  barY - 4,          -1,  1);
+        corner(barX - 4,          barY + BAR_H + 4,   1, -1);
+        corner(barX + BAR_W + 4,  barY + BAR_H + 4,  -1, -1);
+
+        // Progress bar fill
+        const barFill = this.add.graphics();
+
+        // Percentage label
+        const pctText = this.add.text(cx, barY + BAR_H + 14, '0%', {
+            fontSize: '11px', fontFamily: 'monospace', color: '#00aa88',
+        }).setOrigin(0.5);
+
+        // Current-file status — scrolling terminal line
+        const fileText = this.add.text(cx, barY - 18, '', {
+            fontSize: '10px', fontFamily: 'monospace', color: '#004433',
+        }).setOrigin(0.5);
+
+        // Hook into loader events
+        this.load.on('progress', (v) => {
+            barFill.clear();
+            barFill.fillStyle(0x00ffcc, 0.65);
+            barFill.fillRect(barX + 1, barY + 1, (BAR_W - 2) * v, BAR_H - 2);
+            pctText.setText(`${Math.round(v * 100)}%`);
+        });
+
+        this.load.on('fileprogress', (file) => {
+            fileText.setText(file.key);
+        });
+
+        this.load.on('complete', () => {
+            // Destroy all loading screen objects so they don't persist behind
+            // the game scene that create() will build.
+            [loadBg, barBorder, barFill, pctText, fileText].forEach(o => o.destroy());
+        });
+
         // Background for this wave (only load if not already cached)
         if (!this.textures.exists(this.bgKey)) {
             this.load.svg(this.bgKey, `assets/backgrounds/${this.bgKey}.svg`, { width: 1280, height: 720 });
@@ -51,8 +127,16 @@ export default class GameScene extends Phaser.Scene {
         this.load.svg('snail-left',  'assets/snail-left.svg',  svgSize);
         this.load.svg('snail-up',    'assets/snail-up.svg',    svgSize);
         this.load.svg('snail-down',  'assets/snail-down.svg',  svgSize);
-        // Damage / invincibility animation frames
+        // Walk, idle and damage animation frames
         for (const dir of ['right', 'left', 'up', 'down']) {
+            for (let i = 0; i < 6; i++) {
+                const f = `f${String(i).padStart(2, '0')}`;
+                this.load.svg(`snail-walk-${dir}-${f}`, `assets/snail-walk-${dir}-${f}.svg`, svgSize);
+            }
+            for (let i = 0; i < 12; i++) {
+                const f = `f${String(i).padStart(2, '0')}`;
+                this.load.svg(`snail-idle-${dir}-${f}`, `assets/snail-idle-${dir}-${f}.svg`, svgSize);
+            }
             for (let i = 0; i <= 15; i++) {
                 const f = `f${String(i).padStart(2, '0')}`;
                 this.load.svg(`snail-hit-${dir}-${f}`, `assets/snail-hit-${dir}-${f}.svg`, svgSize);
@@ -66,6 +150,20 @@ export default class GameScene extends Phaser.Scene {
             this.load.svg(`alien-fast-${dir}`,    `assets/alien-fast-${dir}.svg`,    svgSize);
             this.load.svg(`alien-tank-${dir}`,    `assets/alien-tank-${dir}.svg`,    svgSize);
             this.load.svg(`alien-bomber-${dir}`,  `assets/alien-bomber-${dir}.svg`,  svgSize);
+            this.load.svg(`alien-shield-${dir}`,  `assets/alien-shield-${dir}.svg`,  svgSize);
+        }
+
+        // Station + terminal sprites
+        if (!this.textures.exists('station-mainframe')) {
+            this.load.svg('station-mainframe', 'assets/station-mainframe.svg', { width: 96, height: 96 });
+        }
+        if (!this.textures.exists('station-gun')) {
+            this.load.svg('station-gun', 'assets/station-gun.svg', { width: 48, height: 48 });
+        }
+        for (const key of ['terminal-reload', 'terminal-turret', 'terminal-shield', 'terminal-slow', 'terminal-repair']) {
+            if (!this.textures.exists(key)) {
+                this.load.svg(key, `assets/${key}.svg`, { width: 64, height: 64 });
+            }
         }
     }
 
@@ -76,33 +174,15 @@ export default class GameScene extends Phaser.Scene {
         this.input.mouse.disableContextMenu();
 
         // ── Sound synthesizer ─────────────────────────────────────────────────
-        this.soundSynth = new SoundSynth();
+        this.soundSynth = this.registry.get('soundSynth');
 
         // ── Hacking Station (center — objective to hack) ──────────────────────
         this.station = new HackingStation(this, 640, 360);
 
         // ── Snail (Player 1) ──────────────────────────────────────────────────
-        // Register per-direction damage animations (withdraw → shell pulse → extend).
-        // 24 frames total: f00–f07 withdraw, f08–f15 shell, f07–f00 extend (reverse).
-        for (const dir of ['right', 'left', 'up', 'down']) {
-            if (!this.anims.exists(`snail-hit-${dir}`)) {
-                const frameKeys = [];
-                for (let i = 0; i <= 15; i++) {
-                    frameKeys.push({ key: `snail-hit-${dir}-f${String(i).padStart(2, '0')}` });
-                }
-                for (let i = 7; i >= 0; i--) {
-                    frameKeys.push({ key: `snail-hit-${dir}-f${String(i).padStart(2, '0')}` });
-                }
-                this.anims.create({
-                    key:      `snail-hit-${dir}`,
-                    frames:   frameKeys,
-                    duration: CONFIG.SNAIL.INVINCIBILITY_MS,
-                    repeat:   0,
-                });
-            }
-        }
-
-        this.snail = new Snail(this, 300, 400);
+        Snail.registerAnims(this);
+        this.snail      = new Snail(this, 300, 400);
+        this.slimeTrail = new SlimeTrail(this);
         if (this.startSnailHp < CONFIG.SNAIL.MAX_HEALTH) {
             this.snail.health = this.startSnailHp;
         }
@@ -111,6 +191,7 @@ export default class GameScene extends Phaser.Scene {
         this.activeHack    = null;   // current HackMinigame instance
         this.hackProgress  = 0;      // words completed this wave (persists across cancels)
         this.hackThreshold = this._wordsForWave(this.startWave);
+        this._hackMode     = 'typing'; // alternates to 'math' on each battery spawn
 
         // ── Alien speed multiplier / slow field ───────────────────────────────
         this.alienSpeedMultiplier = 1.0;
@@ -121,16 +202,42 @@ export default class GameScene extends Phaser.Scene {
         this.ammoMax = CONFIG.PLAYER.MAX_AMMO;
         this.projectiles = [];
 
+        // ── Passive upgrades — applied every wave from the persistent list ───────
+        this._laserMode = false;
+        for (const upgrade of this.upgradesList) {
+            switch (upgrade.type) {
+                case 'HEALTH_BOOST':
+                    this.snail.maxHealth = Math.round(CONFIG.SNAIL.MAX_HEALTH * 1.5);
+                    this.snail.health    = Math.min(this.snail.maxHealth, this.snail.health);
+                    break;
+                case 'SPEED_BOOST':
+                    this.snail.speed = CONFIG.PLAYER.SNAIL_SPEED * 2;
+                    break;
+                case 'AMMO_BOOST':
+                    this.ammoMax = Math.round(CONFIG.PLAYER.MAX_AMMO * 1.5);
+                    this.ammo    = this.ammoMax;
+                    // hud doesn't exist yet — ammoMax is passed to its constructor below
+                    break;
+                case 'LASER':
+                    this._laserMode = true;
+                    break;
+            }
+        }
+
         this.input.on('pointerdown', (pointer) => {
             if (pointer.button !== 0) return;
             if (this.ammo <= 0) return;
             this.ammo--;
-            // Fire from station toward cursor
-            const proj = new Projectile(this, this.station.x, this.station.y, pointer.x, pointer.y);
-            this.projectiles.push(proj);
+            if (this._laserMode) {
+                this._fireLaser(pointer.x, pointer.y);
+            } else {
+                const proj = new Projectile(this, this.station.x, this.station.y, pointer.x, pointer.y);
+                this.projectiles.push(proj);
+            }
             this.hud.updateAmmo(this.ammo);
             this.cameras.main.shake(90, 0.005);
             this.soundSynth.play('shoot');
+            this.station.fireEffect();
         });
 
         // ── Battery / power state ─────────────────────────────────────────────
@@ -160,13 +267,6 @@ export default class GameScene extends Phaser.Scene {
         // ── Service terminals ─────────────────────────────────────────────────
         // Minigame launchers — each wraps the minigame and tracks it for grab-cancel support.
         this.activeTerminalMinigame = null;
-        const rhythmLauncher = (_term, onSuccess, onFailure) => {
-            const mg = new RhythmMinigame(this, {
-                onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
-                onFailure: () => { this.activeTerminalMinigame = null; onFailure(); },
-            });
-            this.activeTerminalMinigame = mg;
-        };
         const sequenceLauncher = (_term, onSuccess, onFailure) => {
             const mg = new SequenceMinigame(this, {
                 onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
@@ -181,9 +281,17 @@ export default class GameScene extends Phaser.Scene {
             });
             this.activeTerminalMinigame = mg;
         };
+        const rhythmLauncher = (_term, onSuccess, onFailure) => {
+            const mg = new RhythmMinigame(this, {
+                onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
+                onFailure: () => { this.activeTerminalMinigame = null; onFailure(); },
+            });
+            this.activeTerminalMinigame = mg;
+        };
         // Store launchers so _spawnUpgradeTerminals can use them.
         this._sequenceLauncher = sequenceLauncher;
         this._typingLauncher   = typingLauncher;
+        this._rhythmLauncher   = rhythmLauncher;
 
         // RELOAD — orbits the hacking station at a fixed radius; relocates on each success.
         // Picks an angle that won't overlap existing upgrade terminals.
@@ -193,6 +301,7 @@ export default class GameScene extends Phaser.Scene {
             do {
                 angle = Math.random() * Math.PI * 2;
                 const tooClose = this.upgradesList.some(u => {
+                    if (u.type === 'DRONE') return false; // drone has no physical terminal
                     const ur = CONFIG.UPGRADES.ORBIT_RADIUS;
                     const dx = r * Math.cos(angle) - ur * Math.cos(u.angle);
                     const dy = r * Math.sin(angle) - ur * Math.sin(u.angle);
@@ -285,6 +394,7 @@ export default class GameScene extends Phaser.Scene {
                 this.escapePhase  = false;
                 this.boardingShip = false;
                 if (this.escapeShip) { this.escapeShip.destroy(); this.escapeShip = null; }
+                this._escapeShipSound?.stop(); this._escapeShipSound = null;
 
                 // Position snail but keep it hidden and locked until drop-in completes
                 this.snail.setVisible(false);
@@ -335,14 +445,15 @@ export default class GameScene extends Phaser.Scene {
             switch (upgrade.type) {
                 case 'CANNON': {
                     const cannon = new DefenseStation(this, x, y - 30, {
-                        type:      'CANNON',
-                        getAliens: () => this.aliens,
+                        type:        'CANNON',
+                        getAliens:   () => this.aliens,
+                        alienFilter: (a) => !a.shielded,   // ignore shielded aliens
                     });
                     term = new Terminal(this, x, y + 25, {
                         label:          'TURRET',
                         cooldown:       CONFIG.TERMINALS.CANNON_COOLDOWN,
                         color:          0xff8844,
-                        launchMinigame: this._sequenceLauncher,
+                        launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => cannon.activate(),
                     });
                     break;
@@ -352,7 +463,7 @@ export default class GameScene extends Phaser.Scene {
                         label:          'SHIELD',
                         cooldown:       CONFIG.TERMINALS.SHIELD_COOLDOWN,
                         color:          0x4488ff,
-                        launchMinigame: this._sequenceLauncher,
+                        launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => { this.soundSynth.play('shieldActivate'); this.snail.shield(CONFIG.TERMINALS.SHIELD_DURATION); },
                     });
                     break;
@@ -361,7 +472,7 @@ export default class GameScene extends Phaser.Scene {
                         label:          'SLOW',
                         cooldown:       CONFIG.TERMINALS.SLOW_COOLDOWN,
                         color:          0xaa44ff,
-                        launchMinigame: this._typingLauncher,
+                        launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateSlowField(),
                     });
                     break;
@@ -370,7 +481,7 @@ export default class GameScene extends Phaser.Scene {
                         label:          'REPAIR',
                         cooldown:       CONFIG.TERMINALS.REPAIR_COOLDOWN,
                         color:          0x44ff88,
-                        launchMinigame: this._sequenceLauncher,
+                        launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => {
                             this.snail.health = Math.min(
                                 this.snail.maxHealth,
@@ -380,11 +491,107 @@ export default class GameScene extends Phaser.Scene {
                         },
                     });
                     break;
+                case 'DRONE':
+                    this._setupDrone();
+                    break;
                 default:
                     break;
             }
             if (term) this.terminals.push(term);
         }
+    }
+
+    _setupDrone() {
+        // Small yellow diamond that orbits the station inside the terminal ring.
+        // Uses a Container so Phaser tweens can animate its world position.
+        this._droneAngle  = Math.random() * Math.PI * 2;
+        this._droneOrbit  = 115; // px — inside the upgrade terminal ring (180px)
+        this._droneSpeed  = 0.55; // radians per second
+        this._droneFlying = false;
+
+        const startX = 640 + Math.cos(this._droneAngle) * this._droneOrbit;
+        const startY = 360 + Math.sin(this._droneAngle) * this._droneOrbit;
+        this._droneGfx = this.add.graphics();
+        this._renderDroneGfx(false);
+        this._droneContainer = this.add.container(startX, startY, [this._droneGfx]).setDepth(60);
+
+        // First activation: random time within DRONE_FIRST_SHOT_MAX, then fixed cooldown loop.
+        const firstDelay = Math.random() * CONFIG.TERMINALS.DRONE_FIRST_SHOT_MAX;
+        this._droneTimer = this.time.delayedCall(firstDelay, () => {
+            this._droneFire();
+            this._droneTimer = this.time.addEvent({
+                delay:    CONFIG.TERMINALS.DRONE_COOLDOWN,
+                loop:     true,
+                callback: () => this._droneFire(),
+            });
+        });
+    }
+
+    /** Redraw the drone diamond at container-local (0, 0). */
+    _renderDroneGfx(flash) {
+        const gfx = this._droneGfx;
+        const s   = flash ? 10 : 7;
+        gfx.clear();
+        gfx.fillStyle(flash ? 0xffffff : 0xffdd44, flash ? 1 : 0.92);
+        gfx.beginPath();
+        gfx.moveTo( 0, -s);
+        gfx.lineTo( s,  0);
+        gfx.lineTo( 0,  s);
+        gfx.lineTo(-s,  0);
+        gfx.closePath();
+        gfx.fillPath();
+        if (!flash) {
+            gfx.lineStyle(1.5, 0xffffff, 0.55);
+            gfx.strokePath();
+        }
+    }
+
+    _droneFire() {
+        if (!this._droneContainer || !this._droneContainer.active) return;
+
+        // Collect eligible terminals: IDLE, and skip REPAIR if Gerald is at full health.
+        const eligible = this.terminals.filter(t => {
+            if (t.terminalState !== 'IDLE') return false;
+            if (t.label === 'REPAIR' && this.snail.health >= this.snail.maxHealth) return false;
+            if (t.label === 'RELOAD' && this.ammo >= this.ammoMax) return false;
+            return true;
+        });
+        if (eligible.length === 0) return;
+
+        const target = Phaser.Utils.Array.GetRandom(eligible);
+        this._droneFlying = true;
+
+        // Phase 1 — fly to the target terminal
+        this.tweens.add({
+            targets:  this._droneContainer,
+            x:        target.x,
+            y:        target.y,
+            duration: 500,
+            ease:     'Sine.easeInOut',
+            onComplete: () => {
+                // Phase 2 — flash at terminal, activate, play sound
+                this._renderDroneGfx(true);
+                this.soundSynth.play('droneActivate');
+                target.droneActivate();
+                this.logDebug(`Drone autonomously activated: ${target.label}`);
+
+                // Phase 3 — brief pause, then return to orbit
+                this.time.delayedCall(350, () => {
+                    if (!this._droneContainer || !this._droneContainer.active) return;
+                    this._renderDroneGfx(false);
+                    const returnX = 640 + Math.cos(this._droneAngle) * this._droneOrbit;
+                    const returnY = 360 + Math.sin(this._droneAngle) * this._droneOrbit;
+                    this.tweens.add({
+                        targets:  this._droneContainer,
+                        x:        returnX,
+                        y:        returnY,
+                        duration: 600,
+                        ease:     'Sine.easeInOut',
+                        onComplete: () => { this._droneFlying = false; },
+                    });
+                });
+            },
+        });
     }
 
     _activateSlowField() {
@@ -437,8 +644,9 @@ export default class GameScene extends Phaser.Scene {
         this.snail.hackingActive = true;
         this.snail.setState('HACKING');
 
-        const remaining = this.hackThreshold - this.hackProgress;
-        this.activeHack = new HackMinigame(this, {
+        const remaining   = this.hackThreshold - this.hackProgress;
+        const MinigameCls = this._hackMode === 'math' ? MathMinigame : HackMinigame;
+        this.activeHack = new MinigameCls(this, {
             wordsRequired: remaining,
             onWordComplete: (_count) => {
                 this.hackProgress++;
@@ -471,20 +679,145 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
+    /**
+     * Fire a hitscan laser from the station toward (tx, ty).
+     * Hits every alien along the ray (within HIT_RADIUS px) in one instant shot.
+     */
+    _fireLaser(tx, ty) {
+        const sx  = this.station.x;
+        const sy  = this.station.y;
+        const angle = Phaser.Math.Angle.Between(sx, sy, tx, ty);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+
+        // Find where the ray exits the screen
+        let tMax = 9999;
+        if (cos > 0)  tMax = Math.min(tMax, (1280 - sx) / cos);
+        else if (cos < 0) tMax = Math.min(tMax, -sx / cos);
+        if (sin > 0)  tMax = Math.min(tMax, (720 - sy) / sin);
+        else if (sin < 0) tMax = Math.min(tMax, -sy / sin);
+
+        const ex = sx + cos * tMax;
+        const ey = sy + sin * tMax;
+
+        // Hit all aliens along the ray
+        const HIT_RADIUS = 18;
+        const BURST_COLORS = { basic: 0xdd3333, fast: 0xaa44ff, tank: 0x7799aa, bomber: 0xff7722 };
+        for (const alien of this.aliens) {
+            if (!alien.active || alien._dying) continue;
+            const rx    = alien.x - sx;
+            const ry    = alien.y - sy;
+            const along = rx * cos + ry * sin;
+            if (along <= 0 || along > tMax) continue;
+            const perp = Math.abs(rx * sin - ry * cos);
+            if (perp > HIT_RADIUS) continue;
+
+            const bx = alien.x, by = alien.y;
+
+            if (alien.shielded) {
+                alien.flashShield?.();
+                this.soundSynth.play('shieldReflect');
+                continue;
+            }
+
+            // Hit flash + wobble (same as projectile hit)
+            const hitFlash = this.add.arc(bx, by, alien.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
+            this.tweens.add({ targets: hitFlash, alpha: 0, duration: 200, onComplete: () => hitFlash.destroy() });
+            this.tweens.add({ targets: alien, x: alien.x + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+
+            const isBomber = alien.alienType === 'bomber';
+            const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+            if (died) {
+                this.score++;
+                this.hud.updateScore(this.score);
+                alien._dying = true;
+                this.time.delayedCall(200, () => {
+                    if (!alien.active) return;
+                    spawnDeathBurst(this, bx, by, BURST_COLORS[alien.alienType] || 0xffffff);
+                    if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                        this.healthDrops.push(new HealthDrop(this, bx, by));
+                    }
+                    if (isBomber) checkBomberBlast(this, bx, by);
+                    alien.destroy();
+                });
+            }
+        }
+
+        // Laser beam visual — outer glow + inner beam + bright core, quick fade
+        const gfx = this.add.graphics().setDepth(200);
+        gfx.lineStyle(10, 0xff2200, 0.2);
+        gfx.lineBetween(sx, sy, ex, ey);
+        gfx.lineStyle(3, 0xff6644, 0.9);
+        gfx.lineBetween(sx, sy, ex, ey);
+        gfx.lineStyle(1, 0xffffff, 1);
+        gfx.lineBetween(sx, sy, ex, ey);
+        this.tweens.add({ targets: gfx, alpha: 0, duration: 150, onComplete: () => gfx.destroy() });
+    }
+
     /** Called when hackProgress hits a POWER_LOSS_WORDS multiple. */
     _triggerPowerLoss() {
         if (!this.stationPowered) return; // already offline
         this.stationPowered = false;
         if (this.activeHack) this.activeHack.cancel();
 
-        // Spawn battery at a random angle around the station
-        const angle = Math.random() * Math.PI * 2;
-        const r     = CONFIG.BATTERY.SPAWN_RADIUS;
-        this.battery = new Battery(this, 640 + Math.cos(angle) * r, 360 + Math.sin(angle) * r);
-
         this.station.setPowered(false);
         this.soundSynth.play('powerLoss');
-        this.logDebug('Station lost power! Battery spawned.');
+
+        // Toggle hack minigame mode so the next hack session uses the other type
+        this._hackMode = this._hackMode === 'typing' ? 'math' : 'typing';
+
+        // ── Delivery ship animation ───────────────────────────────────────────
+        // Pick a drop point around the station, then enter from off-screen in
+        // the same radial direction so the approach looks intentional.
+        const angle = Math.random() * Math.PI * 2;
+        const dropX = 640 + Math.cos(angle) * CONFIG.BATTERY.SPAWN_RADIUS;
+        const dropY = 360 + Math.sin(angle) * CONFIG.BATTERY.SPAWN_RADIUS;
+
+        // 800 px from screen center guarantees off-screen in any direction
+        const entryX = 640 + Math.cos(angle) * 800;
+        const entryY = 360 + Math.sin(angle) * 800;
+
+        const ship = new EscapeShip(this, entryX, entryY, { skipIntro: true });
+        const batteryShipSound = this.soundSynth.playLooped('ship');
+
+        // Phase 1 — fly in to drop position
+        this.tweens.add({
+            targets:  ship,
+            x:        dropX,
+            y:        dropY,
+            duration: 380,
+            ease:     'Sine.easeInOut',
+            onComplete: () => {
+                if (!ship.active) return;
+
+                // Phase 2 — drop the battery (scale pop-in for visual flair)
+                this.battery = new Battery(this, dropX, dropY);
+                this.battery.setScale(0);
+                this.tweens.add({
+                    targets: this.battery, scaleX: 1, scaleY: 1,
+                    duration: 200, ease: 'Back.easeOut',
+                });
+
+                // Phase 3 — brief hover, then fly back off-screen
+                this.time.delayedCall(280, () => {
+                    if (!ship.active) return;
+                    this.tweens.add({
+                        targets:  ship,
+                        x:        entryX,
+                        y:        entryY,
+                        duration: 350,
+                        ease:     'Sine.easeIn',
+                        onComplete: () => {
+                            batteryShipSound?.stop();
+                            ship._rimTween?.stop();
+                            ship.destroy();
+                        },
+                    });
+                });
+            },
+        });
+
+        this.logDebug('Station lost power! Delivery ship inbound.');
     }
 
     /** Called when the snail reaches the station while carrying the battery. */
@@ -517,6 +850,7 @@ export default class GameScene extends Phaser.Scene {
         ];
         const pos = Phaser.Utils.Array.GetRandom(sides);
         this.escapeShip = new EscapeShip(this, pos.x, pos.y);
+        this._escapeShipSound = this.soundSynth.playLooped('ship');
 
         // Instruction flash
         const msg = this.add.text(640, 180, 'HACK COMPLETE — REACH THE ESCAPE SHIP!', {
@@ -556,6 +890,8 @@ export default class GameScene extends Phaser.Scene {
             },
         });
 
+        const dropInSound = this.soundSynth.playLooped('ship');
+
         // ── Phase 1: descend to drop-off hover position ───────────────────────
         const descentExhaust = spawnExhaust();
         this.tweens.add({
@@ -590,6 +926,7 @@ export default class GameScene extends Phaser.Scene {
                         ease:     'Power2.easeIn',
                         onComplete: () => {
                             ascentExhaust.remove(false);
+                            dropInSound?.stop();
                             ship.destroy();
                             onComplete();
                         },
@@ -612,7 +949,7 @@ export default class GameScene extends Phaser.Scene {
         this.snail.hackingActive = false;
 
         // Stop alien spawning and clear remaining aliens
-        this.soundSynth.play('escape');
+        
         if (this.waveManager) this.waveManager.active = false;
         for (const alien of this.aliens) {
             if (!alien.active) continue;
@@ -652,6 +989,7 @@ export default class GameScene extends Phaser.Scene {
             ease: 'Power2.easeIn',
             onComplete: () => {
                 exhaustTimer.remove(false);
+                this._escapeShipSound?.stop(); this._escapeShipSound = null;
                 this.snail.setVisible(false);
                 this._showWaveCompleteSplash();
             },
@@ -695,6 +1033,7 @@ export default class GameScene extends Phaser.Scene {
             case 'fast':   alien = new FastAlien(this, x, y);   break;
             case 'tank':   alien = new TankAlien(this, x, y);   break;
             case 'bomber': alien = new BomberAlien(this, x, y); break;
+            case 'shield': alien = new ShieldAlien(this, x, y); break;
             default:       alien = new BasicAlien(this, x, y);
         }
         if (this.slowFieldActive) {
@@ -710,6 +1049,14 @@ export default class GameScene extends Phaser.Scene {
         this.grabSystem.update(delta);
         this.hud.updateGrab(this.grabSystem.statusText, this.grabSystem.statusColor);
         if (!this.boardingShip) this.snail.update(time, delta);
+        this.slimeTrail.update(this.snail, delta);
+
+        // ── Drone orbit animation ─────────────────────────────────────────────
+        if (this._droneContainer && this._droneContainer.active && !this._droneFlying) {
+            this._droneAngle += this._droneSpeed * (delta / 1000);
+            this._droneContainer.x = 640 + Math.cos(this._droneAngle) * this._droneOrbit;
+            this._droneContainer.y = 360 + Math.sin(this._droneAngle) * this._droneOrbit;
+        }
 
         // ── Battery logic ─────────────────────────────────────────────────────
         if (this.battery && this.battery.active) {
@@ -752,6 +1099,10 @@ export default class GameScene extends Phaser.Scene {
         // Station proximity (shows/hides E prompt) — suppress during escape phase
         if (!this.escapePhase) this.station.updateProximity(this.snail);
 
+        // Gun tracking — rotate gun to face the current cursor position
+        const ptr = this.input.activePointer;
+        this.station.updateGunAngle(ptr.x, ptr.y);
+
         // Escape ship proximity — snail must reach it to end the wave
         if (this.escapePhase && !this.boardingShip && this.escapeShip && this.escapeShip.active) {
             const near = this.escapeShip.checkProximity(this.snail.x, this.snail.y);
@@ -792,10 +1143,15 @@ export default class GameScene extends Phaser.Scene {
             if (status === 'reached_snail' && !this.boardingShip) {
                 const isBomber = alien.alienType === 'bomber';
                 const bx = alien.x, by = alien.y;
+                const burstColor = BURST_COLORS[alien.alienType] || 0xff4444;
                 alien.destroy();
 
                 if (isBomber) {
                     checkBomberBlast(this, bx, by);
+                } else if (this.snail.shielded) {
+                    // Shield absorbs the hit — kill the alien, play shield sound, no damage
+                    this.soundSynth.play('shieldReflect');
+                    spawnDeathBurst(this, bx, by, burstColor);
                 } else {
                     const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                     this.hud.updateHealth(this.snail.health, this.snail.maxHealth);

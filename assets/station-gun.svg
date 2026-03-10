@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+
+  <!-- ── Barrel oblique top ── -->
+  <polygon points="24,21 44,21 49,18 29,18"
+           fill="#60707e" stroke="#1e262e" stroke-width="0.8"/>
+
+  <!-- ── Barrel front face ── -->
+  <rect x="24" y="21" width="20" height="6"
+        fill="#404a56" stroke="#1e262e" stroke-width="0.8"/>
+
+  <!-- Barrel heat vents (thin lines on barrel side) -->
+  <line x1="28"  y1="22" x2="28"  y2="26" stroke="#3a4450" stroke-width="0.7"/>
+  <line x1="32"  y1="22" x2="32"  y2="26" stroke="#3a4450" stroke-width="0.7"/>
+  <line x1="36" y1="22" x2="36" y2="26" stroke="#3a4450" stroke-width="0.7"/>
+
+  <!-- Muzzle tip highlight -->
+  <rect x="41" y="21" width="3" height="6"
+        fill="#88aacc" stroke="#1e262e" stroke-width="0.5" opacity="0.9"/>
+
+  <!-- ── Gun body oblique faces ── -->
+  <polygon points="10,19 24,19 29,15 15,15"
+           fill="#7a8898" stroke="#1e262e" stroke-width="0.8"/>
+  <polygon points="24,19 24,29 29,25 29,15"
+           fill="#3a4450" stroke="#1e262e" stroke-width="0.8"/>
+
+  <!-- ── Gun body front face ── -->
+  <rect x="10" y="19" width="14" height="10"
+        fill="#556070" stroke="#1e262e" stroke-width="0.8"/>
+
+  <!-- Scope on top of body -->
+  <rect x="13" y="15" width="8" height="4" rx="1"
+        fill="#002233" stroke="#1e262e" stroke-width="0.7"/>
+  <circle cx="17" cy="17" r="1.5" fill="#00eeff" opacity="0.9"/>
+
+  <!-- Pivot pin (centre of sprite, sits in mount hole) -->
+  <circle cx="24" cy="24" r="3.5" fill="#556070" stroke="#1e262e" stroke-width="0.8"/>
+  <circle cx="24" cy="24" r="1.5" fill="#1e262e"/>
+
+</svg>

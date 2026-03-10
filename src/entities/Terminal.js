@@ -1,8 +1,18 @@
 import { CONFIG } from '../config.js';
 import { startCooldown } from './shared/CooldownTimer.js';
 
-const WIDTH = 40;
-const HEIGHT = 30;
+// Map terminal label → SVG texture key loaded in GameScene.preload()
+const LABEL_TO_SPRITE = {
+    RELOAD: 'terminal-reload',
+    TURRET: 'terminal-turret',
+    SHIELD: 'terminal-shield',
+    SLOW:   'terminal-slow',
+    REPAIR: 'terminal-repair',
+};
+
+// Sprite is 64×64; the CRT screen sits roughly at y -8 relative to centre
+const SPRITE_W = 64;
+const SPRITE_H = 64;
 
 export default class Terminal extends Phaser.GameObjects.Container {
     /**
@@ -10,7 +20,7 @@ export default class Terminal extends Phaser.GameObjects.Container {
      * @param {number} x
      * @param {number} y
      * @param {object} opts
-     * @param {string} opts.label — display name (e.g. "CANNON", "SHIELD")
+     * @param {string} opts.label — display name (e.g. "RELOAD", "TURRET")
      * @param {number} [opts.cooldown] — cooldown duration in ms
      * @param {function} opts.launchMinigame — called with (terminal, onSuccess, onFailure)
      * @param {function} opts.onSuccess — called when minigame succeeds
@@ -19,32 +29,38 @@ export default class Terminal extends Phaser.GameObjects.Container {
         super(scene, x, y);
         scene.add.existing(this);
 
-        this.terminalState = 'IDLE'; // IDLE | ACTIVE | COOLING_DOWN
+        this.terminalState    = 'IDLE'; // IDLE | ACTIVE | COOLING_DOWN
         this.cooldownDuration = opts.cooldown || 10000;
-        this.launchMinigame = opts.launchMinigame;
-        this.onSuccess = opts.onSuccess;
-        this.label = opts.label || 'TERMINAL';
-        this.color = opts.color || 0x44ffcc;
+        this.launchMinigame   = opts.launchMinigame;
+        this.onSuccess        = opts.onSuccess;
+        this.label            = opts.label || 'TERMINAL';
+        this.color            = opts.color || 0x44ffcc;
 
-        // --- Graphics ---
+        // ── SVG sprite body ──────────────────────────────────────────────────
+        const spriteKey = LABEL_TO_SPRITE[this.label] || 'terminal-reload';
+        this.bodyImg = scene.add.image(0, 0, spriteKey).setOrigin(0.5);
+        this.add(this.bodyImg);
+
+        // ── Highlight outline (graphics overlay drawn on top when nearby) ────
         this.gfx = scene.add.graphics();
         this.add(this.gfx);
 
-        // Screen glow (inner rectangle)
-        this.screenGlow = scene.add.rectangle(0, 0, WIDTH - 8, HEIGHT - 8, this.color, 0.3);
+        // ── Screen glow overlay (tinted rectangle over the CRT area) ────────
+        // CRT screen is at approximately (0, -8) in sprite local space
+        this.screenGlow = scene.add.rectangle(0, -8, SPRITE_W - 20, 18, this.color, 0.0);
         this.add(this.screenGlow);
 
-        // Label text
+        // ── Label text ───────────────────────────────────────────────────────
         const colorHex = '#' + this.color.toString(16).padStart(6, '0');
-        this.labelText = scene.add.text(0, -HEIGHT / 2 - 10, this.label, {
+        this.labelText = scene.add.text(0, -SPRITE_H / 2 - 10, this.label, {
             fontSize: '9px',
             fontFamily: 'monospace',
             color: colorHex,
         }).setOrigin(0.5);
         this.add(this.labelText);
 
-        // E prompt (hidden by default)
-        this.ePrompt = scene.add.text(0, HEIGHT / 2 + 8, '[E]', {
+        // ── E prompt (hidden by default) ─────────────────────────────────────
+        this.ePrompt = scene.add.text(0, SPRITE_H / 2 + 4, '[E]', {
             fontSize: '11px',
             fontFamily: 'monospace',
             color: '#ffffff',
@@ -53,8 +69,8 @@ export default class Terminal extends Phaser.GameObjects.Container {
         }).setOrigin(0.5).setVisible(false);
         this.add(this.ePrompt);
 
-        // Cooldown overlay
-        this.cooldownOverlay = scene.add.rectangle(0, 0, WIDTH, HEIGHT, 0x000000, 0.6).setVisible(false);
+        // ── Cooldown overlay ─────────────────────────────────────────────────
+        this.cooldownOverlay = scene.add.rectangle(0, 0, SPRITE_W, SPRITE_H, 0x000000, 0.55).setVisible(false);
         this.add(this.cooldownOverlay);
 
         this.cooldownText = scene.add.text(0, 0, '', {
@@ -65,23 +81,21 @@ export default class Terminal extends Phaser.GameObjects.Container {
         this.add(this.cooldownText);
 
         this.snailNearby = false;
-        this.drawTerminal(false);
+        this._setHighlight(false);
     }
 
-    drawTerminal(highlighted) {
+    _setHighlight(highlighted) {
         const g = this.gfx;
         g.clear();
-
-        // Outer frame
-        g.fillStyle(0x1a3333, 1);
-        g.fillRect(-WIDTH / 2, -HEIGHT / 2, WIDTH, HEIGHT);
-
-        // Outline — white if highlighted, teal otherwise
-        const outlineColor = highlighted ? 0xffffff : this.color;
-        const outlineAlpha = highlighted ? 0.9 : 0.4;
-        g.lineStyle(highlighted ? 2 : 1.5, outlineColor, outlineAlpha);
-        g.strokeRect(-WIDTH / 2, -HEIGHT / 2, WIDTH, HEIGHT);
+        if (highlighted) {
+            g.lineStyle(2.5, 0xffffff, 0.85);
+            g.strokeRect(-SPRITE_W / 2, -SPRITE_H / 2, SPRITE_W, SPRITE_H);
+        }
+        this.bodyImg.setAlpha(highlighted ? 1 : 0.85);
     }
+
+    // Keep old name used internally
+    drawTerminal(highlighted) { this._setHighlight(highlighted); }
 
     /**
      * Called each frame with the snail reference to check proximity
@@ -154,6 +168,30 @@ export default class Terminal extends Phaser.GameObjects.Container {
                 this.cooldownText.setVisible(false);
             },
         );
+    }
+
+    /**
+     * Autonomously activate this terminal (drone upgrade — no minigame).
+     * Calls onSuccess and starts a full cooldown. Returns false if not IDLE.
+     */
+    droneActivate() {
+        if (this.terminalState !== 'IDLE') return false;
+
+        this.terminalState = 'ACTIVE';
+        this.ePrompt.setVisible(false);
+        this.screenGlow.fillColor = 0xffdd44;
+        this.screenGlow.fillAlpha = 0.8;
+
+        // Brief visible flash, then trigger success + cooldown
+        this.scene.time.delayedCall(350, () => {
+            if (!this.active) return;
+            this.screenGlow.fillColor = this.color;
+            this.screenGlow.fillAlpha = 0.3;
+            if (this.onSuccess) this.onSuccess();
+            this.startCooldown(this.cooldownDuration);
+        });
+
+        return true;
     }
 
     /** Cancel any active minigame on this terminal (e.g. from teleport) */

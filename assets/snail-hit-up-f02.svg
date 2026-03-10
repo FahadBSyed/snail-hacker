@@ -9,9 +9,9 @@
   <circle cx="24" cy="24" r="5"  fill="#BD8C64"/>
   <ellipse cx="24" cy="15.7" rx="4.3" ry="2.9" fill="#E8D44D" opacity="0.60"/>
   <line x1="20.9" y1="13.4" x2="14.9" y2="7.4" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round" opacity="0.54"/>
-  <circle cx="14.9" cy="7.4" r="2" fill="#E8D44D" opacity="0.54"/>
+  <circle cx="14.9" cy="7.4" r="2" fill="#1a1a1a" opacity="0.54"/>
   <line x1="27.1" y1="13.4" x2="33.1" y2="7.4" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round" opacity="0.54"/>
-  <circle cx="33.1" cy="7.4" r="2" fill="#E8D44D" opacity="0.54"/>
+  <circle cx="33.1" cy="7.4" r="2" fill="#1a1a1a" opacity="0.54"/>
   </g>
 
 </svg>

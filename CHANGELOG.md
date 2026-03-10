@@ -148,3 +148,167 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 - **`scripts/generate-damage-sprites.js`** — New sprite generator producing 64 SVG frames (16 per direction: right/left/up/down). Frames f00–f07 show Gerald withdrawing into his shell (body shrinks, feet retract, eyes/antennae pull in); frames f08–f15 show the shell pulsing with an alternating breathe scale. Left frames are the right frames mirrored via `<g transform="scale(-1,1)">`.
 - **feColorMatrix white tint** — Rather than a white rectangle overlay, frames with `FLASH[fi] > 0` are wrapped in an SVG `<filter>` using `feColorMatrix` to linearly interpolate every pixel toward white: `new_channel = src * (1-w) + w`. f00 (w=0.75) is nearly white; f03 (w=0.10) is a faint wash; shell-pulse frames alternate at w=0.45. No covering rectangle — Gerald's actual colours bleach out and recover together.
 - **Wired into GameScene** — `GameScene.preload()` loads all 64 frames (`snail-hit-{dir}-f{00..15}`). An `anims.create()` call registers `snail-hit-{dir}` (8 fps, no repeat). `Snail.takeDamage()` plays the animation on the sprite; the existing i-frame white-rectangle overlay was removed since the sprite animation now carries the visual feedback.
+
+---
+
+## Session 8 — 2026-03-09
+
+### HUD Ammo — Counter Instead of Individual Icons
+- Replaced the row of individual bullet rectangles with a `current/max` text counter (e.g. `20/30`) plus a small procedural bullet icon (casing + triangular tip) to its right.
+- Counter and icon both turn red when ammo is ≤ 2, matching the existing `! LOW AMMO !` warning.
+- `hud._ammoMax` is updated in `GameScene` when the AMMO_BOOST passive upgrade applies so the denominator always reflects the current magazine size.
+
+### Tank Alien — 50% Bigger Sprite
+- `TankAlien._initSprite()` now calls `this.sprite.setScale(1.5)` after the base sprite is created, making the tank visually 50% larger than other alien types without touching any SVG assets or CONFIG values.
+
+### Station & Terminal Sprites
+- **`scripts/generate-station-sprites.js`** — New generator producing 7 SVG assets in oblique top-down style (classic SNES/Pokémon perspective): visible front face, top parallelogram, and right shadow face with light from upper-left.
+- **`assets/station-mainframe.svg`** (96×96) — Classic mainframe cabinet with 3D oblique depth, CRT display, LED indicators, tape reels, punch-card slot, and a raised gun-mount platform on top.
+- **`assets/station-gun.svg`** (48×48) — Separate rotatable turret gun with oblique barrel, scope, muzzle highlight, and pivot pin centered at (24,24) so it can be rotated independently of the mainframe. Rotates to face the player's crosshair; recoils and emits a muzzle-flash light burst on fire.
+- **Five terminal SVGs** (64×64 each) — Each shows a CRT monitor on a squat desk unit, color-coded by function: `terminal-reload` (cyan, ammo counter + reload icon), `terminal-turret` (orange, cannon + crosshair), `terminal-shield` (blue, shield icon + bar), `terminal-slow` (purple, snowflake + clock face), `terminal-repair` (green, health cross + wrench).
+- All 7 SVGs loaded in `GameScene.preload()` with conditional texture caching (avoids reloading across waves).
+
+### Passive Upgrade Cards
+- Four new passive upgrades added to the upgrade pool alongside the existing active terminals:
+  - **HEALTH_BOOST** — Gerald's max HP raised by +50% (`CONFIG.SNAIL.MAX_HEALTH × 1.5`; default 100 → 150).
+  - **AMMO_BOOST** — Magazine size raised by +50% (`CONFIG.PLAYER.MAX_AMMO × 1.5`; default 35 → ~52 bullets).
+  - **LASER** — Hitscan laser replaces projectiles on left-click; sets `_laserMode = true` in `GameScene`.
+  - **SPEED_BOOST** — Gerald's movement speed doubled (`CONFIG.PLAYER.SNAIL_SPEED × 2`; default 40 → 80 px/s).
+- Passive card cards display a **"— PASSIVE —"** label beneath the color accent stripe to distinguish them from active terminal upgrades.
+- Passive upgrades apply immediately in `GameScene.create()` and do **not** spawn a physical terminal — `_spawnUpgradeTerminals()` skips them entirely.
+- All upgrade definitions (active + passive, 9 total) live in `IntermissionScene.getUpgradeDefs()` and read live CONFIG at render time so card text always reflects current balance values.
+
+### All Upgrade Stations → Rhythm Minigame
+- SHIELD, SLOWFIELD, and REPAIR terminals now all use `RhythmMinigame` instead of their previous minigames (SequenceMinigame and TypingMinigame respectively).
+- Rhythm minigame restricted to **WASD keys only** — timing is the challenge, not key-hunting.
+- A shared `rhythmLauncher` helper in `GameScene` constructs the minigame for all three terminals, keeping the wiring DRY.
+- One beat required to succeed; one miss allowed (two misses = failure); 2.5s per-beat timeout.
+
+### Math Minigame + Hack-Mode Rotation
+- **`src/minigames/MathMinigame.js`** — New minigame implementing the same `wordsRequired / onWordComplete / onSuccess / cancel()` contract as `HackMinigame`. Presents single-digit addition or subtraction (`a + b =` / `a − b =`; subtraction guaranteed non-negative). Player types the numeric answer; auto-submits on correct digit count; backspace supported. Correct answer turns green (180ms before next problem); wrong answer turns red (300ms before reset).
+- **Hack-mode rotation** — `GameScene` tracks a `_hackMode` flag (`'typing'` | `'math'`). The active hack class is chosen at start-of-hack: `HackMinigame` for `'typing'`, `MathMinigame` for `'math'`.
+- **Rotation tied to battery spawns** — Every time the station loses power (`hackProgress` hits a `CONFIG.BATTERY.POWER_LOSS_WORDS` multiple), `_hackMode` toggles before the battery delivery ship animation plays. Pattern: typing → (battery) → math → (battery) → typing → …
+- **Battery delivery animation** — A small ship flies in from off-screen along a random radial direction, hovers briefly, and exits. The `Battery` instance pops in (`scale 0 → 1`, `Back.easeOut`) while the ship hovers, then sits on the ground until the snail walks into it. Snail auto-picks up on contact and must carry it to the station center to restore power.
+- New config keys: `BATTERY.POWER_LOSS_WORDS` (15), `BATTERY.SPAWN_RADIUS` (200 px), `BATTERY.SNAIL_PICKUP_DIST` (35 px), `BATTERY.DELIVERY_DIST` (55 px).
+
+### Bug Fix — GameScene preload() Missing Closing Brace
+- `GameScene.preload()` was missing its closing `}` after the terminal sprite loading loop. The parser hit the opening `{` of `create()` and threw `SyntaxError: Unexpected token '{'`, preventing the game from loading entirely. Fixed by inserting the missing brace.
+
+---
+
+## Session 7 — 2026-03-08
+
+### Drone — Fly-to-Terminal Animation
+- **Container refactor** — The drone was previously a raw `Graphics` object drawn at world coordinates each frame (untweenable). Replaced with a `Phaser.GameObjects.Container` (`_droneContainer`) positioned at the orbit location, with a child `Graphics` (`_droneGfx`) that draws the diamond at container-local (0, 0). Phaser tweens can now animate `_droneContainer.x`/`.y` smoothly.
+- **Three-phase activation sequence** — When the drone selects a target terminal it now:
+  1. Tweens to the terminal's world position (500 ms, `Sine.easeInOut`)
+  2. Flashes white + plays `droneActivate` sound + calls `target.droneActivate()`, holds for 350 ms
+  3. Tweens back to the stored orbit position (600 ms, `Sine.easeInOut`)
+- **`_droneFlying` guard** — The orbit update in `GameScene.update()` checks `!this._droneFlying` so the container isn't snapped back to orbit coordinates while the flight tweens are in progress. Replaces the old `_droneFlashing` flag.
+- **`_renderDroneGfx(flash)`** — Replaces the old `_drawDrone(gfx, x, y)` method. Draws the diamond at (0, 0) in normal (gold, s=7) or flash (white, s=10) style. Called only on state transitions, not every frame.
+
+### Drone — RELOAD Terminal Eligible
+- The drone can now autonomously activate the RELOAD terminal in addition to the upgrade terminals (CANNON, SHIELD, SLOWFIELD, REPAIR). The RELOAD terminal was already present in `this.terminals` with no explicit exclusion; a smart skip guard was added — `if (t.label === 'RELOAD' && this.ammo >= this.ammoMax) return false` — mirroring the existing REPAIR skip-at-full-health condition. The drone will not waste an action reloading a full magazine.
+
+---
+
+## Session 9 — 2026-03-09
+
+### Bug Fixes
+- **HUD ammo icon `setTint` crash** — `Graphics` objects have no `setTint` method (that belongs to Image/Sprite). `_drawBulletIcon` now accepts an optional `color` parameter and redraws the icon in cyan or red each call; `updateAmmo` passes the appropriate hex colour instead of calling `setTint`.
+- **AudioContext autoplay warning** — When `SoundSynth._ctx_get()` creates the `AudioContext`, two persistent `pointerdown` / `keydown` listeners are registered on `window` to call `resume()` on every subsequent user gesture. This covers edge cases where the context is created during scene setup before the browser has fully settled a user gesture.
+
+### ShieldAlien — New Enemy Type
+- **`src/entities/aliens/ShieldAlien.js`** — Extends `BaseAlien`. Approaches the snail with a rotating cyan energy ring that blocks all incoming projectiles. Two overlapping arcs (thick `#00eeff` arc + offset `#0088cc` arc) form a "broken hex ring" silhouette; a pulsing white rim tween gives an electric shimmer. When the alien closes within `CONFIG.ALIENS.SHIELD.SHIELD_DROP_DIST` (130 px) of the snail, `_dropShield()` fires: the tween stops, an expanding ring burst tweens outward and fades, and the shield graphics are cleared — leaving the alien vulnerable but already dangerously close.
+- **`config.js`** — `ALIENS.SHIELD: { SPEED: 55, RADIUS: 16, HEALTH: 15, SHIELD_DROP_DIST: 130 }`.
+- **`CollisionSystem`** — Projectile vs alien now checks `alien.shielded` before the damage path. If shielded, the projectile is destroyed and a small cyan spark arc spawns at the impact point (scales 3×, fades in 220 ms); no damage, score, or death burst. Burst colour `0x00eeff` registered for shield type death.
+- **`GameScene`** — Imports `ShieldAlien`; `case 'shield'` added to `spawnAlien` switch; `alien-shield-*` SVG textures loaded in `preload()`.
+- **`WaveManager`** — `'shield'` added to the type pools for waves 5–10.
+
+### alien-shield Sprites
+- **`scripts/generate-alien-enemy-sprites.js`** — Added `shield` palette: dark-to-bright teal disc (`#082233` → `#1fa8cc`), `#00eeff` dome ring and glow (matching the in-game shield arc colour), cyan rim lights. Count message updated to 32 SVGs.
+- **8 new SVG assets** generated: `assets/alien-shield-{right,left,up,down,diag-*}.svg`.
+
+### Palette Swap Documentation
+- **`assets/sprites/PALETTE_SWAPS.md`** — New reference file listing all 5 alien palettes (frog/basic = violet, fast = purple, tank = grey/steel, bomber = orange, shield = cyan/ice-blue) with per-element colour tables. The shared saucer geometry is described once at the top.
+
+### Audio File Override System
+- `src/soundOverrides.js` — new registry file mapping SoundSynth names to audio file entries. Each entry is a plain path string or a `{ url, volume }` object; multiple entries per name are supported and one is chosen at random on each play.
+- `SoundSynth` constructor now accepts an optional `overrides` map. Entries are normalised to `{ url, volume }` internally. Files are fetched and decoded in the background on first `play()` call; the procedural synth plays as fallback until loading completes or permanently if loading fails. Per-file `volume` is multiplied by master volume at playback.
+- `GameScene` and `IntermissionScene` both import and pass `SOUND_OVERRIDES` to their `SoundSynth` instance.
+- `assets/sounds/` directory created with a `README.md` documenting all overrideable sound names and the `{ url, volume }` entry format.
+- SoundSynth now logs `console.warn` for each file that fails to fetch or decode (HTTP status, decode error) and a summary warning when all files for a name fail. Successful loads log at `console.log`. Previously all errors were swallowed silently.
+
+### DEV: Start at Arbitrary Wave with Pre-Game Upgrades
+- `CONFIG.DEV_START_WAVE` (default 1, DEV_MODE only) — set to any wave number to jump directly there. Starting at wave N grants N−1 pre-game upgrade picks.
+- `MenuScene` — on START, checks `CONFIG.DEV_MODE && CONFIG.DEV_START_WAVE > 1`; if so, routes to `IntermissionScene` in startup mode instead of directly to `GameScene`.
+- `IntermissionScene` now accepts `_startupMode: true` and `_targetWave: N` in scene data. In startup mode it shows a "STARTING AT WAVE N — PRE-GAME SETUP" header with a pick counter (e.g. "UPGRADE 2 of 3") and progress dots. After each pick it loops back to itself until all N−1 upgrades are chosen, then starts `GameScene` at wave N with full health.
+- `DEV_START_WAVE` also appears automatically in the in-browser balance config editor (it is a top-level numeric value).
+
+### ShieldAlien — Shield Hit Feedback + Wider Drop Distance
+- `ShieldAlien.flashShield()` — bright cyan/white flash ring expands + fades at the shield radius (250ms); rim tween kicked to full brightness for the duration.
+- `SoundSynth._shieldReflect()` — metallic ping (two sine harmonics 1800→900 Hz, 3200→1600 Hz) + brief highpass noise zip, like a bullet bouncing off.
+- `CollisionSystem.checkProjectileCollisions` — shield deflect block now calls `alien.flashShield()` and `scene.soundSynth.play('shieldReflect')`.
+- `GameScene` cannon hit loop — added `alien.shielded` guard; shielded aliens trigger flash + sound and skip the red hit flash/wobble entirely.
+- `CONFIG.ALIENS.SHIELD.SHIELD_DROP_DIST` increased 130 → 200.
+
+### ShieldAlien — True Damage Immunity + 1-Shot Health
+- `ShieldAlien.takeDamage()` override returns `false` immediately while `this.shielded` is true, blocking all damage sources (projectiles, bomber splash, cannon auto-fire) — not just the projectile deflection already handled in `CollisionSystem`.
+- `CONFIG.ALIENS.SHIELD.HEALTH` reduced 15 → 10 so it dies in one shot once the shield drops (matches `PROJECTILE_HIT_ALIEN: 10`).
+
+### Loading Screen
+- `src/scenes/GameScene.js` — loading UI drawn at the start of `preload()` using Phaser's loader events. Shows "SNAIL HACKER / BOOTING SYSTEMS", a cyan progress bar with terminal corner-bracket decoration, a percentage counter, and a scrolling file-key status line. Hooks into `this.load.on('progress')`, `'fileprogress'`, and `'complete'`. Naturally replaced by `create()` once all assets are ready.
+
+### Mucus Trail Particle Effect
+- `src/systems/SlimeTrail.js` — new system; every 90 ms while Gerald is `MOVING`, spawns a procedural Graphics decal behind his foot. Each decal is a rotated ellipse (10–14 × 4–6 px, `0xA8C400`) plus a smaller satellite circle (`0x90B000`) offset backward, with random slight rotation and alpha (0.45–0.60). Placed at depth −0.5 so it renders above the background but beneath all entities. A Phaser `Quad.easeIn` tween fades the decal to zero over 3.5 s, then destroys the Graphics object.
+- `src/scenes/GameScene.js` — imports `SlimeTrail`, instantiates it after the snail, and calls `slimeTrail.update(snail, delta)` each frame.
+
+### Slithering Sound Effect
+- `src/systems/SoundSynth.js` — extended `playLooped` to fall back to a procedural `_${name}_looped()` method when no file override is available. Added `_slithering_looped()`: looping 1-second white-noise buffer → bandpass filter (280 Hz, Q=3) → gain, with a 2.5 Hz LFO for a subtle rhythmic pulse that mirrors the foot-wave animation. Very quiet (0.12 × master volume). Returned handle has `stop(fadeOut)`.
+- `src/entities/Snail.js` — `setState` now starts the slither loop when entering `MOVING` and fades it out (300 ms) when leaving. `_startSlither` / `_stopSlither` helpers manage the handle. `destroy()` override stops the sound immediately on scene teardown.
+
+### Gerald Walk & Idle Animations
+- `scripts/generate-walk-idle-sprites.js` — new generator producing 72 SVG frames:
+  - **Walk** (24 files, 6 frames × 4 dirs): sine-wave ripple along the underside of the body (muscular foot wave); eye stalks bob vertically with each stride. Right/left use a wavy closed path replacing the body ellipse; up view bobs the whole shell; down view ripples and sways stalks.
+  - **Idle** (48 files, 12 frames × 4 dirs): eye stalks drift side-to-side in a slow sinusoidal pattern; single blink at frame 6 (half-close → closed → half-open across frames 5–7).
+- `src/scenes/GameScene.js` — preload now loads all walk/idle frame textures alongside existing hit frames.
+- `src/entities/Snail.js` — `registerAnims` creates `snail-walk-{dir}` (10 fps, loop) and `snail-idle-{dir}` (8 fps, loop) animations. Added `_playCurrentAnim()` to select walk vs idle based on state, called from `setFacing`, `setState`, and after damage invincibility expires. Constructor starts idle immediately. Removed unused `DIR_TEXTURES` const.
+
+### Gerald Sprite — Eyes Moved to Eye-Stalk Tips
+- `generate-snail-sprites.js` — all 4 directional sprites updated. Antenna tip circles changed from `BODY` yellow to `EYE` black with white highlights. Old floating eye element (on the body near the face) removed from right/left and down views. Up view (rear) now shows dark eye-stalk tips too.
+- `generate-damage-sprites.js` — same fix across all 64 hit-animation frames. The separate eye interpolation blocks (which tracked wrong body positions) are removed; eyes now live on the antenna tip circles and retract naturally with the antennae as Gerald withdraws into his shell. Regenerated all 68 SVGs.
+
+### Auto-Turret Behaviour Tweaks
+- **Shield-aware targeting**: turret now passes `alienFilter: (a) => !a.shielded` to `DefenseStation`, so it skips shield aliens whose energy ring is up and focuses fire on targetable enemies instead.
+- **Minigame**: turret terminal now uses `_rhythmLauncher` (same as SHIELD/SLOW/REPAIR) instead of `_sequenceLauncher`.
+
+### Auto-Turret Visual Redesign
+- `DefenseStation.drawStation()` completely redrawn in the oblique top-down aesthetic of the `station-gun` / `station-mainframe` SVG sprites.
+- **Base**: regular hexagon (flat-top, r=20) in gunmetal `#3a4450` outer / `#556070` inner, with a dark edge outline and a subtle `#00ffcc` accent ring at r=22 — echoes the hacking station's hex body and cyan glow.
+- **Barrel group**: boxy gun body (14×10 px) with lit top strip (`#7a8898`) and shadow right strip (`#3a4450`); scope housing to the right with `#00eeff` glowing lens; narrow barrel (6×18 px) with lit left edge (`#60707e`), three heat-vent marks, and a `#88aacc` muzzle-tip highlight — all matching the palette from `stationGun()` in `generate-station-sprites.js`.
+- Label text and cooldown arc colour changed from orange `#ff8844` / `0xff8844` to station cyan `#00ffcc` / `0x00ffcc` to match the new palette.
+
+### Gerald Shield — Blocks Alien Contact Damage
+- When a non-bomber alien reaches Gerald while `snail.shielded` is true, the alien is destroyed without dealing damage. The `shieldReflect` sound plays (same as the shield alien's projectile deflect sound) and a full death burst fires with the alien's type colour — so the alien still visually explodes and the kill is registered.
+- `BURST_COLORS` is now exported from `CollisionSystem.js` so `GameScene` can look up the correct burst colour for the killed alien type.
+- Bomber AoE blast is also blocked by the shield: `checkBomberBlast` now checks `scene.snail.shielded` and plays `shieldReflect` instead of dealing damage and playing the damage sound.
+
+### Bug Fix — Bomber Blast Not Killing Nearby Aliens
+- `checkBomberBlast` called `a.takeDamage()` but discarded the return value, so splash-damaged aliens that reached 0 HP kept walking. Fixed: when `takeDamage` returns true in the splash loop, the alien is marked `_dying`, score is incremented, a death burst fires after 120 ms, and the alien is destroyed. Chain bombers (a bomber killed by another bomber's blast) recursively call `checkBomberBlast` from their own position.
+
+### SoundSynth — Shared Instance + Menu Warmup
+- **Single shared instance** — `SoundSynth` is now created once in `main.js`, `preload()` is called immediately (HTTP fetches start while the menu is showing), and the instance is stored in `game.registry` under `'soundSynth'`.
+- **`warmup()` method** — creates the `AudioContext` and decodes all already-fetched `rawBuffers` in one shot. Called on the START button `pointerdown` in `MenuScene`, which is a confirmed user gesture. By the time `GameScene` starts and the drop-in ship animation plays, all audio files are decoded and ready.
+- **`GameScene` + `IntermissionScene`** — replaced `new SoundSynth(SOUND_OVERRIDES)` + `preload()` with `this.registry.get('soundSynth')`. Removed now-unused `SoundSynth` and `SOUND_OVERRIDES` imports from both files.
+
+### Ship Sound — Looped Ambient During All Ship Appearances
+- `SoundSynth.playLooped(name)` — new method that plays a decoded AudioBuffer on a continuous loop and returns a `{ stop(fadeOut?) }` handle (`fadeOut` defaults to 0.25s linear fade). Returns `null` if no decoded buffer is available, so callers can safely use `?.stop()`.
+- **Drop-in animation** — starts the loop when the ship enters; stops it (with fade) in the Phase 3 ascent `onComplete` before `ship.destroy()`.
+- **Battery delivery** — starts the loop when the delivery ship is created; stops it in the fly-out `onComplete` before `ship.destroy()`.
+- **Wave escape** — `_startEscapePhase` stores the handle on `this._escapeShipSound`; `_boardEscapeShip` stops it when the ship disappears off the top. `onWaveStart` also clears the handle for safety.
+
+### SoundSynth — Eager Preload
+- **Separated fetch from decode** — `SoundSynth` override state now tracks four fields: `fetching`, `rawBuffers` (fetched `ArrayBuffer`s), `decoding`, and `buffers` (decoded `AudioBuffer`s ready to play), replacing the single `loading` boolean.
+- **`preload()` method** — Kicks off `fetch()` for all override files immediately on call, with no `AudioContext` required (network requests don't need a user gesture). When the context becomes available (on first `play()`), any already-fetched raw buffers are decoded right away via the internal `_decode()` helper.
+- **Called at scene create** — `GameScene.create()` and `IntermissionScene.create()` call `this.soundSynth.preload()` right after constructing the synth. By the time the player fires their first shot the files are already fetched and decoded, eliminating the first-play fallback to procedural synth.
+- **Fallback preserved** — If `preload()` was never called (or all files failed), `play()` falls back to the old inline fetch-then-decode path, then to the procedural synth, as before.

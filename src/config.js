@@ -3,6 +3,7 @@ const CONFIG_VERSION = 3;  // increment whenever DEFAULTS change in a breaking w
 
 export const DEFAULTS = {
     DEV_MODE: true,
+    DEV_START_WAVE: 1,   // DEV_MODE only — jump to this wave (1 = normal start; >1 picks upgrades first)
     _version: CONFIG_VERSION,
 
     PLAYER: {
@@ -60,6 +61,7 @@ export const DEFAULTS = {
         FAST:   { SPEED: 150, RADIUS: 12, HEALTH: 10 },
         TANK:   { SPEED: 38,  RADIUS: 18, HEALTH: 30 },
         BOMBER: { SPEED: 50,  RADIUS: 18, HEALTH: 10 },
+        SHIELD: { SPEED: 55,  RADIUS: 16, HEALTH: 10, SHIELD_DROP_DIST: 200 },
     },
 
     DAMAGE: {
@@ -85,6 +87,8 @@ export const DEFAULTS = {
         SHIELD_DURATION:  25000,  // ms — how long the shield lasts
         SLOW_COOLDOWN:    18000,
         SLOW_DURATION:    25000,  // ms — how long SlowField lasts
+        DRONE_FIRST_SHOT_MAX: 10000,  // ms — drone fires at a random time within this window each round
+        DRONE_COOLDOWN:       60000,  // ms — cooldown between subsequent drone activations
     },
 
     CANNON: {

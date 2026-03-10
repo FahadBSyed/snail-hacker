@@ -53,17 +53,15 @@ function snailRight() {
   <!-- slime trail hint -->
   <ellipse cx="16" cy="33" rx="4" ry="1.2" fill="${BODY}" opacity="0.3"/>
 
-  <!-- antenna left -->
+  <!-- antenna left — eye at tip -->
   <line x1="32" y1="26" x2="28" y2="14" stroke="${ANTENNA}" stroke-width="1.5" stroke-linecap="round"/>
-  <circle cx="28" cy="14" r="2" fill="${ANTENNA}"/>
+  <circle cx="28" cy="14" r="2" fill="${EYE}"/>
+  <circle cx="28.5" cy="13.3" r="0.6" fill="white"/>
 
-  <!-- antenna right -->
+  <!-- antenna right — eye at tip -->
   <line x1="36" y1="26" x2="38" y2="12" stroke="${ANTENNA}" stroke-width="1.5" stroke-linecap="round"/>
-  <circle cx="38" cy="12" r="2" fill="${ANTENNA}"/>
-
-  <!-- eye -->
-  <circle cx="37" cy="27" r="1.8" fill="${EYE}"/>
-  <circle cx="37.6" cy="26.4" r="0.6" fill="white"/>
+  <circle cx="38" cy="12" r="2" fill="${EYE}"/>
+  <circle cx="38.6" cy="11.3" r="0.6" fill="white"/>
 `);
 }
 
@@ -82,17 +80,15 @@ function snailLeft() {
     <!-- slime trail hint -->
     <ellipse cx="16" cy="33" rx="4" ry="1.2" fill="${BODY}" opacity="0.3"/>
 
-    <!-- antenna left -->
+    <!-- antenna left — eye at tip -->
     <line x1="32" y1="26" x2="28" y2="14" stroke="${ANTENNA}" stroke-width="1.5" stroke-linecap="round"/>
-    <circle cx="28" cy="14" r="2" fill="${ANTENNA}"/>
+    <circle cx="28" cy="14" r="2" fill="${EYE}"/>
+    <circle cx="28.5" cy="13.3" r="0.6" fill="white"/>
 
-    <!-- antenna right -->
+    <!-- antenna right — eye at tip -->
     <line x1="36" y1="26" x2="38" y2="12" stroke="${ANTENNA}" stroke-width="1.5" stroke-linecap="round"/>
-    <circle cx="38" cy="12" r="2" fill="${ANTENNA}"/>
-
-    <!-- eye -->
-    <circle cx="37" cy="27" r="1.8" fill="${EYE}"/>
-    <circle cx="37.6" cy="26.4" r="0.6" fill="white"/>
+    <circle cx="38" cy="12" r="2" fill="${EYE}"/>
+    <circle cx="38.6" cy="11.3" r="0.6" fill="white"/>
   </g>
 `);
 }
@@ -111,13 +107,13 @@ function snailUp() {
   <!-- slime trail hint -->
   <ellipse cx="24" cy="40" rx="3" ry="1.5" fill="${BODY}" opacity="0.3"/>
 
-  <!-- antenna left (splayed outward) -->
+  <!-- antenna left (splayed outward) — eye stalk tip visible from rear -->
   <line x1="20" y1="12" x2="12" y2="4" stroke="${ANTENNA}" stroke-width="1.5" stroke-linecap="round"/>
-  <circle cx="12" cy="4" r="2" fill="${ANTENNA}"/>
+  <circle cx="12" cy="4" r="2" fill="${EYE}"/>
 
-  <!-- antenna right (splayed outward) -->
+  <!-- antenna right (splayed outward) — eye stalk tip visible from rear -->
   <line x1="28" y1="12" x2="36" y2="4" stroke="${ANTENNA}" stroke-width="1.5" stroke-linecap="round"/>
-  <circle cx="36" cy="4" r="2" fill="${ANTENNA}"/>
+  <circle cx="36" cy="4" r="2" fill="${EYE}"/>
 `);
 }
 
@@ -135,19 +131,15 @@ function snailDown() {
   <!-- slime trail hint -->
   <ellipse cx="24" cy="8" rx="3" ry="1.5" fill="${BODY}" opacity="0.3"/>
 
-  <!-- antenna left -->
+  <!-- antenna left — eye at stalk tip -->
   <line x1="20" y1="32" x2="14" y2="42" stroke="${ANTENNA}" stroke-width="1.5" stroke-linecap="round"/>
-  <circle cx="14" cy="42" r="2" fill="${ANTENNA}"/>
+  <circle cx="14" cy="42" r="2" fill="${EYE}"/>
+  <circle cx="14.6" cy="41.3" r="0.7" fill="white"/>
 
-  <!-- antenna right -->
+  <!-- antenna right — eye at stalk tip -->
   <line x1="28" y1="32" x2="34" y2="42" stroke="${ANTENNA}" stroke-width="1.5" stroke-linecap="round"/>
-  <circle cx="34" cy="42" r="2" fill="${ANTENNA}"/>
-
-  <!-- eyes (two, front-facing) -->
-  <circle cx="21" cy="33" r="2" fill="${EYE}"/>
-  <circle cx="21.5" cy="32.3" r="0.7" fill="white"/>
-  <circle cx="27" cy="33" r="2" fill="${EYE}"/>
-  <circle cx="27.5" cy="32.3" r="0.7" fill="white"/>
+  <circle cx="34" cy="42" r="2" fill="${EYE}"/>
+  <circle cx="34.6" cy="41.3" r="0.7" fill="white"/>
 
   <!-- mouth (small friendly curve) -->
   <path d="M22 36 Q24 38 26 36" stroke="${EYE}" stroke-width="0.8" fill="none" stroke-linecap="round"/>

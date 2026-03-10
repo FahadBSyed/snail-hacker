@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+
+  <!-- foot prism peeking below shell -->
+  <path d="M 19 37.3 L 29 37.3 L 29.0 41.0 L 28.2 41.1 L 27.3 41.3 L 26.5 41.5 L 25.7 41.6 L 24.8 41.7 L 24.0 41.6 L 23.2 41.5 L 22.3 41.3 L 21.5 41.1 L 20.7 41.0 L 19.8 40.9 L 19.0 41.0 Z" fill="#E8D44D"/>
+
+  <!-- shell (bobs with stride) — drawn over foot -->
+  <circle cx="24" cy="25.3"     r="13" fill="#8B5E3C"/>
+  <circle cx="24" cy="24.3" r="9"  fill="#A0714F"/>
+  <circle cx="24" cy="23.3" r="5"  fill="#BD8C64"/>
+
+  <!-- head body peeking above shell — drawn after shell -->
+  <ellipse cx="24" cy="13.7" rx="6" ry="4" fill="#E8D44D"/>
+
+  <!-- slime trail -->
+  <ellipse cx="24" cy="43" rx="3" ry="1.5" fill="#E8D44D" opacity="0.25"/>
+
+  <!-- antenna left — eye at tip (bobs) -->
+  <line x1="20" y1="11.5" x2="12" y2="3.0" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="12" cy="3.0" r="2" fill="#1a1a1a"/>
+
+  <!-- antenna right — eye at tip (bobs) -->
+  <line x1="28" y1="11.5" x2="36" y2="3.0" stroke="#E8D44D" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="36" cy="3.0" r="2" fill="#1a1a1a"/>
+
+</svg>

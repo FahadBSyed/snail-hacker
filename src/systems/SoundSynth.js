@@ -1,12 +1,140 @@
 /**
- * SoundSynth — procedural Web Audio API sound effects.
- * No audio files required. AudioContext is created lazily on first play()
- * call so it always occurs after a user gesture (satisfying browser policy).
+ * SoundSynth — procedural Web Audio API sound effects with optional file overrides.
+ *
+ * Pass an overrides map (see src/soundOverrides.js) to the constructor,
+ * then call preload() immediately to start fetching all audio files in the
+ * background (no AudioContext — and therefore no user-gesture — required for
+ * the network requests). Decoding happens automatically once the AudioContext
+ * is created on the first play() call.
+ *
+ * AudioContext is still created lazily on first play() to satisfy browser
+ * policy (requires a prior user gesture).
  */
 export default class SoundSynth {
-    constructor() {
+    constructor(overrides = {}) {
         this._ctx   = null;
         this.volume = 0.35;   // master volume 0–1
+
+        // name -> {
+        //   entries:    {url,volume}[]          — original config
+        //   rawBuffers: {ab,volume}[] | null     — fetched ArrayBuffers, awaiting decode
+        //   buffers:    {buf,volume}[] | null    — decoded AudioBuffers, ready to play
+        //   fetching:   boolean
+        //   decoding:   boolean
+        // }
+        this._overrides = new Map(
+            Object.entries(overrides).map(([name, entries]) => [
+                name, {
+                    entries: entries.map(e =>
+                        typeof e === 'string' ? { url: e, volume: 1.0 } : { volume: 1.0, ...e }
+                    ),
+                    rawBuffers: null,
+                    buffers:    null,
+                    fetching:   false,
+                    decoding:   false,
+                },
+            ])
+        );
+    }
+
+    /**
+     * Fetch all override files now. No AudioContext required — call this as
+     * early as possible (e.g. right after constructing the synth). Decoding
+     * into AudioBuffers happens automatically once the context is available.
+     */
+    preload() {
+        for (const [name, override] of this._overrides) {
+            if (override.fetching || override.rawBuffers || override.buffers) continue;
+            override.fetching = true;
+            Promise.all(
+                override.entries.map(({ url, volume }) =>
+                    fetch(url)
+                        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.arrayBuffer(); })
+                        .then(ab => ({ ab, volume }))
+                        .catch(err => {
+                            console.warn(`[SoundSynth] failed to fetch "${name}" → ${url}:`, err.message ?? err);
+                            return null;
+                        })
+                )
+            ).then(results => {
+                override.rawBuffers = results.filter(Boolean);
+                override.fetching   = false;
+                // If the AudioContext already exists, kick off decode immediately.
+                if (this._ctx && override.rawBuffers.length) this._decode(name, override);
+            });
+        }
+    }
+
+    /** Decode pending rawBuffers into AudioBuffers using the given context. */
+    _decode(name, override) {
+        if (override.decoding || override.buffers || !override.rawBuffers?.length) return;
+        override.decoding = true;
+        const ctx = this._ctx;
+        Promise.all(
+            override.rawBuffers.map(({ ab, volume }) =>
+                // slice() so the ArrayBuffer stays detachable on re-decode attempts
+                ctx.decodeAudioData(ab.slice(0))
+                    .then(buf => ({ buf, volume }))
+                    .catch(err => {
+                        console.warn(`[SoundSynth] decode failed for "${name}":`, err.message ?? err);
+                        return null;
+                    })
+            )
+        ).then(results => {
+            override.buffers  = results.filter(Boolean);
+            override.decoding = false;
+            if (override.buffers.length) {
+                console.log(`[SoundSynth] ready: ${override.buffers.length} file(s) for "${name}"`);
+            } else {
+                console.warn(`[SoundSynth] all files failed for "${name}" — using procedural synth`);
+            }
+        });
+    }
+
+    /**
+     * Play a sound on a continuous loop. Returns a handle `{ stop(fadeOut?) }`
+     * where `fadeOut` is the fade-out duration in seconds (default 0.25).
+     * First tries a decoded file override; if none is available falls back to
+     * a procedural `_${name}_looped()` method. Returns null if neither exists.
+     */
+    playLooped(name) {
+        const override = this._overrides.get(name);
+        if (override?.buffers?.length) {
+            const entry = override.buffers[Math.floor(Math.random() * override.buffers.length)];
+            const ctx = this._ctx_get(), t = ctx.currentTime;
+            const g = ctx.createGain();
+            g.gain.setValueAtTime(this.volume * entry.volume, t);
+            g.connect(ctx.destination);
+            const src = ctx.createBufferSource();
+            src.buffer = entry.buf;
+            src.loop = true;
+            src.connect(g);
+            src.start(t);
+            return {
+                stop: (fadeOut = 0.25) => {
+                    try {
+                        const now = ctx.currentTime;
+                        g.gain.setValueAtTime(g.gain.value, now);
+                        g.gain.linearRampToValueAtTime(0, now + fadeOut);
+                        src.stop(now + fadeOut);
+                    } catch (_) {}
+                },
+            };
+        }
+        // Fall back to procedural looped implementation
+        try { return this[`_${name}_looped`]?.() ?? null; } catch (_) { return null; }
+    }
+
+    /**
+     * Create the AudioContext and immediately decode all pre-fetched files.
+     * Call this on the first confirmed user gesture (e.g. a button click)
+     * so that decoded buffers are ready before the first play() or playLooped().
+     */
+    warmup() {
+        this._ctx_get();   // create (or resume) the AudioContext
+        for (const [name, override] of this._overrides) {
+            if (override.rawBuffers?.length) this._decode(name, override);
+        }
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
@@ -14,6 +142,11 @@ export default class SoundSynth {
     _ctx_get() {
         if (!this._ctx) {
             this._ctx = new (window.AudioContext || window.webkitAudioContext)();
+            // Re-resume on any future gesture in case the context was created
+            // during scene setup before the browser settled the gesture state.
+            const resume = () => { if (this._ctx.state === 'suspended') this._ctx.resume(); };
+            window.addEventListener('pointerdown', resume, { once: false });
+            window.addEventListener('keydown',     resume, { once: false });
         }
         if (this._ctx.state === 'suspended') this._ctx.resume();
         return this._ctx;
@@ -65,7 +198,54 @@ export default class SoundSynth {
     // ── Public API ─────────────────────────────────────────────────────────────
 
     play(name) {
+        const override = this._overrides.get(name);
+        if (override) {
+            if (override.buffers?.length) {
+                // Already decoded — play a random entry immediately.
+                const entry = override.buffers[Math.floor(Math.random() * override.buffers.length)];
+                this._playBuffer(entry.buf, entry.volume);
+                return;
+            }
+            // AudioContext is now available (user gesture has occurred). If we
+            // have pre-fetched raw bytes waiting, kick off decode. If fetch
+            // hasn't been started at all (preload() was never called), do the
+            // old fetch-then-decode path as a fallback.
+            const ctx = this._ctx_get();
+            if (override.rawBuffers?.length) {
+                this._decode(name, override);
+            } else if (!override.fetching) {
+                override.fetching = true;
+                Promise.all(
+                    override.entries.map(({ url, volume }) =>
+                        fetch(url)
+                            .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.arrayBuffer(); })
+                            .then(ab => ({ ab, volume }))
+                            .catch(err => {
+                                console.warn(`[SoundSynth] failed to fetch "${name}" → ${url}:`, err.message ?? err);
+                                return null;
+                            })
+                    )
+                ).then(results => {
+                    override.rawBuffers = results.filter(Boolean);
+                    override.fetching   = false;
+                    if (this._ctx) this._decode(name, override);
+                });
+            }
+            // Fall through to procedural synth while loading (or if all files failed).
+        }
         try { this[`_${name}`]?.(); } catch (_) { /* never let audio errors crash the game */ }
+    }
+
+    /** Play a decoded AudioBuffer at master volume × per-file volume. */
+    _playBuffer(buf, volume = 1.0) {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(this.volume * volume, t);
+        g.connect(ctx.destination);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(g);
+        src.start(t);
     }
 
     // ── Sound definitions ──────────────────────────────────────────────────────
@@ -280,6 +460,88 @@ export default class SoundSynth {
             const g2 = this._gain(ctx, 0.10, st, 0.45);
             this._osc(ctx, 'sine', freq * 2, freq * 2, st, 0.43, g2);
         });
+    }
+
+    /** Drone fires — quick robotic two-tone chirp. */
+    _droneActivate() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const g1 = this._gain(ctx, 0.22, t,        0.09);
+        this._osc(ctx, 'square', 880, 1200, t,        0.08, g1);
+        const g2 = this._gain(ctx, 0.22, t + 0.10, 0.12);
+        this._osc(ctx, 'square', 1400, 1400, t + 0.10, 0.10, g2);
+    }
+
+    /** Bullet deflected off shield — metallic ping + highpass zip. */
+    _shieldReflect() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Metallic ping — two harmonics, quick pitch-fall
+        const g  = this._gain(ctx, 0.45, t, 0.28);
+        this._osc(ctx, 'sine', 1800, 900, t, 0.25, g);
+        const g2 = this._gain(ctx, 0.20, t, 0.18);
+        this._osc(ctx, 'sine', 3200, 1600, t, 0.15, g2);
+        // Brief ricochet zip noise
+        const ng  = this._gain(ctx, 0.18, t, 0.07);
+        const hpf = this._filter(ctx, 'highpass', 3000, ng);
+        this._noise(ctx, 0.06, hpf);
+    }
+
+    /**
+     * Gerald slithering — continuous soft looping sound for movement.
+     * Returns a { stop(fadeOut?) } handle; caller must call stop() when done.
+     *
+     * Graph: looping white-noise buffer → bandpass (~280 Hz) → gain
+     *        LFO (2.5 Hz sine) → gain.gain  [gentle amplitude ripple]
+     */
+    _slithering_looped() {
+        const ctx = this._ctx_get();
+        const t   = ctx.currentTime;
+        const sr  = ctx.sampleRate;
+
+        // 1-second white-noise buffer, set to loop for continuous playback
+        const noiseBuf = ctx.createBuffer(1, sr, sr);
+        const data     = noiseBuf.getChannelData(0);
+        for (let i = 0; i < sr; i++) data[i] = Math.random() * 2 - 1;
+        const noiseSrc = ctx.createBufferSource();
+        noiseSrc.buffer = noiseBuf;
+        noiseSrc.loop   = true;
+
+        // Bandpass centred ~280 Hz, Q=3 — muffled wet sliding tone
+        const bpf           = ctx.createBiquadFilter();
+        bpf.type            = 'bandpass';
+        bpf.frequency.value = 280;
+        bpf.Q.value         = 3;
+
+        // Master gain — quiet; volume scales with master
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(this.volume * 0.12, t);
+
+        // LFO at 2.5 Hz adds a subtle rhythmic pulse matching the foot-wave
+        const lfo           = ctx.createOscillator();
+        lfo.type            = 'sine';
+        lfo.frequency.value = 2.5;
+        const lfoGain       = ctx.createGain();
+        lfoGain.gain.value  = 0.035;   // ±3.5 % depth — barely perceptible
+        lfo.connect(lfoGain);
+        lfoGain.connect(gain.gain);
+        lfo.start(t);
+
+        noiseSrc.connect(bpf);
+        bpf.connect(gain);
+        gain.connect(ctx.destination);
+        noiseSrc.start(t);
+
+        return {
+            stop: (fadeOut = 0.30) => {
+                try {
+                    const now = ctx.currentTime;
+                    gain.gain.cancelScheduledValues(now);
+                    gain.gain.setValueAtTime(gain.gain.value, now);
+                    gain.gain.linearRampToValueAtTime(0, now + fadeOut);
+                    noiseSrc.stop(now + fadeOut);
+                    lfo.stop(now + fadeOut);
+                } catch (_) {}
+            },
+        };
     }
 
     /** New wave beginning — two sharp alert beeps. */

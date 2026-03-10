@@ -1,14 +1,57 @@
 import { CONFIG } from '../config.js';
 
-// Texture keys for each direction (loaded in GameScene.preload)
-const DIR_TEXTURES = {
-    right: 'snail-right',
-    left:  'snail-left',
-    up:    'snail-up',
-    down:  'snail-down',
-};
 
 export default class Snail extends Phaser.GameObjects.Container {
+    /**
+     * Register the directional hit animations with the scene's animation manager.
+     * Must be called after the hit-frame textures are loaded (GameScene.preload).
+     * Safe to call multiple times — skips any animation that already exists.
+     */
+    static registerAnims(scene) {
+        for (const dir of ['right', 'left', 'up', 'down']) {
+            // Walk cycle — 6 frames, loops
+            if (!scene.anims.exists(`snail-walk-${dir}`)) {
+                scene.anims.create({
+                    key:       `snail-walk-${dir}`,
+                    frames:    Array.from({ length: 6 }, (_, i) => ({
+                        key: `snail-walk-${dir}-f${String(i).padStart(2, '0')}`,
+                    })),
+                    frameRate: 10,
+                    repeat:    -1,
+                });
+            }
+
+            // Idle — 12 frames, loops
+            if (!scene.anims.exists(`snail-idle-${dir}`)) {
+                scene.anims.create({
+                    key:       `snail-idle-${dir}`,
+                    frames:    Array.from({ length: 12 }, (_, i) => ({
+                        key: `snail-idle-${dir}-f${String(i).padStart(2, '0')}`,
+                    })),
+                    frameRate: 8,
+                    repeat:    -1,
+                });
+            }
+
+            // Damage — withdraw → shell pulse → extend (reverse); one-shot
+            if (!scene.anims.exists(`snail-hit-${dir}`)) {
+                const frameKeys = [];
+                for (let i = 0; i <= 15; i++) {
+                    frameKeys.push({ key: `snail-hit-${dir}-f${String(i).padStart(2, '0')}` });
+                }
+                for (let i = 7; i >= 0; i--) {
+                    frameKeys.push({ key: `snail-hit-${dir}-f${String(i).padStart(2, '0')}` });
+                }
+                scene.anims.create({
+                    key:      `snail-hit-${dir}`,
+                    frames:   frameKeys,
+                    duration: CONFIG.SNAIL.INVINCIBILITY_MS,
+                    repeat:   0,
+                });
+            }
+        }
+    }
+
     constructor(scene, x, y) {
         super(scene, x, y);
         scene.add.existing(this);
@@ -20,12 +63,15 @@ export default class Snail extends Phaser.GameObjects.Container {
 
         this.health    = CONFIG.SNAIL.MAX_HEALTH;
         this.maxHealth = CONFIG.SNAIL.MAX_HEALTH;
+        this.speed     = CONFIG.PLAYER.SNAIL_SPEED;
         this.invincible = false;
         this.shielded   = false;
 
-        // --- Sprite (uses preloaded SVG textures) ---
-        this.sprite = scene.add.sprite(0, 0, DIR_TEXTURES.right);
+        // --- Sprite (animated) ---
+        this.sprite = scene.add.sprite(0, 0, 'snail-idle-right-f00');
         this.add(this.sprite);
+        this._currentAnimKey = null;   // tracks playing anim to avoid redundant play() calls
+        this._slitherHandle  = null;   // { stop() } returned by SoundSynth.playLooped('slithering')
 
         // --- Overhead state label ---
         this.stateLabel = scene.add.text(0, -30, 'IDLE', {
@@ -44,6 +90,9 @@ export default class Snail extends Phaser.GameObjects.Container {
             s: Phaser.Input.Keyboard.KeyCodes.S,
             d: Phaser.Input.Keyboard.KeyCodes.D,
         });
+
+        // Start idle animation immediately (registerAnims must be called first)
+        this._playCurrentAnim();
     }
 
     shield(duration) {
@@ -92,28 +141,58 @@ export default class Snail extends Phaser.GameObjects.Container {
 
         this.scene.time.delayedCall(CONFIG.SNAIL.INVINCIBILITY_MS, () => {
             this.invincible = false;
-            this.sprite.stop();
-            this.sprite.setTexture(DIR_TEXTURES[this.facing]);
+            this._currentAnimKey = null;  // force re-play after hit anim
+            this._playCurrentAnim();
         });
 
         return this.health <= 0;
     }
 
+    // Choose and play the correct looping animation based on current state + facing.
+    _playCurrentAnim() {
+        if (this.invincible) return;
+        const key = this.state === 'MOVING'
+            ? `snail-walk-${this.facing}`
+            : `snail-idle-${this.facing}`;
+        if (key !== this._currentAnimKey) {
+            this._currentAnimKey = key;
+            this.sprite.play(key);
+        }
+    }
+
     setFacing(direction) {
         if (this.facing !== direction) {
             this.facing = direction;
-            // Don't interrupt the damage animation while invincible.
-            if (!this.invincible) {
-                this.sprite.setTexture(DIR_TEXTURES[direction]);
-            }
+            this._playCurrentAnim();
         }
     }
 
     setState(newState) {
         if (this.state !== newState) {
+            const wasMoving = this.state === 'MOVING';
+            const isMoving  = newState === 'MOVING';
             this.state = newState;
             this.stateLabel.setText(newState);
+            if (isMoving  && !wasMoving) this._startSlither();
+            if (!isMoving && wasMoving)  this._stopSlither();
+            this._playCurrentAnim();
         }
+    }
+
+    _startSlither() {
+        if (this._slitherHandle) return;
+        const synth = this.scene.registry.get('soundSynth');
+        this._slitherHandle = synth?.playLooped('slithering') ?? null;
+    }
+
+    _stopSlither(fadeOut = 0.30) {
+        this._slitherHandle?.stop(fadeOut);
+        this._slitherHandle = null;
+    }
+
+    destroy() {
+        this._stopSlither(0.05);
+        super.destroy();
     }
 
     update(time, delta) {
@@ -139,8 +218,8 @@ export default class Snail extends Phaser.GameObjects.Container {
         }
 
         if (dx !== 0 || dy !== 0) {
-            this.x += dx * CONFIG.PLAYER.SNAIL_SPEED * dt;
-            this.y += dy * CONFIG.PLAYER.SNAIL_SPEED * dt;
+            this.x += dx * this.speed * dt;
+            this.y += dy * this.speed * dt;
             this.setState('MOVING');
 
             // Update facing direction — horizontal takes priority over vertical
