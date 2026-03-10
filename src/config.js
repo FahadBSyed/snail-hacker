@@ -100,7 +100,7 @@ export const DEFAULTS = {
     MINIGAMES: {
         SEQUENCE_TIME_LIMIT:   4000,  // ms to complete key sequence
         RHYTHM_BEATS_REQUIRED: 1,     // beats to win rhythm minigame
-        RHYTHM_MAX_MISSES:     1,     // allowed misses before failure
+        RHYTHM_MAX_MISSES:     0,     // allowed misses before failure (0 = must hit every beat)
         RHYTHM_BEAT_TIMEOUT:   2500,  // ms before auto-miss per beat
         TYPING_MS_PER_CHAR:    1500,  // ms per character in typing minigame
         FROGGER_TIME_LIMIT:   45000,  // ms before frogger minigame expires
