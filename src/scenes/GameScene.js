@@ -111,8 +111,9 @@ export default class GameScene extends Phaser.Scene {
         });
 
         this.load.on('complete', () => {
-            pctText.setText('100%');
-            fileText.setText('READY');
+            // Destroy all loading screen objects so they don't persist behind
+            // the game scene that create() will build.
+            [loadBg, barBorder, barFill, pctText, fileText].forEach(o => o.destroy());
         });
 
         // Background for this wave (only load if not already cached)
