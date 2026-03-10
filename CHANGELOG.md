@@ -2,6 +2,13 @@
 
 ## Session 9 — 2026-03-10
 
+### FroggerMinigame wired to Wave 10
+
+- **`src/scenes/GameScene.js`** — `_startHack()` now branches on `this.wave === 10` to launch `FroggerMinigame` instead of `HackMinigame`/`MathMinigame`. Callbacks map `onCrossing` → HUD + station progress, `onSuccess` → `_completeWave()`, `onFailure` → reset hack state (player can re-approach and retry). `FroggerMinigame` is imported at the top.
+- **`src/scenes/GameScene.js`** — `_wordsForWave(10)` now returns `CONFIG.MINIGAMES.FROGGER_CROSSINGS` so the HUD hack-progress bar tracks crossings (0-3) rather than a word count.
+- **`src/minigames/FroggerMinigame.js`** — Added optional `onCrossing(count)` callback, fired after each successful crossing so the caller can update external progress displays.
+- To test wave 10: in DEV_MODE, open the config editor from the menu and set `DEV_START_WAVE` to `10`.
+
 ### FroggerMinigame
 
 - **`src/minigames/FroggerMinigame.js`** — New minigame for the boss fight shield-break mechanic. Full Frogger-style game rendered inside a 456×398 panel centred on the screen:

@@ -50,8 +50,9 @@ export default class FroggerMinigame {
     /**
      * @param {Phaser.Scene} scene
      * @param {object}  opts
-     * @param {number}  [opts.pointsNeeded]  crossings required to win
-     * @param {number}  [opts.timeLimit]     ms before failure
+     * @param {number}   [opts.pointsNeeded]   crossings required to win
+     * @param {number}   [opts.timeLimit]      ms before failure
+     * @param {function} [opts.onCrossing]     called with (crossingsSoFar) after each crossing
      * @param {function} opts.onSuccess
      * @param {function} opts.onFailure
      */
@@ -59,6 +60,7 @@ export default class FroggerMinigame {
         this.scene        = scene;
         this.onSuccess    = opts.onSuccess;
         this.onFailure    = opts.onFailure;
+        this.onCrossing   = opts.onCrossing || null;
         this.cancelled    = false;
         this.pointsNeeded = opts.pointsNeeded ?? CONFIG.MINIGAMES.FROGGER_CROSSINGS;
         this.timeLimit    = opts.timeLimit    ?? CONFIG.MINIGAMES.FROGGER_TIME_LIMIT;
@@ -419,6 +421,7 @@ export default class FroggerMinigame {
         this.score++;
         this.scoreText.setText(this._scoreStr());
         this.scene.soundSynth?.play('wordSuccess');
+        if (this.onCrossing) this.onCrossing(this.score);
 
         this.resultText.setText('✓ SAFE!').setColor('#44ff88').setAlpha(1);
 

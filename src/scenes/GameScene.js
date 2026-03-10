@@ -12,6 +12,7 @@ import SlimeTrail from '../systems/SlimeTrail.js';
 import Terminal from '../entities/Terminal.js';
 import DefenseStation from '../entities/DefenseStation.js';
 import HackMinigame from '../minigames/HackMinigame.js';
+import FroggerMinigame from '../minigames/FroggerMinigame.js';
 import MathMinigame from '../minigames/MathMinigame.js';
 import RhythmMinigame from '../minigames/RhythmMinigame.js';
 import SequenceMinigame from '../minigames/SequenceMinigame.js';
@@ -430,6 +431,7 @@ export default class GameScene extends Phaser.Scene {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     _wordsForWave(wave) {
+        if (wave === 10) return CONFIG.MINIGAMES.FROGGER_CROSSINGS;
         return CONFIG.HACK.BASE_WORDS + (wave - 1) * CONFIG.HACK.WORDS_GROWTH;
     }
 
@@ -644,6 +646,31 @@ export default class GameScene extends Phaser.Scene {
         this.snail.hackingActive = true;
         this.snail.setState('HACKING');
 
+        // ── Wave 10: Frogger minigame instead of typing ────────────────────────
+        if (this.wave === 10) {
+            this.activeHack = new FroggerMinigame(this, {
+                pointsNeeded: this.hackThreshold,  // = FROGGER_CROSSINGS (3)
+                onCrossing: (count) => {
+                    this.hackProgress = count;
+                    this.hud.updateHack(this.hackProgress, this.hackThreshold);
+                    this.station.setHackProgress(this.hackProgress / this.hackThreshold);
+                },
+                onSuccess: () => {
+                    this.activeHack = null;
+                    this.snail.hackingActive = false;
+                    this.snail.setState('IDLE');
+                    this._completeWave();
+                },
+                onFailure: () => {
+                    this.activeHack = null;
+                    this.snail.hackingActive = false;
+                    this.snail.setState('IDLE');
+                },
+            });
+            return;
+        }
+
+        // ── Waves 1–9: typing / math hack ─────────────────────────────────────
         const remaining   = this.hackThreshold - this.hackProgress;
         const MinigameCls = this._hackMode === 'math' ? MathMinigame : HackMinigame;
         this.activeHack = new MinigameCls(this, {
