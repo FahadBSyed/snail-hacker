@@ -362,14 +362,15 @@ export default class GameScene extends Phaser.Scene {
             switch (upgrade.type) {
                 case 'CANNON': {
                     const cannon = new DefenseStation(this, x, y - 30, {
-                        type:      'CANNON',
-                        getAliens: () => this.aliens,
+                        type:        'CANNON',
+                        getAliens:   () => this.aliens,
+                        alienFilter: (a) => !a.shielded,   // ignore shielded aliens
                     });
                     term = new Terminal(this, x, y + 25, {
                         label:          'TURRET',
                         cooldown:       CONFIG.TERMINALS.CANNON_COOLDOWN,
                         color:          0xff8844,
-                        launchMinigame: this._sequenceLauncher,
+                        launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => cannon.activate(),
                     });
                     break;

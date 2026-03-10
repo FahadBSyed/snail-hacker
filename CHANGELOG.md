@@ -256,6 +256,10 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 - `ShieldAlien.takeDamage()` override returns `false` immediately while `this.shielded` is true, blocking all damage sources (projectiles, bomber splash, cannon auto-fire) — not just the projectile deflection already handled in `CollisionSystem`.
 - `CONFIG.ALIENS.SHIELD.HEALTH` reduced 15 → 10 so it dies in one shot once the shield drops (matches `PROJECTILE_HIT_ALIEN: 10`).
 
+### Auto-Turret Behaviour Tweaks
+- **Shield-aware targeting**: turret now passes `alienFilter: (a) => !a.shielded` to `DefenseStation`, so it skips shield aliens whose energy ring is up and focuses fire on targetable enemies instead.
+- **Minigame**: turret terminal now uses `_rhythmLauncher` (same as SHIELD/SLOW/REPAIR) instead of `_sequenceLauncher`.
+
 ### Auto-Turret Visual Redesign
 - `DefenseStation.drawStation()` completely redrawn in the oblique top-down aesthetic of the `station-gun` / `station-mainframe` SVG sprites.
 - **Base**: regular hexagon (flat-top, r=20) in gunmetal `#3a4450` outer / `#556070` inner, with a dark edge outline and a subtle `#00ffcc` accent ring at r=22 — echoes the hacking station's hex body and cyan glow.
