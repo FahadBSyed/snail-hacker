@@ -132,10 +132,12 @@ export const DEFAULTS = {
     },
 
     BOSS: {
-        HP:                  200,
+        HP:                  200,   // total hit points
         PHASE_SHIFT_HP:      100,   // damage taken before each phase shift
         ORBIT_RADIUS_X:      400,   // horizontal semi-axis (px)
-        ORBIT_RADIUS_Y:      130,   // vertical semi-axis — keeps boss above the Frogger panel (y≤490)
+        ORBIT_RADIUS_Y:      130,   // vertical semi-axis (px)
+        MIN_ORBIT_DIST:      260,   // px — boss is never closer than this to the station center
+        MAX_ORBIT_Y:         490,   // px — y ceiling; keeps boss above the FroggerMinigame panel
         ALIEN_BURST_SPREAD:   40,   // px between side-by-side burst aliens (perpendicular to attack vector)
         ORBIT_SPEED:         0.4,   // rad/s base oscillation speed
         ENRAGE_HP:           100,   // HP threshold for enrage
@@ -145,7 +147,7 @@ export const DEFAULTS = {
         SHIELD_DOWN_DURATION: 5000, // ms shield stays down after breaking
         ALIEN_BURST_COUNT: 3,       // FastAliens spawned per burst attack
         ATTACK_COOLDOWNS: {
-            ALIEN_BURST: 7000,      // ms between alien burst attacks
+            ALIEN_BURST: 5000,      // ms between alien burst attacks
         },
     },
 };

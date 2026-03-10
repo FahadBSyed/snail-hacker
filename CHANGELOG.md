@@ -1,5 +1,18 @@
 # SNAIL HACKER — Changelog
 
+## Session 10d — 2026-03-10
+
+### Boss tuning: minimum orbit distance + burst frequency
+
+- **`src/config.js`** — Three new/changed BOSS values:
+  - `MIN_ORBIT_DIST: 260` (new) — boss is never closer than 260 px to the station center (doubles the previous effective minimum of ~130 px from the ellipse short axis)
+  - `MAX_ORBIT_Y: 490` (new) — explicit y-ceiling that keeps the boss above the FroggerMinigame panel; previously this was an implicit side-effect of ORBIT_RADIUS_Y
+  - `ATTACK_COOLDOWNS.ALIEN_BURST: 5000` (was 7000) — burst fires every 5 s instead of 7 s (~40% more frequent)
+- **`src/entities/aliens/BossAlien.js`** — Orbit code now enforces both constraints after computing the ellipse position:
+  - If within `MIN_ORBIT_DIST` of station, boss is pushed outward along the radial direction
+  - `ny` clamped to ≤ `MAX_ORBIT_Y` so boss never enters the Frogger panel
+  - Same constraints applied to `_reenter()` tween target so boss doesn't land close-in after a phase shift
+
 ## Session 10c — 2026-03-10
 
 ### Boss Fight — Damage Detection Fix

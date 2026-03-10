@@ -184,12 +184,21 @@ export default class BossAlien extends Phaser.GameObjects.Container {
         this.x = entry.x;
         this.y = entry.y;
 
-        // Pick a new orbit angle and tween to it
+        // Pick a new orbit angle and tween to it (apply same distance constraints as orbit)
         const newAngle = Math.random() * Math.PI * 2;
         this._baseAngle = newAngle;
         this._time      = 0;
-        const targetX   = 640 + Math.cos(newAngle) * CONFIG.BOSS.ORBIT_RADIUS_X;
-        const targetY   = 360 + Math.sin(newAngle) * CONFIG.BOSS.ORBIT_RADIUS_Y;
+        const cfg = CONFIG.BOSS;
+        let targetX = 640 + Math.cos(newAngle) * cfg.ORBIT_RADIUS_X;
+        let targetY = 360 + Math.sin(newAngle) * cfg.ORBIT_RADIUS_Y;
+        const rdx = targetX - 640, rdy = targetY - 360;
+        const rdist = Math.sqrt(rdx * rdx + rdy * rdy);
+        if (rdist > 0 && rdist < cfg.MIN_ORBIT_DIST) {
+            const scale = cfg.MIN_ORBIT_DIST / rdist;
+            targetX = 640 + rdx * scale;
+            targetY = 360 + rdy * scale;
+        }
+        if (targetY > cfg.MAX_ORBIT_Y) targetY = cfg.MAX_ORBIT_Y;
 
         this.scene.tweens.add({
             targets:  this,
@@ -249,15 +258,27 @@ export default class BossAlien extends Phaser.GameObjects.Container {
         const burstCd  = cfg.ATTACK_COOLDOWNS.ALIEN_BURST * (enraged ? cfg.ENRAGE_COOLDOWN_MULT : 1);
 
         // Sinusoidal orbit: base angle drifts slowly, ±45° oscillation layered on top.
-        // Uses an ellipse (ORBIT_RADIUS_X wide, ORBIT_RADIUS_Y tall) so the boss
-        // stays above the FroggerMinigame panel in the bottom third.
         this._time      += dt;
         this._baseAngle += orbitSpd * 0.35 * dt;
         const offset     = Math.sin(this._time * orbitSpd) * (Math.PI / 4);
         const angle      = this._baseAngle + offset;
 
-        this.x = 640 + Math.cos(angle) * cfg.ORBIT_RADIUS_X;
-        this.y = 360 + Math.sin(angle) * cfg.ORBIT_RADIUS_Y;
+        let nx = 640 + Math.cos(angle) * cfg.ORBIT_RADIUS_X;
+        let ny = 360 + Math.sin(angle) * cfg.ORBIT_RADIUS_Y;
+
+        // Enforce minimum distance from station — push outward along the radial direction
+        const dx = nx - 640, dy = ny - 360;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 0 && dist < cfg.MIN_ORBIT_DIST) {
+            const scale = cfg.MIN_ORBIT_DIST / dist;
+            nx = 640 + dx * scale;
+            ny = 360 + dy * scale;
+        }
+        // y ceiling keeps boss above FroggerMinigame panel
+        if (ny > cfg.MAX_ORBIT_Y) ny = cfg.MAX_ORBIT_Y;
+
+        this.x = nx;
+        this.y = ny;
 
         // Face toward station
         const faceAngle = Phaser.Math.Angle.Between(this.x, this.y, 640, 360);
