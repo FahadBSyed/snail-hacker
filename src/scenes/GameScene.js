@@ -669,6 +669,7 @@ export default class GameScene extends Phaser.Scene {
                     if (this.boss && this.boss.active && !this.boss._dying) {
                         this.boss.dropShield();
                         this.soundSynth.play('shieldReflect');
+                        console.log('[boss] shield dropped by Frogger success');
                         this.logDebug('Boss shield broken! Shield down for 5s.');
                         this.time.delayedCall(CONFIG.BOSS.SHIELD_DOWN_DURATION, () => {
                             if (this.boss && this.boss.active && !this.boss._dying) {
@@ -1304,7 +1305,7 @@ export default class GameScene extends Phaser.Scene {
 
             // Projectile vs boss
             this.projectiles = this.projectiles.filter(proj => {
-                if (!proj.active) return true;
+                if (!proj.active) return false;
                 const dist = Phaser.Math.Distance.Between(proj.x, proj.y, this.boss.x, this.boss.y);
                 if (dist < this.boss.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
                     proj.destroy();
@@ -1315,9 +1316,11 @@ export default class GameScene extends Phaser.Scene {
                         // Red hit flash at boss position
                         const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
                         this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
-                        // Wobble
-                        this.tweens.add({ targets: this.boss, x: this.boss.x + 6, duration: 50, yoyo: true, repeat: 1 });
+                        // Brief sprite flash (no position tween — orbit code owns boss.x/y)
+                        this.boss.sprite.setAlpha(0.2);
+                        this.time.delayedCall(80, () => { if (this.boss?.sprite) this.boss.sprite.setAlpha(1); });
                         const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                        console.log(`[boss] hit! hp=${this.boss.health} dead=${dead} shielded=${this.boss.shielded}`);
                         if (this.hud) this.hud.updateBossBar(this.boss.health);
                         if (dead) this._bossDeath();
                     }

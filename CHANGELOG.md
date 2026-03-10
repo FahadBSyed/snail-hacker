@@ -1,5 +1,15 @@
 # SNAIL HACKER — Changelog
 
+## Session 10c — 2026-03-10
+
+### Boss Fight — Damage Detection Fix
+
+- **`src/entities/aliens/BossAlien.js`** — Collision radius increased 36→48 px to match the actual 96×96 sprite (visual radius = 48 px). Shots at the sprite edges were missing because the hitbox was smaller than the graphic. Added `console.log` inside `takeDamage` to report when damage is blocked vs applied.
+- **`src/scenes/GameScene.js`**:
+  - **Removed wobble tween** (`targets: this.boss, x: boss.x + 6`) from the boss hit path. That tween fought directly with the orbit code which overwrites `boss.x` every frame, causing Phaser's tween system to hold stale start/end values and corrupt the position. Replaced with a 80ms sprite alpha flash (sets `boss.sprite.alpha` to 0.2 then back to 1) which doesn't conflict with the Container's x/y.
+  - Fixed `return true` → `return false` for inactive projectiles in the boss collision filter so stale destroyed projectiles are cleaned up correctly.
+  - Added `console.log('[boss] hit!')` and `console.log('[boss] shield dropped')` to confirm the collision and shield-drop paths are being reached (aids debugging; can be removed after confirmation).
+
 ## Session 10b — 2026-03-10
 
 ### Boss Fight — Bug Fixes

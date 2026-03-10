@@ -23,7 +23,7 @@ export default class BossAlien extends Phaser.GameObjects.Container {
 
         this.alienType = 'boss';
         this.health    = CONFIG.BOSS.HP;
-        this.radius    = 36;   // collision radius (sprite renders at ~96px)
+        this.radius    = 48;   // collision radius (sprite is 96×96 px → visual radius 48)
 
         this.shielded        = true;
         this._dying          = false;
@@ -66,7 +66,10 @@ export default class BossAlien extends Phaser.GameObjects.Container {
      *  player who keeps shooting during the 550ms fly-away window still deals
      *  damage. */
     takeDamage(amount) {
-        if (this.shielded || this._dying) return false;
+        if (this.shielded || this._dying) {
+            console.log(`[BossAlien] takeDamage blocked — shielded=${this.shielded} dying=${this._dying}`);
+            return false;
+        }
 
         this.health       -= amount;
         this._damageAccum += amount;
