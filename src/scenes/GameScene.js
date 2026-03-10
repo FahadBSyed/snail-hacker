@@ -7,6 +7,7 @@ import TankAlien from '../entities/aliens/TankAlien.js';
 import BomberAlien from '../entities/aliens/BomberAlien.js';
 import ShieldAlien from '../entities/aliens/ShieldAlien.js';
 import BossAlien from '../entities/aliens/BossAlien.js';
+import BossProjectile from '../entities/BossProjectile.js';
 import HackingStation from '../entities/HackingStation.js';
 import GrabHandSystem from '../systems/GrabHandSystem.js';
 import SlimeTrail from '../systems/SlimeTrail.js';
@@ -197,7 +198,8 @@ export default class GameScene extends Phaser.Scene {
         this._hackMode     = 'typing'; // alternates to 'math' on each battery spawn
 
         // ── Boss ──────────────────────────────────────────────────────────────
-        this.boss = null;
+        this.boss            = null;
+        this.bossProjectiles = [];
 
         // ── Alien speed multiplier / slow field ───────────────────────────────
         this.alienSpeedMultiplier = 1.0;
@@ -933,6 +935,10 @@ export default class GameScene extends Phaser.Scene {
                 }
                 this.logDebug(`Boss fires alien burst! (${count} FastAliens)`);
             },
+            onBlackHole: (bx, by) => {
+                this.bossProjectiles.push(new BossProjectile(this, bx, by));
+                this.logDebug('Boss fires black hole!');
+            },
         });
         this.hud.showBossBar(this.boss.health, CONFIG.BOSS.HP);
         this.logDebug('The Overlord has arrived!');
@@ -971,6 +977,10 @@ export default class GameScene extends Phaser.Scene {
                 }
             },
         });
+
+        // Clear any lingering black holes immediately
+        for (const bp of this.bossProjectiles) { if (bp.active) bp.destroy(); }
+        this.bossProjectiles = [];
 
         // Final explosion + wave end
         this.time.delayedCall(900, () => {
@@ -1358,6 +1368,46 @@ export default class GameScene extends Phaser.Scene {
             });
         }
 
+        // Boss projectiles — update, P2 shots vs black hole, snail contact
+        this.bossProjectiles = this.bossProjectiles.filter(bp => {
+            if (!bp.active) return false;
+            const alive = bp.update(time, delta, this.snail.x, this.snail.y);
+            if (!alive) return false;
+
+            // P2 projectile vs black hole
+            for (const proj of this.projectiles) {
+                if (!proj.active) continue;
+                const dist = Phaser.Math.Distance.Between(proj.x, proj.y, bp.x, bp.y);
+                if (dist < bp.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
+                    proj.destroy();
+                    const dead = bp.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                    // Purple hit flash
+                    const flash = this.add.arc(bp.x, bp.y, bp.radius, 0, 360, false, 0xaa44ff, 0.75).setDepth(58);
+                    this.tweens.add({ targets: flash, alpha: 0, duration: 180, onComplete: () => flash.destroy() });
+                    this.soundSynth?.play('shieldReflect');
+                    if (dead) {
+                        spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
+                        bp.destroy();
+                        return false;
+                    }
+                    break;
+                }
+            }
+
+            // Black hole contacts Gerald → warp him
+            if (bp.active) {
+                const snailDist = Phaser.Math.Distance.Between(bp.x, bp.y, this.snail.x, this.snail.y);
+                if (snailDist < bp.radius + 12) {
+                    this._warpSnail();
+                    spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
+                    bp.destroy();
+                    return false;
+                }
+            }
+
+            return bp.active;
+        });
+
         // Collision checks (projectile vs alien)
         checkProjectileCollisions(this);
 
@@ -1379,9 +1429,53 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // Cleanup
-        this.projectiles = this.projectiles.filter(p => p.active);
-        this.aliens      = this.aliens.filter(a => a.active && !a._dying);
-        this.healthDrops = this.healthDrops.filter(d => d.active);
+        this.projectiles     = this.projectiles.filter(p => p.active);
+        this.aliens          = this.aliens.filter(a => a.active && !a._dying);
+        this.healthDrops     = this.healthDrops.filter(d => d.active);
+        this.bossProjectiles = this.bossProjectiles.filter(bp => bp.active);
+    }
+
+    // ── Black hole warp ───────────────────────────────────────────────────────
+
+    /** Teleport Gerald to a random position far from the station. */
+    _warpSnail() {
+        // Cancel any active hack — same effect as P2 teleporting the snail
+        if (this.activeHack)  { this.activeHack.cancel(); this.activeHack = null; }
+        if (this.snail) this.snail.hackingActive = false;
+
+        // Pick a random position at least 260px from station, inside the play area
+        const angle = Math.random() * Math.PI * 2;
+        const dist  = Phaser.Math.Between(260, 380);
+        const wx    = Phaser.Math.Clamp(640 + Math.cos(angle) * dist, 80, 1200);
+        const wy    = Phaser.Math.Clamp(360 + Math.sin(angle) * dist, 80, 460);
+
+        // Collapse rings at origin, expand rings at destination
+        this._spawnWarpRings(this.snail.x, this.snail.y, true);
+        this.snail.x = wx;
+        this.snail.y = wy;
+        this._spawnWarpRings(wx, wy, false);
+
+        this.soundSynth?.play('teleport');
+        this.logDebug(`Black hole warp → (${Math.round(wx)}, ${Math.round(wy)})`);
+    }
+
+    /** Three staggered rings: collapse=true shrinks inward, false expands outward. */
+    _spawnWarpRings(x, y, collapse) {
+        for (let i = 0; i < 3; i++) {
+            const r    = 8 + i * 14;
+            const ring = this.add.arc(x, y, r, 0, 360, false, 0x0a0011, 0)
+                .setStrokeStyle(2, collapse ? 0xbb44ff : 0x7722cc, 0.9).setDepth(62);
+            this.tweens.add({
+                targets:  ring,
+                scaleX:   collapse ? 0.1 : 3.5,
+                scaleY:   collapse ? 0.1 : 3.5,
+                alpha:    0,
+                delay:    i * 55,
+                duration: 380,
+                ease:     'Power2.easeOut',
+                onComplete: () => ring.destroy(),
+            });
+        }
     }
 
     logDebug(message) {

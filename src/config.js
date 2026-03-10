@@ -146,8 +146,12 @@ export const DEFAULTS = {
         SHIELD_DROP_WORDS:     3,   // frogger crossings required to drop shield
         SHIELD_DOWN_DURATION: 5000, // ms shield stays down after breaking
         ALIEN_BURST_COUNT: 3,       // FastAliens spawned per burst attack
+        BLACK_HOLE_HP:     30,      // projectile hits required to destroy a black hole
+        BLACK_HOLE_SPEED:  80,      // px/s — slow homing toward Gerald
+        BLACK_HOLE_RADIUS: 14,      // collision + visual radius (px)
         ATTACK_COOLDOWNS: {
             ALIEN_BURST: 5000,      // ms between alien burst attacks
+            BLACK_HOLE:  8000,      // ms between black hole shots
         },
     },
 };

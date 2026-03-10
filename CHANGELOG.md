@@ -1,5 +1,19 @@
 # SNAIL HACKER — Changelog
 
+## Session 10f — 2026-03-10
+
+### Boss Attack: Black Hole Projectile
+
+- **`src/entities/BossProjectile.js`** (new) — Slow-homing dark projectile. Draws a near-black core with concentric pulsing purple/violet rings. Homes toward Gerald at `CONFIG.BOSS.BLACK_HOLE_SPEED` (80 px/s). Absorbs `CONFIG.BOSS.BLACK_HOLE_HP` (30) projectile hits before dying.
+- **`src/config.js`** — `BLACK_HOLE_HP: 30`, `BLACK_HOLE_SPEED: 80`, `BLACK_HOLE_RADIUS: 14`, `ATTACK_COOLDOWNS.BLACK_HOLE: 8000`.
+- **`src/entities/aliens/BossAlien.js`** — Added `_blackHoleTimer` and `onBlackHole` callback; fires every `BLACK_HOLE` cooldown (scales with enrage multiplier).
+- **`src/scenes/GameScene.js`**:
+  - `this.bossProjectiles = []` maintained alongside `this.boss`; cleared on boss death.
+  - `onBlackHole` callback pushes a `BossProjectile` from the boss's current position.
+  - Update loop: homing movement, P2 shots destroy it (purple hit flash + death burst), snail contact calls `_warpSnail()`.
+  - `_warpSnail()` — cancels active hack, teleports Gerald 260–380 px from station at a random angle (clamped to play area), plays collapse/expand warp-ring visuals, plays teleport sound.
+  - `_spawnWarpRings(x, y, collapse)` — three staggered purple ring tweens.
+
 ## Session 10e — 2026-03-10
 
 ### FroggerMinigame: half-width sideways steps

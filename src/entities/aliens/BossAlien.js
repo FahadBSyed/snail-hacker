@@ -32,8 +32,10 @@ export default class BossAlien extends Phaser.GameObjects.Container {
         this._time           = 0;
         this._baseAngle      = Math.atan2(y - 360, x - 640);
         this._burstTimer     = 0;
+        this._blackHoleTimer = 0;
 
-        this.onAlienBurst = opts.onAlienBurst || null;
+        this.onAlienBurst  = opts.onAlienBurst  || null;
+        this.onBlackHole   = opts.onBlackHole   || null;
 
         // ── Sprite ──────────────────────────────────────────────────────────────
         this.sprite = scene.add.image(0, 0, 'alien-boss-right');
@@ -299,6 +301,14 @@ export default class BossAlien extends Phaser.GameObjects.Container {
         if (this._burstTimer >= burstCd) {
             this._burstTimer = 0;
             if (this.onAlienBurst) this.onAlienBurst(this.x, this.y);
+        }
+
+        // Black hole attack
+        const blackHoleCd = cfg.ATTACK_COOLDOWNS.BLACK_HOLE * (enraged ? cfg.ENRAGE_COOLDOWN_MULT : 1);
+        this._blackHoleTimer += delta;
+        if (this._blackHoleTimer >= blackHoleCd) {
+            this._blackHoleTimer = 0;
+            if (this.onBlackHole) this.onBlackHole(this.x, this.y);
         }
     }
 }
