@@ -256,6 +256,10 @@ Three new tunable entries in `DEFAULTS` (and therefore `CONFIG`):
 - `ShieldAlien.takeDamage()` override returns `false` immediately while `this.shielded` is true, blocking all damage sources (projectiles, bomber splash, cannon auto-fire) — not just the projectile deflection already handled in `CollisionSystem`.
 - `CONFIG.ALIENS.SHIELD.HEALTH` reduced 15 → 10 so it dies in one shot once the shield drops (matches `PROJECTILE_HIT_ALIEN: 10`).
 
+### Mucus Trail Particle Effect
+- `src/systems/SlimeTrail.js` — new system; every 90 ms while Gerald is `MOVING`, spawns a procedural Graphics decal behind his foot. Each decal is a rotated ellipse (10–14 × 4–6 px, `0xA8C400`) plus a smaller satellite circle (`0x90B000`) offset backward, with random slight rotation and alpha (0.45–0.60). Placed at depth −0.5 so it renders above the background but beneath all entities. A Phaser `Quad.easeIn` tween fades the decal to zero over 3.5 s, then destroys the Graphics object.
+- `src/scenes/GameScene.js` — imports `SlimeTrail`, instantiates it after the snail, and calls `slimeTrail.update(snail, delta)` each frame.
+
 ### Slithering Sound Effect
 - `src/systems/SoundSynth.js` — extended `playLooped` to fall back to a procedural `_${name}_looped()` method when no file override is available. Added `_slithering_looped()`: looping 1-second white-noise buffer → bandpass filter (280 Hz, Q=3) → gain, with a 2.5 Hz LFO for a subtle rhythmic pulse that mirrors the foot-wave animation. Very quiet (0.12 × master volume). Returned handle has `stop(fadeOut)`.
 - `src/entities/Snail.js` — `setState` now starts the slither loop when entering `MOVING` and fades it out (300 ms) when leaving. `_startSlither` / `_stopSlither` helpers manage the handle. `destroy()` override stops the sound immediately on scene teardown.

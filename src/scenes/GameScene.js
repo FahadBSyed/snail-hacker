@@ -8,6 +8,7 @@ import BomberAlien from '../entities/aliens/BomberAlien.js';
 import ShieldAlien from '../entities/aliens/ShieldAlien.js';
 import HackingStation from '../entities/HackingStation.js';
 import GrabHandSystem from '../systems/GrabHandSystem.js';
+import SlimeTrail from '../systems/SlimeTrail.js';
 import Terminal from '../entities/Terminal.js';
 import DefenseStation from '../entities/DefenseStation.js';
 import HackMinigame from '../minigames/HackMinigame.js';
@@ -107,7 +108,8 @@ export default class GameScene extends Phaser.Scene {
 
         // ── Snail (Player 1) ──────────────────────────────────────────────────
         Snail.registerAnims(this);
-        this.snail = new Snail(this, 300, 400);
+        this.snail      = new Snail(this, 300, 400);
+        this.slimeTrail = new SlimeTrail(this);
         if (this.startSnailHp < CONFIG.SNAIL.MAX_HEALTH) {
             this.snail.health = this.startSnailHp;
         }
@@ -974,6 +976,7 @@ export default class GameScene extends Phaser.Scene {
         this.grabSystem.update(delta);
         this.hud.updateGrab(this.grabSystem.statusText, this.grabSystem.statusColor);
         if (!this.boardingShip) this.snail.update(time, delta);
+        this.slimeTrail.update(this.snail, delta);
 
         // ── Drone orbit animation ─────────────────────────────────────────────
         if (this._droneContainer && this._droneContainer.active && !this._droneFlying) {
