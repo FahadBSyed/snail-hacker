@@ -103,7 +103,7 @@ export default class FroggerMinigame {
 
     // ── UI construction ───────────────────────────────────────────────────────
     _createUI() {
-        this.container = this.scene.add.container(640, 360).setDepth(200);
+        this.container = this.scene.add.container(640, 360).setDepth(200).setScale(0.5);
 
         // Panel background
         const panel = this.scene.add.rectangle(0, 0, PANEL_W, PANEL_H, 0x04040f, 0.96)
@@ -290,7 +290,7 @@ export default class FroggerMinigame {
         for (let row = 1; row <= 5; row++) {
             const y = GRID_OY + row * CELL_H + CELL_H / 2;
             for (let x = GRID_OX + 4; x < GRID_OX + GRID_W - 4; x += 22) {
-                g.strokeLineSegment(x, y, x + 12, y);
+                g.lineBetween(x, y, x + 12, y);
             }
         }
 
