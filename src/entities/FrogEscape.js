@@ -41,11 +41,11 @@ export default class FrogEscape extends Phaser.GameObjects.Container {
         this._idleTween  = null;
 
         // ── Blob shadow ──────────────────────────────────────────────────────
-        const shadow = scene.add.ellipse(3, 14, 58, 18, 0x000000, 0.20);
+        const shadow = scene.add.ellipse(1, 5, 19, 6, 0x000000, 0.20);
         this.add(shadow);
 
-        // ── Frog sprite (2× scale = 96×96 px) ───────────────────────────────
-        this._img = scene.add.image(0, 0, `frog-${this._dir}`).setScale(2);
+        // ── Frog sprite (0.667× scale = 32×32 px) ───────────────────────────
+        this._img = scene.add.image(0, 0, `frog-${this._dir}`).setScale(2 / 3);
         this.add(this._img);
 
         // ── Fade in ──────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ export default class FrogEscape extends Phaser.GameObjects.Container {
         // ── Idle breathe (gentle scale bob on the image) ─────────────────────
         this._idleTween = scene.tweens.add({
             targets: this._img,
-            scaleX: 2.10, scaleY: 1.90,
+            scaleX: 0.70, scaleY: 0.633,
             duration: 680,
             ease: 'Sine.easeInOut',
             yoyo: true,
@@ -76,7 +76,7 @@ export default class FrogEscape extends Phaser.GameObjects.Container {
 
         // Stop idle breathe and reset image scale
         if (this._idleTween) { this._idleTween.stop(); this._idleTween = null; }
-        this._img.setScale(2);
+        this._img.setScale(2 / 3);
 
         // Set velocity toward the chosen edge
         const velMap = {
