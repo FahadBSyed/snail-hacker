@@ -276,6 +276,9 @@ export default class GameScene extends Phaser.Scene {
                 this.logDebug('Snail grabbed!');
             },
         });
+        if (this.upgradesList.some(u => u.type === 'QUICK_GRAB')) {
+            this.grabSystem.cooldownMultiplier = 0.5;
+        }
 
         // ── Service terminals ─────────────────────────────────────────────────
         // Minigame launchers — each wraps the minigame and tracks it for grab-cancel support.

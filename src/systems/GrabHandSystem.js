@@ -73,6 +73,7 @@ export default class GrabHandSystem {
 
         this.onCooldown        = false;
         this.cooldownRemaining = 0;     // seconds
+        this.cooldownMultiplier = 1.0;  // reduced by QUICK_GRAB upgrade
 
         // Dangle spring state (shared; only one object held at a time)
         this._prevHeldPos  = null;  // {x,y} last frame — for velocity calc
@@ -200,7 +201,7 @@ export default class GrabHandSystem {
         this.heldTarget        = null;
         this.batteryGrabOrigin = null;
         this.onCooldown        = true;
-        this.cooldownRemaining = CONFIG.GRAB.COOLDOWN;
+        this.cooldownRemaining = CONFIG.GRAB.COOLDOWN * this.cooldownMultiplier;
         this._showCursor('crosshair');
     }
 
