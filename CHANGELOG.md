@@ -2,6 +2,14 @@
 
 ## Session 10k — 2026-03-11
 
+### Upgrade Card Entrance and Selection Animations
+
+Upgrade cards in the intermission scene now animate in and respond visually to selection.
+
+- **Entrance**: Each card slides down from above the screen while expanding from a small scale to full size (`Back.easeOut`). Cards animate in left-to-right with a 140 ms stagger so they arrive sequentially rather than all at once.
+- **Selection**: Selecting a card triggers a rapid alpha flash (5 pulses) combined with a full 360° spin. Non-selected cards fade to 25% opacity.
+- **Implementation**: Refactored `_showUpgradeCards` in `src/scenes/IntermissionScene.js` to wrap each card's graphics + text objects in a `Phaser.GameObjects.Container`. All drawing coords are now container-local (origin at card center). Interactivity uses `container.setSize` + `container.setInteractive()` instead of a separate zone object.
+
 ### EMP Mines Bypass Boss Shield (with 30% Damage Reduction)
 
 EMP mine explosions now penetrate the boss's energy shield, consistent with how they already bypass ShieldAlien shields. Because the EMP is not intended as the primary damage source against the boss, damage is reduced to 70% of `CONFIG.EMP.MINE_DAMAGE` when hitting the boss. Phase-shift accumulation is still tracked correctly so EMP hits can still contribute to triggering phase shifts.

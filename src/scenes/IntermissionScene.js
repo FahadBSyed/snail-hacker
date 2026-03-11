@@ -264,51 +264,75 @@ export default class IntermissionScene extends Phaser.Scene {
 
         const UPGRADE_DEFS = getUpgradeDefs();
         types.forEach((type, i) => {
-            const def = UPGRADE_DEFS[type];
-            const x   = startX + i * (cardW + gap);
+            const def      = UPGRADE_DEFS[type];
+            const x        = startX + i * (cardW + gap);
             const colorHex = '#' + def.color.toString(16).padStart(6, '0');
 
-            // Draw card background + border
+            // Container groups all card children so they animate as one unit.
+            // Start above the screen, scaled down — entrance tween brings it into place.
+            const container = this.add.container(x, cardY - 460);
+            container.setScale(0.15);
+            container.setAlpha(0);
+
+            // Card background + border (coords are relative to container origin)
             const gfx = this.add.graphics();
             const drawCard = (hover = false) => {
                 gfx.clear();
                 gfx.fillStyle(0x0d150d, 1);
-                gfx.fillRoundedRect(x - cardW / 2, cardY - cardH / 2, cardW, cardH, 8);
+                gfx.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 8);
                 gfx.lineStyle(hover ? 3 : 2, def.color, hover ? 1.0 : 0.7);
-                gfx.strokeRoundedRect(x - cardW / 2, cardY - cardH / 2, cardW, cardH, 8);
+                gfx.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 8);
                 // Color accent stripe at top
                 gfx.fillStyle(def.color, 0.22);
-                gfx.fillRect(x - cardW / 2 + 1, cardY - cardH / 2 + 1, cardW - 2, 30);
+                gfx.fillRect(-cardW / 2 + 1, -cardH / 2 + 1, cardW - 2, 30);
             };
             drawCard();
+            container.add(gfx);
 
             // Label (inside accent stripe)
-            this.add.text(x, cardY - cardH / 2 + 16, def.label, {
+            const labelText = this.add.text(0, -cardH / 2 + 16, def.label, {
                 fontSize: '12px', fontFamily: 'monospace', color: colorHex, fontStyle: 'bold',
             }).setOrigin(0.5);
+            container.add(labelText);
 
-            // Passive badge (shown just below accent stripe for passive upgrades)
+            // Passive badge
             if (PASSIVE_UPGRADES.has(type)) {
-                this.add.text(x, cardY - cardH / 2 + 40, '— PASSIVE —', {
+                const badge = this.add.text(0, -cardH / 2 + 40, '— PASSIVE —', {
                     fontSize: '9px', fontFamily: 'monospace', color: '#557755',
                 }).setOrigin(0.5);
+                container.add(badge);
             }
 
             // Description
-            this.add.text(x, cardY + 12, def.desc, {
+            const descText = this.add.text(0, 12, def.desc, {
                 fontSize: '12px', fontFamily: 'monospace', color: '#aaaaaa', align: 'center',
                 wordWrap: { width: cardW - 24 },
             }).setOrigin(0.5);
+            container.add(descText);
 
             // Key-number hint at bottom
-            this.add.text(x, cardY + cardH / 2 - 18, `[ ${i + 1} ]`, {
+            const keyHint = this.add.text(0, cardH / 2 - 18, `[ ${i + 1} ]`, {
                 fontSize: '13px', fontFamily: 'monospace', color: '#ffdd44',
             }).setOrigin(0.5);
+            container.add(keyHint);
 
-            // Interactive hit zone
-            const zone = this.add.zone(x, cardY, cardW, cardH).setInteractive();
-            zone.on('pointerover', () => { if (!selected) drawCard(true); });
-            zone.on('pointerout',  () => { if (!selected) drawCard(false); });
+            // Interactive hit zone inside the container
+            container.setSize(cardW, cardH);
+            container.setInteractive();
+            container.on('pointerover', () => { if (!selected) drawCard(true); });
+            container.on('pointerout',  () => { if (!selected) drawCard(false); });
+
+            // ── Entrance animation (staggered left → right) ──────────────────
+            this.tweens.add({
+                targets:  container,
+                y:        cardY,
+                scaleX:   1,
+                scaleY:   1,
+                alpha:    1,
+                duration: 380,
+                delay:    i * 140,
+                ease:     'Back.easeOut',
+            });
 
             const select = () => {
                 if (selected) return;
@@ -316,20 +340,42 @@ export default class IntermissionScene extends Phaser.Scene {
                 this.input.keyboard.off('keydown', keyListener);
                 this.soundSynth.play('upgradeSelect');
 
-                // Flash selected card bright, dim others
-                drawCard(true);
-                cards.forEach(c => { if (c !== cards[i]) c.gfx.setAlpha(0.3); });
+                // Dim non-selected cards
+                cards.forEach((c, j) => {
+                    if (j !== i) {
+                        this.tweens.add({
+                            targets: c.container, alpha: 0.25, duration: 200,
+                        });
+                    }
+                });
 
-                // Find a safe angle and record the upgrade
+                // Flash: rapid alpha pulse
+                this.tweens.add({
+                    targets:  container,
+                    alpha:    0.15,
+                    duration: 70,
+                    yoyo:     true,
+                    repeat:   4,
+                    ease:     'Sine.easeInOut',
+                    onComplete: () => container.setAlpha(1),
+                });
+
+                // Spin: full 360° rotation
+                this.tweens.add({
+                    targets:  container,
+                    angle:    360,
+                    duration: 520,
+                    ease:     'Cubic.easeInOut',
+                });
+
+                // Record the upgrade and advance after the animation
                 const angle = this._findSafeUpgradeAngle();
                 this.upgrades = [...this.upgrades, { type, angle }];
-
-                // Brief pause, then advance
-                this.time.delayedCall(550, () => this._advance());
+                this.time.delayedCall(600, () => this._advance());
             };
 
-            zone.on('pointerdown', select);
-            cards.push({ gfx, select });
+            container.on('pointerdown', select);
+            cards.push({ gfx, select, container });
         });
 
         // Prompt below the cards
