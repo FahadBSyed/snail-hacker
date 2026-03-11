@@ -2,6 +2,18 @@
 
 ## Session 10k — 2026-03-11
 
+### On-Foot Frog Sprites + Hop Animation Frames
+
+- **`scripts/generate-frog-sprites.js`** (new) — Generates 20 SVGs of the alien frog passenger on foot, without the flying saucer. Uses the same rotation trick as the saucer scripts: geometry is defined once in local coords (+x forward), and a `translate(24,24) rotate(deg)` transform produces all four cardinal directions.
+  - **4 neutral idle sprites**: `assets/sprites/frog/frog-{right,left,up,down}.svg` — relaxed standing pose, four legs visible.
+  - **16 hop frames** (4 dirs × 4 frames): `assets/sprites/frog/frog-hop-{dir}-f{00-03}.svg`
+    - **f00** land/squash — wide body, legs splayed outward on impact
+    - **f01** crouch — all legs pulled in, body compact, storing energy
+    - **f02** leap — body elongated in travel direction, back legs sweeping back, front legs tucked
+    - **f03** glide — back legs fully trailing, front legs reaching forward to land
+  - Draw order: back legs → torso (belly highlight ellipse) → head/eyes/face → front legs.
+  - Colours match the saucer frog passenger exactly (`#3cb83c` body, `#dde840` eyes, `#1d6b1d` outlines).
+
 ### Blob Drop Shadows on Gerald and Aliens
 
 - **Approach**: a `Graphics` ellipse added as the first child of each entity Container (rendered before the sprite, therefore always behind it). Costs one `fillEllipse` per entity per frame — negligible on `Phaser.CANVAS`.
