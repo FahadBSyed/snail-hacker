@@ -26,11 +26,12 @@ export default class FastAlien extends BaseAlien {
     update(time, delta) {
         const dt        = delta / 1000;
         const speedMult = this.scene.alienSpeedMultiplier || 1.0;
-        const snail     = this.scene.snail;
+        const decoy     = this.scene.decoy;
+        const target    = (decoy && decoy.active) ? decoy : this.scene.snail;
         this.t += dt;
 
-        // Re-steer base trajectory toward snail each frame
-        this.angle     = Phaser.Math.Angle.Between(this.baseX, this.baseY, snail.x, snail.y);
+        // Re-steer base trajectory toward active target each frame
+        this.angle     = Phaser.Math.Angle.Between(this.baseX, this.baseY, target.x, target.y);
         this.perpAngle = this.angle + Math.PI / 2;
 
         // Advance base position along steering angle
@@ -48,7 +49,10 @@ export default class FastAlien extends BaseAlien {
             this.sprite.setTexture(`${this.spriteKey}-${dir}`);
         }
 
-        const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
-        return dist < this.radius + 20 ? 'reached_snail' : 'alive';
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+        if (dist < this.radius + 20) {
+            return (decoy && decoy.active) ? 'reached_decoy' : 'reached_snail';
+        }
+        return 'alive';
     }
 }

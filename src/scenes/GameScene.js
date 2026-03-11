@@ -6,12 +6,15 @@ import FastAlien from '../entities/aliens/FastAlien.js';
 import TankAlien from '../entities/aliens/TankAlien.js';
 import BomberAlien from '../entities/aliens/BomberAlien.js';
 import ShieldAlien from '../entities/aliens/ShieldAlien.js';
+import BossAlien from '../entities/aliens/BossAlien.js';
+import BossProjectile from '../entities/BossProjectile.js';
 import HackingStation from '../entities/HackingStation.js';
 import GrabHandSystem from '../systems/GrabHandSystem.js';
 import SlimeTrail from '../systems/SlimeTrail.js';
 import Terminal from '../entities/Terminal.js';
 import DefenseStation from '../entities/DefenseStation.js';
 import HackMinigame from '../minigames/HackMinigame.js';
+import FroggerMinigame from '../minigames/FroggerMinigame.js';
 import MathMinigame from '../minigames/MathMinigame.js';
 import RhythmMinigame from '../minigames/RhythmMinigame.js';
 import SequenceMinigame from '../minigames/SequenceMinigame.js';
@@ -20,6 +23,8 @@ import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
+import Decoy from '../entities/Decoy.js';
+import EmpMine from '../entities/EmpMine.js';
 import HUD from './HUD.js';
 import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions, BURST_COLORS } from '../systems/CollisionSystem.js';
 
@@ -55,13 +60,13 @@ export default class GameScene extends Phaser.Scene {
         loadBg.fillRect(0, 0, W, H);
 
         // Title
-        this.add.text(cx, cy - 90, 'SNAIL HACKER', {
+        const loadTitle = this.add.text(cx, cy - 90, 'SNAIL HACKER', {
             fontSize: '40px', fontFamily: 'monospace',
             color: '#00ffcc',
         }).setOrigin(0.5);
 
         // Subtitle / flavour
-        this.add.text(cx, cy - 44, '[ BOOTING SYSTEMS ]', {
+        const loadSubtitle = this.add.text(cx, cy - 44, '[ BOOTING SYSTEMS ]', {
             fontSize: '13px', fontFamily: 'monospace',
             color: '#006655', letterSpacing: 4,
         }).setOrigin(0.5);
@@ -113,7 +118,7 @@ export default class GameScene extends Phaser.Scene {
         this.load.on('complete', () => {
             // Destroy all loading screen objects so they don't persist behind
             // the game scene that create() will build.
-            [loadBg, barBorder, barFill, pctText, fileText].forEach(o => o.destroy());
+            [loadBg, loadTitle, loadSubtitle, barBorder, barFill, pctText, fileText].forEach(o => o.destroy());
         });
 
         // Background for this wave (only load if not already cached)
@@ -151,6 +156,7 @@ export default class GameScene extends Phaser.Scene {
             this.load.svg(`alien-tank-${dir}`,    `assets/alien-tank-${dir}.svg`,    svgSize);
             this.load.svg(`alien-bomber-${dir}`,  `assets/alien-bomber-${dir}.svg`,  svgSize);
             this.load.svg(`alien-shield-${dir}`,  `assets/alien-shield-${dir}.svg`,  svgSize);
+            this.load.svg(`alien-boss-${dir}`,    `assets/alien-boss-${dir}.svg`,    { width: 96, height: 96 });
         }
 
         // Station + terminal sprites
@@ -193,6 +199,10 @@ export default class GameScene extends Phaser.Scene {
         this.hackThreshold = this._wordsForWave(this.startWave);
         this._hackMode     = 'typing'; // alternates to 'math' on each battery spawn
 
+        // ── Boss ──────────────────────────────────────────────────────────────
+        this.boss            = null;
+        this.bossProjectiles = [];
+
         // ── Alien speed multiplier / slow field ───────────────────────────────
         this.alienSpeedMultiplier = 1.0;
         this.slowFieldActive = false;
@@ -201,9 +211,11 @@ export default class GameScene extends Phaser.Scene {
         this.ammo    = CONFIG.PLAYER.STARTING_AMMO;
         this.ammoMax = CONFIG.PLAYER.MAX_AMMO;
         this.projectiles = [];
+        this.mines       = [];
 
         // ── Passive upgrades — applied every wave from the persistent list ───────
-        this._laserMode = false;
+        this._laserMode      = false;
+        this.ricochetEnabled = false;
         for (const upgrade of this.upgradesList) {
             switch (upgrade.type) {
                 case 'HEALTH_BOOST':
@@ -220,6 +232,9 @@ export default class GameScene extends Phaser.Scene {
                     break;
                 case 'LASER':
                     this._laserMode = true;
+                    break;
+                case 'RICOCHET':
+                    this.ricochetEnabled = true;
                     break;
             }
         }
@@ -248,6 +263,7 @@ export default class GameScene extends Phaser.Scene {
         this.grabSystem = new GrabHandSystem(this, {
             snail:      this.snail,
             getBattery: () => this.battery,
+            getMines:   () => this.mines,
             onPickup: () => {
                 // Cancel any active hack or terminal minigame
                 if (this.activeHack) this.activeHack.cancel();
@@ -263,6 +279,9 @@ export default class GameScene extends Phaser.Scene {
                 this.logDebug('Snail grabbed!');
             },
         });
+        if (this.upgradesList.some(u => u.type === 'QUICK_GRAB')) {
+            this.grabSystem.cooldownMultiplier = 0.5;
+        }
 
         // ── Service terminals ─────────────────────────────────────────────────
         // Minigame launchers — each wraps the minigame and tracks it for grab-cancel support.
@@ -418,6 +437,7 @@ export default class GameScene extends Phaser.Scene {
                     this.waveManager.active = true;
                     this.soundSynth.play('waveBegin');
                     this.logDebug('Drop-in complete — player in control, spawning active');
+                    if (wave === 10) this._spawnBoss();
                 });
             },
             onWaveEnd: (wave) => {
@@ -430,6 +450,7 @@ export default class GameScene extends Phaser.Scene {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     _wordsForWave(wave) {
+        if (wave === 10) return CONFIG.BOSS.SHIELD_DROP_WORDS;
         return CONFIG.HACK.BASE_WORDS + (wave - 1) * CONFIG.HACK.WORDS_GROWTH;
     }
 
@@ -493,6 +514,24 @@ export default class GameScene extends Phaser.Scene {
                     break;
                 case 'DRONE':
                     this._setupDrone();
+                    break;
+                case 'DECOY':
+                    term = new Terminal(this, x, y, {
+                        label:          'DECOY',
+                        cooldown:       CONFIG.TERMINALS.DECOY_COOLDOWN,
+                        color:          0xff44cc,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => this._activateDecoy(),
+                    });
+                    break;
+                case 'EMP_MINES':
+                    term = new Terminal(this, x, y, {
+                        label:          'EMP',
+                        cooldown:       CONFIG.TERMINALS.EMP_COOLDOWN,
+                        color:          0x00ff88,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => this._activateEmpMines(),
+                    });
                     break;
                 default:
                     break;
@@ -639,11 +678,159 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
+    _activateDecoy() {
+        // Destroy any existing decoy first
+        if (this.decoy && this.decoy.active) this.decoy._expire();
+
+        // Pick a random position in the arena, away from center and edges
+        const angle = Math.random() * Math.PI * 2;
+        const dist  = 180 + Math.random() * 180; // 180–360 px from center
+        const dx    = Math.cos(angle) * dist;
+        const dy    = Math.sin(angle) * dist;
+        const x     = Phaser.Math.Clamp(640 + dx, 80, 1200);
+        const y     = Phaser.Math.Clamp(360 + dy, 80, 640);
+
+        this.decoy = new Decoy(this, x, y);
+        this.soundSynth.play('slowActivate'); // reuse a sci-fi activation sound
+    }
+
+    _activateEmpMines() {
+        // Cancel any previous spawner still running
+        if (this._empSpawnTimer) { this._empSpawnTimer.remove(false); this._empSpawnTimer = null; }
+
+        const spawnMine = () => {
+            const angle = Math.random() * Math.PI * 2;
+            const dist  = 120 + Math.random() * 230; // 120–350 px from center
+            const x = Phaser.Math.Clamp(640 + Math.cos(angle) * dist, 60, 1220);
+            const y = Phaser.Math.Clamp(360 + Math.sin(angle) * dist, 60, 660);
+            this.mines.push(new EmpMine(this, x, y));
+        };
+
+        spawnMine(); // first mine immediately
+
+        let spawned = 1;
+        const maxMines = Math.floor(CONFIG.TERMINALS.EMP_ACTIVE_DURATION / CONFIG.TERMINALS.EMP_SPAWN_INTERVAL);
+        this._empSpawnTimer = this.time.addEvent({
+            delay:    CONFIG.TERMINALS.EMP_SPAWN_INTERVAL,
+            loop:     true,
+            callback: () => {
+                spawnMine();
+                spawned++;
+                if (spawned >= maxMines) {
+                    this._empSpawnTimer.remove(false);
+                    this._empSpawnTimer = null;
+                }
+            },
+        });
+    }
+
+    /**
+     * Detonate a mine: deal CONFIG.EMP.MINE_DAMAGE to every alien within
+     * BLAST_RADIUS, bypassing shields. Shows an EMP ring + flash visual.
+     */
+    _empExplode(mine) {
+        const { x, y } = mine;
+        mine.destroy();
+
+        this.soundSynth.play('explosion');
+
+        // Expanding EMP ring
+        const ring = this.add.circle(x, y, 8, 0x00ff88, 0).setDepth(70);
+        ring.setStrokeStyle(3, 0x00ff88, 0.95);
+        this.tweens.add({
+            targets: ring,
+            scaleX:  CONFIG.EMP.BLAST_RADIUS / 8,
+            scaleY:  CONFIG.EMP.BLAST_RADIUS / 8,
+            alpha:   0,
+            duration: 500, ease: 'Power2.easeOut',
+            onComplete: () => ring.destroy(),
+        });
+
+        // Central flash
+        const flash = this.add.circle(x, y, 24, 0x00ff88, 0.8).setDepth(71);
+        this.tweens.add({
+            targets: flash, alpha: 0, scaleX: 2.5, scaleY: 2.5,
+            duration: 280, onComplete: () => flash.destroy(),
+        });
+
+        // Damage all aliens in blast radius — shields are bypassed
+        for (const alien of this.aliens) {
+            if (!alien.active || alien._dying) continue;
+            const dist = Phaser.Math.Distance.Between(x, y, alien.x, alien.y);
+            if (dist >= CONFIG.EMP.BLAST_RADIUS) continue;
+
+            // Green hit flash on each affected alien
+            const bx = alien.x, by = alien.y;
+            const hitFlash = this.add.arc(bx, by, alien.radius, 0, 360, false, 0x00ff88, 0.75).setDepth(58);
+            this.tweens.add({ targets: hitFlash, alpha: 0, duration: 240, onComplete: () => hitFlash.destroy() });
+            this.tweens.add({ targets: alien, x: bx + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+
+            const isBomber = alien.alienType === 'bomber';
+            const died = alien.takeDamageRaw(CONFIG.EMP.MINE_DAMAGE); // bypasses shield override
+            if (died) {
+                this.score++;
+                this.hud.updateScore(this.score);
+                const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
+                alien._dying = true;
+                this.time.delayedCall(200, () => {
+                    if (!alien.active) return;
+                    spawnDeathBurst(this, bx, by, burstColor);
+                    if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                        this.healthDrops.push(new HealthDrop(this, bx, by));
+                    }
+                    if (isBomber) checkBomberBlast(this, bx, by);
+                    alien.destroy();
+                });
+            }
+        }
+    }
+
     _startHack() {
         if (!this.stationPowered) return; // station offline — need battery first
         this.snail.hackingActive = true;
         this.snail.setState('HACKING');
 
+        // ── Wave 10: Frogger minigame breaks boss shield ───────────────────────
+        if (this.wave === 10) {
+            this.activeHack = new FroggerMinigame(this, {
+                pointsNeeded: this.hackThreshold,  // = BOSS.SHIELD_DROP_WORDS (3)
+                onCrossing: (count) => {
+                    this.hackProgress = count;
+                    this.hud.updateHack(this.hackProgress, this.hackThreshold, 'SHIELD');
+                    this.station.setHackProgress(this.hackProgress / this.hackThreshold);
+                },
+                onSuccess: () => {
+                    this.activeHack = null;
+                    this.snail.hackingActive = false;
+                    this.snail.setState('IDLE');
+                    // Drop the boss shield; it auto-re-raises after SHIELD_DOWN_DURATION
+                    if (this.boss && this.boss.active && !this.boss._dying) {
+                        this.boss.dropShield();
+                        this.soundSynth.play('shieldReflect');
+                        console.log('[boss] shield dropped by Frogger success');
+                        this.logDebug('Boss shield broken! Shield down for 5s.');
+                        this.time.delayedCall(CONFIG.BOSS.SHIELD_DOWN_DURATION, () => {
+                            if (this.boss && this.boss.active && !this.boss._dying) {
+                                this.boss.raiseShield();
+                                this.logDebug('Boss shield back up.');
+                            }
+                        });
+                    }
+                    // Reset progress bar so player can break shield again
+                    this.hackProgress = 0;
+                    this.hud.updateHack(0, this.hackThreshold, 'SHIELD');
+                    this.station.setHackProgress(0);
+                },
+                onFailure: () => {
+                    this.activeHack = null;
+                    this.snail.hackingActive = false;
+                    this.snail.setState('IDLE');
+                },
+            });
+            return;
+        }
+
+        // ── Waves 1–9: typing / math hack ─────────────────────────────────────
         const remaining   = this.hackThreshold - this.hackProgress;
         const MinigameCls = this._hackMode === 'math' ? MathMinigame : HackMinigame;
         this.activeHack = new MinigameCls(this, {
@@ -702,7 +889,8 @@ export default class GameScene extends Phaser.Scene {
 
         // Hit all aliens along the ray
         const HIT_RADIUS = 18;
-        const BURST_COLORS = { basic: 0xdd3333, fast: 0xaa44ff, tank: 0x7799aa, bomber: 0xff7722 };
+        const hitSet = new Set();  // track hits for ricochet to avoid re-targeting
+        let ricochetOriginX = sx, ricochetOriginY = sy, ricochetBestAlong = 0;
         for (const alien of this.aliens) {
             if (!alien.active || alien._dying) continue;
             const rx    = alien.x - sx;
@@ -718,6 +906,14 @@ export default class GameScene extends Phaser.Scene {
                 alien.flashShield?.();
                 this.soundSynth.play('shieldReflect');
                 continue;
+            }
+
+            hitSet.add(alien);
+            // Track the farthest hit alien as ricochet origin
+            if (along > ricochetBestAlong) {
+                ricochetBestAlong = along;
+                ricochetOriginX = bx;
+                ricochetOriginY = by;
             }
 
             // Hit flash + wobble (same as projectile hit)
@@ -743,6 +939,58 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
+        // Laser ricochet — fires from the farthest hit alien toward a new target
+        if (this.ricochetEnabled && hitSet.size > 0) {
+            this._fireLaserRicochet(ricochetOriginX, ricochetOriginY, 0, hitSet);
+        }
+
+        // Boss hit check (laser mode)
+        if (this.boss && this.boss.active && !this.boss._dying) {
+            const rx    = this.boss.x - sx;
+            const ry    = this.boss.y - sy;
+            const along = rx * cos + ry * sin;
+            if (along > 0 && along <= tMax) {
+                const perp = Math.abs(rx * sin - ry * cos);
+                if (perp <= this.boss.radius) {
+                    if (this.boss.shielded) {
+                        this.boss.flashShield();
+                        this.soundSynth.play('shieldReflect');
+                    } else {
+                        const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
+                        this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
+                        this.boss.sprite.setAlpha(0.2);
+                        this.time.delayedCall(80, () => { if (this.boss?.sprite) this.boss.sprite.setAlpha(1); });
+                        const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                        console.log(`[boss] laser hit! hp=${this.boss.health} dead=${dead}`);
+                        if (this.hud) this.hud.updateBossBar(this.boss.health);
+                        if (dead) this._bossDeath();
+                    }
+                }
+            }
+        }
+
+        // Boss projectile (black hole) hit check (laser mode)
+        this.bossProjectiles = this.bossProjectiles.filter(bp => {
+            if (!bp.active) return false;
+            const rx    = bp.x - sx;
+            const ry    = bp.y - sy;
+            const along = rx * cos + ry * sin;
+            if (along <= 0 || along > tMax) return true;
+            const perp = Math.abs(rx * sin - ry * cos);
+            if (perp > bp.radius + HIT_RADIUS) return true;
+
+            const dead = bp.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+            const flash = this.add.arc(bp.x, bp.y, bp.radius, 0, 360, false, 0xaa44ff, 0.75).setDepth(58);
+            this.tweens.add({ targets: flash, alpha: 0, duration: 180, onComplete: () => flash.destroy() });
+            this.soundSynth?.play('shieldReflect');
+            if (dead) {
+                spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
+                bp.destroy();
+                return false;
+            }
+            return true;
+        });
+
         // Laser beam visual — outer glow + inner beam + bright core, quick fade
         const gfx = this.add.graphics().setDepth(200);
         gfx.lineStyle(10, 0xff2200, 0.2);
@@ -752,6 +1000,65 @@ export default class GameScene extends Phaser.Scene {
         gfx.lineStyle(1, 0xffffff, 1);
         gfx.lineBetween(sx, sy, ex, ey);
         this.tweens.add({ targets: gfx, alpha: 0, duration: 150, onComplete: () => gfx.destroy() });
+    }
+
+    /**
+     * Recursive laser ricochet chain.
+     * Fires a secondary hitscan arc from (fromX, fromY) to the nearest valid
+     * alien not already in hitSet. Chains with halving probability.
+     */
+    _fireLaserRicochet(fromX, fromY, bounces, hitSet) {
+        const chance = CONFIG.RICOCHET.BASE_CHANCE * (CONFIG.RICOCHET.FALLOFF ** bounces);
+        if (Math.random() > chance) return;
+
+        // Find nearest valid alien not already hit, within search radius
+        let nearest = null;
+        let nearestDist = CONFIG.RICOCHET.SEARCH_RADIUS;
+        for (const a of this.aliens) {
+            if (!a.active || a._dying || a.shielded || hitSet.has(a)) continue;
+            const d = Phaser.Math.Distance.Between(fromX, fromY, a.x, a.y);
+            if (d < nearestDist) { nearest = a; nearestDist = d; }
+        }
+        if (!nearest) return;
+
+        hitSet.add(nearest);
+        const tx = nearest.x, ty = nearest.y;
+
+        // Cyan ricochet beam visual
+        const gfx = this.add.graphics().setDepth(200);
+        gfx.lineStyle(8, 0x44ffff, 0.15);
+        gfx.lineBetween(fromX, fromY, tx, ty);
+        gfx.lineStyle(2, 0x88ffff, 0.85);
+        gfx.lineBetween(fromX, fromY, tx, ty);
+        gfx.lineStyle(1, 0xffffff, 0.9);
+        gfx.lineBetween(fromX, fromY, tx, ty);
+        this.tweens.add({ targets: gfx, alpha: 0, duration: 200, onComplete: () => gfx.destroy() });
+
+        // Cyan hit flash + wobble
+        const hitFlash = this.add.arc(tx, ty, nearest.radius, 0, 360, false, 0x44ffff, 0.75).setDepth(58);
+        this.tweens.add({ targets: hitFlash, alpha: 0, duration: 200, onComplete: () => hitFlash.destroy() });
+        this.tweens.add({ targets: nearest, x: nearest.x + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+
+        const isBomber = nearest.alienType === 'bomber';
+        const bx = nearest.x, by = nearest.y;
+        const died = nearest.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+        if (died) {
+            this.score++;
+            this.hud.updateScore(this.score);
+            nearest._dying = true;
+            this.time.delayedCall(200, () => {
+                if (!nearest.active) return;
+                spawnDeathBurst(this, bx, by, BURST_COLORS[nearest.alienType] || 0xffffff);
+                if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                    this.healthDrops.push(new HealthDrop(this, bx, by));
+                }
+                if (isBomber) checkBomberBlast(this, bx, by);
+                nearest.destroy();
+            });
+        }
+
+        // Chain to next ricochet
+        this._fireLaserRicochet(tx, ty, bounces + 1, hitSet);
     }
 
     /** Called when hackProgress hits a POWER_LOSS_WORDS multiple. */
@@ -837,6 +1144,107 @@ export default class GameScene extends Phaser.Scene {
     _completeWave() {
         this.logDebug(`Hack complete! Wave ${this.wave} — escape ship spawning.`);
         this._startEscapePhase();
+    }
+
+    // ── Boss fight ────────────────────────────────────────────────────────────
+
+    _spawnBoss() {
+        const angle = 0; // enter from the right
+        const bx = 640 + Math.cos(angle) * CONFIG.BOSS.ORBIT_RADIUS_X;
+        const by = 360 + Math.sin(angle) * CONFIG.BOSS.ORBIT_RADIUS_Y;
+        this.boss = new BossAlien(this, bx, by, {
+            onAlienBurst: (bx, by) => {
+                const count  = CONFIG.BOSS.ALIEN_BURST_COUNT;
+                const spread = CONFIG.BOSS.ALIEN_BURST_SPREAD;
+                // Spread aliens side-by-side perpendicular to the boss→station vector
+                const toStation = Phaser.Math.Angle.Between(bx, by, 640, 360);
+                const perp      = toStation + Math.PI / 2;
+                const halfOff   = (count - 1) / 2;
+                for (let i = 0; i < count; i++) {
+                    const off = (i - halfOff) * spread;
+                    this.spawnAlien('fast', bx + Math.cos(perp) * off, by + Math.sin(perp) * off);
+                }
+                this.logDebug(`Boss fires alien burst! (${count} FastAliens)`);
+            },
+            onBlackHole: (bx, by) => {
+                this.bossProjectiles.push(new BossProjectile(this, bx, by, 'blackhole'));
+                this.logDebug('Boss fires black hole!');
+            },
+            onEMP: (bx, by) => {
+                this.bossProjectiles.push(new BossProjectile(this, bx, by, 'emp', {
+                    targetX: this.station.x, targetY: this.station.y,
+                }));
+                this.logDebug('Boss fires EMP!');
+            },
+            onTerminalLockEMP: (bx, by) => {
+                const eligible = this.terminals.filter(t =>
+                    t.active && t.terminalState === 'IDLE' &&
+                    t.label !== 'RELOAD' && t.label !== 'REPAIR',
+                );
+                if (eligible.length === 0) return;
+                const target = Phaser.Math.RND.pick(eligible);
+                this.bossProjectiles.push(new BossProjectile(this, bx, by, 'terminallock', {
+                    targetX: target.x, targetY: target.y, targetTerminal: target,
+                }));
+                this.logDebug(`Boss fires terminal lock EMP at ${target.label}!`);
+            },
+        });
+        this.hud.showBossBar(this.boss.health, CONFIG.BOSS.HP);
+        this.logDebug('The Overlord has arrived!');
+    }
+
+    _bossDeath() {
+        if (!this.boss || !this.boss.active) return;
+        this.boss._dying = true;
+        this.boss._phaseShifting = false;
+
+        const bx = this.boss.x;
+        const by = this.boss.y;
+
+        // Heavy screen shake
+        this.cameras.main.shake(600, 0.02);
+
+        // Three staggered expanding rings
+        for (let i = 0; i < 3; i++) {
+            this.time.delayedCall(i * 150, () => {
+                const ring = this.add.arc(bx, by, this.boss ? this.boss.radius : 36, 0, 360, false, 0xff2200, 0).setDepth(60);
+                ring.setStrokeStyle(4, 0xff4400, 1);
+                this.tweens.add({
+                    targets: ring, scaleX: 5, scaleY: 5, alpha: 0,
+                    duration: 500, ease: 'Power2.easeOut',
+                    onComplete: () => ring.destroy(),
+                });
+            });
+        }
+
+        // Rapid white flash (8 flashes over 800ms)
+        const flashTimer = this.time.addEvent({
+            delay: 100, repeat: 7,
+            callback: () => {
+                if (this.boss && this.boss.active) {
+                    this.boss.alpha = this.boss.alpha < 0.5 ? 1 : 0.15;
+                }
+            },
+        });
+
+        // Clear any lingering black holes immediately
+        for (const bp of this.bossProjectiles) { if (bp.active) bp.destroy(); }
+        this.bossProjectiles = [];
+
+        // Final explosion + wave end
+        this.time.delayedCall(900, () => {
+            if (this.boss && this.boss.active) {
+                spawnDeathBurst(this, bx, by, 0xff2200);
+                spawnDeathBurst(this, bx, by, 0xff8800);
+                this.cameras.main.flash(500, 255, 100, 0);
+                this.boss.destroy();
+                this.boss = null;
+            }
+            this.hud.hideBossBar();
+            this.score += 50;
+            this.hud.updateScore(this.score);
+            this._completeWave();
+        });
     }
 
     _startEscapePhase() {
@@ -1020,14 +1428,21 @@ export default class GameScene extends Phaser.Scene {
     // ── Alien spawning ─────────────────────────────────────────────────────────
 
     _randomEdgePosition() {
+        // On wave 10 the FroggerMinigame occupies the bottom third (y > 480),
+        // so clamp side-edge spawns to the top two-thirds to keep the boss
+        // and its projectiles out of that region.
+        const maxY = this.wave === 10 ? 460 : 670;
         const edge = Phaser.Math.Between(0, 2);
         if (edge === 0) return { x: Phaser.Math.Between(50, 1230), y: -20 };
-        if (edge === 1) return { x: -20,  y: Phaser.Math.Between(50, 670) };
-        return           { x: 1300, y: Phaser.Math.Between(50, 670) };
+        if (edge === 1) return { x: -20,  y: Phaser.Math.Between(50, maxY) };
+        return           { x: 1300, y: Phaser.Math.Between(50, maxY) };
     }
 
-    spawnAlien(type = 'basic') {
-        const { x, y } = this._randomEdgePosition();
+    spawnAlien(type = 'basic', spawnX, spawnY) {
+        const pos = (spawnX !== undefined)
+            ? { x: spawnX, y: spawnY }
+            : this._randomEdgePosition();
+        const { x, y } = pos;
         let alien;
         switch (type) {
             case 'fast':   alien = new FastAlien(this, x, y);   break;
@@ -1136,10 +1551,45 @@ export default class GameScene extends Phaser.Scene {
             return p.update(time, delta);
         });
 
-        // Aliens — move and check contact with snail
+        // EMP mines — check alien contact and trigger explosions
+        if (this.mines.length > 0) {
+            const surviving = [];
+            for (const mine of this.mines) {
+                if (!mine.active) continue;
+                if (mine.state !== 'ground') { surviving.push(mine); continue; }
+
+                let triggered = false;
+                for (const alien of this.aliens) {
+                    if (!alien.active || alien._dying) continue;
+                    const d = Phaser.Math.Distance.Between(mine.x, mine.y, alien.x, alien.y);
+                    if (d < mine.triggerRadius + alien.radius) { triggered = true; break; }
+                }
+
+                if (triggered) {
+                    this._empExplode(mine); // mine.destroy() called inside
+                } else {
+                    surviving.push(mine);
+                }
+            }
+            this.mines = surviving;
+        }
+
+        // Aliens — move and check contact with snail or decoy
         this.aliens = this.aliens.filter(alien => {
             if (!alien.active || alien._dying) return false;
             const status = alien.update(time, delta);
+
+            if (status === 'reached_decoy') {
+                const bx = alien.x, by = alien.y;
+                const burstColor = BURST_COLORS[alien.alienType] || 0xff4444;
+                alien.destroy();
+                spawnDeathBurst(this, bx, by, burstColor);
+                if (this.decoy && this.decoy.active) {
+                    this.decoy.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
+                }
+                return false;
+            }
+
             if (status === 'reached_snail' && !this.boardingShip) {
                 const isBomber = alien.alienType === 'bomber';
                 const bx = alien.x, by = alien.y;
@@ -1168,6 +1618,100 @@ export default class GameScene extends Phaser.Scene {
             return true;
         });
 
+        // Boss update + projectile collision (boss is NOT in this.aliens)
+        if (this.boss && this.boss.active && !this.boss._dying) {
+            this.boss.update(time, delta);
+
+            // Projectile vs boss
+            if (this.projectiles.length > 0) {
+                console.log(`[boss] checking ${this.projectiles.length} proj vs boss @ (${Math.round(this.boss.x)},${Math.round(this.boss.y)}) shielded=${this.boss.shielded}`);
+            }
+            this.projectiles = this.projectiles.filter(proj => {
+                if (!proj.active) return false;
+                const dist = Phaser.Math.Distance.Between(proj.x, proj.y, this.boss.x, this.boss.y);
+                if (dist < this.boss.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
+                    proj.destroy();
+                    if (this.boss.shielded) {
+                        this.boss.flashShield();
+                        this.soundSynth.play('shieldReflect');
+                    } else {
+                        // Red hit flash at boss position
+                        const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
+                        this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
+                        // Brief sprite flash (no position tween — orbit code owns boss.x/y)
+                        this.boss.sprite.setAlpha(0.2);
+                        this.time.delayedCall(80, () => { if (this.boss?.sprite) this.boss.sprite.setAlpha(1); });
+                        const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                        console.log(`[boss] hit! hp=${this.boss.health} dead=${dead} shielded=${this.boss.shielded}`);
+                        if (this.hud) this.hud.updateBossBar(this.boss.health);
+                        if (dead) this._bossDeath();
+                    }
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        // Boss projectiles — update, P2 shots vs black hole, snail contact
+        this.bossProjectiles = this.bossProjectiles.filter(bp => {
+            if (!bp.active) return false;
+            const alive = bp.update(time, delta, this.snail.x, this.snail.y);
+            if (!alive) return false;
+
+            // P2 projectile vs black hole
+            for (const proj of this.projectiles) {
+                if (!proj.active) continue;
+                const dist = Phaser.Math.Distance.Between(proj.x, proj.y, bp.x, bp.y);
+                if (dist < bp.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
+                    proj.destroy();
+                    const dead = bp.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                    // Purple hit flash
+                    const flash = this.add.arc(bp.x, bp.y, bp.radius, 0, 360, false, 0xaa44ff, 0.75).setDepth(58);
+                    this.tweens.add({ targets: flash, alpha: 0, duration: 180, onComplete: () => flash.destroy() });
+                    this.soundSynth?.play('shieldReflect');
+                    if (dead) {
+                        spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
+                        bp.destroy();
+                        return false;
+                    }
+                    break;
+                }
+            }
+
+            // Type-specific contact detection
+            if (bp.active) {
+                if (bp.projType === 'blackhole') {
+                    const snailDist = Phaser.Math.Distance.Between(bp.x, bp.y, this.snail.x, this.snail.y);
+                    if (snailDist < bp.radius + 12) {
+                        this._warpSnail();
+                        spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
+                        bp.destroy();
+                        return false;
+                    }
+                } else if (bp.projType === 'emp') {
+                    const stationDist = Phaser.Math.Distance.Between(bp.x, bp.y, this.station.x, this.station.y);
+                    if (stationDist < bp.radius + CONFIG.STATION.RADIUS) {
+                        this._triggerPowerLoss();
+                        spawnDeathBurst(this, bp.x, bp.y, 0xffcc00);
+                        bp.destroy();
+                        return false;
+                    }
+                } else if (bp.projType === 'terminallock') {
+                    const term = bp._targetTerminal;
+                    if (!term || !term.active) { bp.destroy(); return false; }
+                    const termDist = Phaser.Math.Distance.Between(bp.x, bp.y, term.x, term.y);
+                    if (termDist < bp.radius + 28) {
+                        term.forceLock(CONFIG.BOSS.TERMINAL_LOCK_DURATION);
+                        spawnDeathBurst(this, bp.x, bp.y, 0xff4422);
+                        bp.destroy();
+                        return false;
+                    }
+                }
+            }
+
+            return bp.active;
+        });
+
         // Collision checks (projectile vs alien)
         checkProjectileCollisions(this);
 
@@ -1189,9 +1733,53 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // Cleanup
-        this.projectiles = this.projectiles.filter(p => p.active);
-        this.aliens      = this.aliens.filter(a => a.active && !a._dying);
-        this.healthDrops = this.healthDrops.filter(d => d.active);
+        this.projectiles     = this.projectiles.filter(p => p.active);
+        this.aliens          = this.aliens.filter(a => a.active && !a._dying);
+        this.healthDrops     = this.healthDrops.filter(d => d.active);
+        this.bossProjectiles = this.bossProjectiles.filter(bp => bp.active);
+    }
+
+    // ── Black hole warp ───────────────────────────────────────────────────────
+
+    /** Teleport Gerald to a random position far from the station. */
+    _warpSnail() {
+        // Cancel any active hack — same effect as P2 teleporting the snail
+        if (this.activeHack)  { this.activeHack.cancel(); this.activeHack = null; }
+        if (this.snail) this.snail.hackingActive = false;
+
+        // Pick a random position at least 260px from station, inside the play area
+        const angle = Math.random() * Math.PI * 2;
+        const dist  = Phaser.Math.Between(260, 380);
+        const wx    = Phaser.Math.Clamp(640 + Math.cos(angle) * dist, 80, 1200);
+        const wy    = Phaser.Math.Clamp(360 + Math.sin(angle) * dist, 80, 460);
+
+        // Collapse rings at origin, expand rings at destination
+        this._spawnWarpRings(this.snail.x, this.snail.y, true);
+        this.snail.x = wx;
+        this.snail.y = wy;
+        this._spawnWarpRings(wx, wy, false);
+
+        this.soundSynth?.play('teleport');
+        this.logDebug(`Black hole warp → (${Math.round(wx)}, ${Math.round(wy)})`);
+    }
+
+    /** Three staggered rings: collapse=true shrinks inward, false expands outward. */
+    _spawnWarpRings(x, y, collapse) {
+        for (let i = 0; i < 3; i++) {
+            const r    = 8 + i * 14;
+            const ring = this.add.arc(x, y, r, 0, 360, false, 0x0a0011, 0)
+                .setStrokeStyle(2, collapse ? 0xbb44ff : 0x7722cc, 0.9).setDepth(62);
+            this.tweens.add({
+                targets:  ring,
+                scaleX:   collapse ? 0.1 : 3.5,
+                scaleY:   collapse ? 0.1 : 3.5,
+                alpha:    0,
+                delay:    i * 55,
+                duration: 380,
+                ease:     'Power2.easeOut',
+                onComplete: () => ring.destroy(),
+            });
+        }
     }
 
     logDebug(message) {

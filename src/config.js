@@ -89,6 +89,19 @@ export const DEFAULTS = {
         SLOW_DURATION:    25000,  // ms — how long SlowField lasts
         DRONE_FIRST_SHOT_MAX: 10000,  // ms — drone fires at a random time within this window each round
         DRONE_COOLDOWN:       60000,  // ms — cooldown between subsequent drone activations
+        DECOY_DURATION:       12000,  // ms — how long the decoy lure lasts
+        DECOY_COOLDOWN:       22000,  // ms — terminal cooldown after deploying decoy
+        DECOY_HEALTH:         60,     // HP — aliens chip away at this; 0 destroys decoy early
+        EMP_SPAWN_INTERVAL:    5000,  // ms between each mine spawn while active
+        EMP_ACTIVE_DURATION:  25000,  // ms of continuous mine spawning (5 mines total)
+        EMP_COOLDOWN:         30000,  // ms — terminal cooldown after activation
+    },
+
+    EMP: {
+        MINE_DAMAGE:       30,   // damage dealt to all aliens in blast — ignores shields
+        MINE_TRIGGER_DIST: 32,   // px added to alien.radius — how close alien must be
+        BLAST_RADIUS:      180,  // px — explosion AoE
+        MINE_PICKUP_DIST:  45,   // px — cursor proximity to grab a mine
     },
 
     CANNON: {
@@ -100,13 +113,21 @@ export const DEFAULTS = {
     MINIGAMES: {
         SEQUENCE_TIME_LIMIT:   4000,  // ms to complete key sequence
         RHYTHM_BEATS_REQUIRED: 1,     // beats to win rhythm minigame
-        RHYTHM_MAX_MISSES:     1,     // allowed misses before failure
+        RHYTHM_MAX_MISSES:     0,     // allowed misses before failure (0 = must hit every beat)
         RHYTHM_BEAT_TIMEOUT:   2500,  // ms before auto-miss per beat
         TYPING_MS_PER_CHAR:    1500,  // ms per character in typing minigame
+        FROGGER_TIME_LIMIT:   45000,  // ms before frogger minigame expires
+        FROGGER_CROSSINGS:        3,  // successful crossings needed to win
     },
 
     RELOAD: {
         DELAY: 2000,  // ms after typing RELOAD before ammo refills
+    },
+
+    RICOCHET: {
+        BASE_CHANCE:   0.8,   // probability of first bounce
+        FALLOFF:       0.5,   // chance multiplier each successive bounce (0.8 → 0.4 → 0.2 …)
+        SEARCH_RADIUS: 400,   // px — max distance to find next ricochet target
     },
 
     INTERMISSION: {
@@ -127,6 +148,37 @@ export const DEFAULTS = {
     ESCAPE: {
         BOARD_RADIUS:    40,   // px — snail must be within this distance to board the ship
         ASCENT_DURATION: 1200, // ms for the ship to fly off the top of the screen
+    },
+
+    BOSS: {
+        HP:                  200,   // total hit points
+        PHASE_SHIFT_HP:      100,   // damage taken before each phase shift
+        ORBIT_RADIUS_X:      400,   // horizontal semi-axis (px)
+        ORBIT_RADIUS_Y:      130,   // vertical semi-axis (px)
+        MIN_ORBIT_DIST:      260,   // px — boss is never closer than this to the station center
+        MAX_ORBIT_Y:         490,   // px — y ceiling; keeps boss above the FroggerMinigame panel
+        ALIEN_BURST_SPREAD:   40,   // px between side-by-side burst aliens (perpendicular to attack vector)
+        ORBIT_SPEED:         0.4,   // rad/s base oscillation speed
+        ENRAGE_HP:           100,   // HP threshold for enrage
+        ENRAGE_ORBIT_MULT:   1.5,
+        ENRAGE_COOLDOWN_MULT: 0.7,
+        SHIELD_DROP_WORDS:     3,   // frogger crossings required to drop shield
+        SHIELD_DOWN_DURATION: 5000, // ms shield stays down after breaking
+        ALIEN_BURST_COUNT: 3,       // FastAliens spawned per burst attack
+        BLACK_HOLE_HP:           30,   // projectile hits required to destroy a black hole
+        BLACK_HOLE_SPEED:        80,   // px/s — slow homing toward Gerald
+        BLACK_HOLE_RADIUS:       14,   // collision + visual radius (px)
+        EMP_HP:                  20,   // shots to destroy an EMP projectile
+        EMP_SPEED:              100,   // px/s — homes toward the station
+        TERMINAL_LOCK_HP:        20,   // shots to destroy a terminal lock EMP
+        TERMINAL_LOCK_SPEED:    100,   // px/s — homes toward target terminal
+        TERMINAL_LOCK_DURATION: 15000, // ms terminal stays locked
+        ATTACK_COOLDOWNS: {
+            ALIEN_BURST:    5000,   // ms between alien burst attacks
+            BLACK_HOLE:     8000,   // ms between black hole shots
+            EMP:           12000,   // ms between EMP shots
+            TERMINAL_LOCK: 15000,   // ms between terminal lock EMP shots
+        },
     },
 };
 

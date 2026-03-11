@@ -9,6 +9,9 @@ export default class Projectile extends Phaser.GameObjects.Arc {
         const angle = Phaser.Math.Angle.Between(x, y, targetX, targetY);
         this.vx = Math.cos(angle) * CONFIG.PLAYER.PROJECTILE_SPEED;
         this.vy = Math.sin(angle) * CONFIG.PLAYER.PROJECTILE_SPEED;
+
+        // Incremented each time the projectile ricochets; used to decay ricochet chance.
+        this.ricochetBounces = 0;
     }
 
     update(time, delta) {

@@ -13,13 +13,13 @@ const FLAVOR_TEXT = {
 };
 
 // Passive upgrades apply instantly on selection — no terminal is spawned.
-const PASSIVE_UPGRADES = new Set(['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST']);
+const PASSIVE_UPGRADES = new Set(['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET', 'QUICK_GRAB']);
+
+const ACTIVE_POOL  = ['CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR', 'DRONE', 'DECOY', 'EMP_MINES'];
+const PASSIVE_POOL = ['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET', 'QUICK_GRAB'];
 
 // All upgrade types that can be offered.
-const UPGRADE_POOL = [
-    'CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR', 'DRONE',
-    'HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST',
-];
+const UPGRADE_POOL = [...ACTIVE_POOL, ...PASSIVE_POOL];
 
 function getUpgradeDefs() {
     const cannonSecs = Math.round(CONFIG.CANNON.ACTIVE_DURATION / 1000);
@@ -35,6 +35,10 @@ function getUpgradeDefs() {
         SLOWFIELD:    { label: 'SLOW FIELD',     color: 0xaa44ff, desc: `Hack to slow all aliens\nto ${slowPct}% speed\nfor ${slowSecs}s.` },
         REPAIR:       { label: 'REPAIR KIT',     color: 0x44ff88, desc: `Hack to restore\n+${repairHp} HP to Gerald's shell.` },
         DRONE:        { label: 'AUTO DRONE',     color: 0xffdd44, desc: `Drone fires within ${droneFirstSecs}s\nof each round, then every\n${droneCoolSecs}s after.` },
+        DECOY:        { label: 'DECOY LURE',     color: 0xff44cc, desc: `Hack to deploy a lure\nthat draws all aliens\naway for ${Math.round(CONFIG.TERMINALS.DECOY_DURATION / 1000)}s.` },
+        EMP_MINES:    { label: 'EMP MINES',      color: 0x00ff88, desc: `Hack to deploy proximity\nmines every ${Math.round(CONFIG.TERMINALS.EMP_SPAWN_INTERVAL / 1000)}s. Explode on\ncontact, bypass shields.` },
+        RICOCHET:     { label: 'RICOCHET',        color: 0x44ffff, desc: `80% chance shots bounce\nto the nearest enemy.\nChance halves each hop.` },
+        QUICK_GRAB:   { label: 'QUICK GRAB',      color: 0xcc88ff, desc: `Halves the grab hand\ncooldown (${CONFIG.GRAB.COOLDOWN}s → ${CONFIG.GRAB.COOLDOWN / 2}s)\nbetween grabs.` },
         HEALTH_BOOST: { label: 'HEALTH BOOST',   color: 0xff6666, desc: `Gerald's max health\nincreases by 50%.` },
         AMMO_BOOST:   { label: 'AMMO BOOST',     color: 0xffcc44, desc: `Gun capacity increases\nby 50% more bullets\nbefore reload.` },
         LASER:        { label: 'HITSCAN LASER',  color: 0xff3333, desc: `Replaces bullets with\na piercing laser beam\nthat hits all enemies.` },
@@ -93,7 +97,9 @@ export default class IntermissionScene extends Phaser.Scene {
         }
 
         // Determine available upgrades and whether this is an upgrade selection wave.
-        const available     = UPGRADE_POOL.filter(t => !this.upgrades.some(u => u.type === t));
+        // Odd waves offer actives; even waves offer passives.
+        const pool      = this.wave % 2 === 0 ? PASSIVE_POOL : ACTIVE_POOL;
+        const available = pool.filter(t => !this.upgrades.some(u => u.type === t));
         const isUpgradeWave = available.length > 0;
 
         if (isUpgradeWave) {
@@ -223,7 +229,8 @@ export default class IntermissionScene extends Phaser.Scene {
 
         // Upgrade section header
         this.add.rectangle(cx, 180, 700, 1, 0xaa44ff, 0.4);
-        this.add.text(cx, 205, 'UPGRADE AVAILABLE', {
+        const upgradeKind = this.wave % 2 === 0 ? 'PASSIVE UPGRADE' : 'ACTIVE UPGRADE';
+        this.add.text(cx, 205, upgradeKind, {
             fontSize: '24px', fontFamily: 'monospace', color: '#cc88ff',
         }).setOrigin(0.5);
         this.add.text(cx, 238, 'Choose an upgrade for the next wave:', {

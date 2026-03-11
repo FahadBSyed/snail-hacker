@@ -329,6 +329,13 @@ export default class SoundSynth {
         this._osc(ctx, 'sine', 440, 880, t, 0.18, g);
     }
 
+    /** Frogger hop — soft short blip, quiet so it doesn't fatigue on repeated presses. */
+    _frogHop() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const g = this._gain(ctx, 0.14, t, 0.08);
+        this._osc(ctx, 'sine', 520, 420, t, 0.07, g);
+    }
+
     /** Rhythm minigame hit — bright short tone. */
     _rhythmHit() {
         const ctx = this._ctx_get(), t = ctx.currentTime;
@@ -383,17 +390,16 @@ export default class SoundSynth {
         this._osc(ctx, 'square', 900, 600, t + 0.09, 0.10, g2);
     }
 
-    /** Snail grabbed — bandpass noise sweep. */
+    /** Snail grabbed — highpass noise whoosh + bass thump. */
     _grab() {
         const ctx = this._ctx_get(), t = ctx.currentTime;
-        const ng  = this._gain(ctx, 0.38, t, 0.15);
-        const bpf = ctx.createBiquadFilter();
-        bpf.type = 'bandpass';
-        bpf.Q.value = 3;
-        bpf.frequency.setValueAtTime(300, t);
-        bpf.frequency.exponentialRampToValueAtTime(1200, t + 0.12);
-        bpf.connect(ng);
-        this._noise(ctx, 0.15, bpf);
+        // Noise burst through a highpass filter
+        const ng  = this._gain(ctx, 0.50, t, 0.20);
+        const hpf = this._filter(ctx, 'highpass', 600, ng);
+        this._noise(ctx, 0.18, hpf);
+        // Short low thump for tactile impact
+        const bg = this._gain(ctx, 0.38, t, 0.12);
+        this._osc(ctx, 'sine', 180, 55, t, 0.10, bg);
     }
 
     /** Station loses power — descending alarm + crackle. */

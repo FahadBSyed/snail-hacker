@@ -1,5 +1,148 @@
 # SNAIL HACKER — Changelog
 
+## Session 10g — 2026-03-10
+
+### Boss Attacks: EMP + Terminal Lock EMP Projectiles
+
+- **`src/entities/BossProjectile.js`** — Extended to support three types (`blackhole`, `emp`, `terminallock`). Constructor now takes `(scene, x, y, type, opts)` where `opts.targetX/Y` is the fixed homing target, and `opts.targetTerminal` is the Terminal reference for terminal lock. Per-type draw methods: yellow rings for EMP, red/orange for terminal lock. Per-type speed from config.
+- **`src/config.js`** — Added `EMP_HP: 20`, `EMP_SPEED: 100`, `TERMINAL_LOCK_HP: 20`, `TERMINAL_LOCK_SPEED: 100`, `TERMINAL_LOCK_DURATION: 15000`, `ATTACK_COOLDOWNS.EMP: 12000`, `ATTACK_COOLDOWNS.TERMINAL_LOCK: 15000`.
+- **`src/entities/Terminal.js`** — `startCooldown()` stores the handle in `this._cooldownHandle` and cancels any previous one before starting. New `forceLock(duration)`: forces COOLING_DOWN, shows red "LOCKED!" overlay + pulsing screen glow, auto-unlocks after duration.
+- **`src/entities/aliens/BossAlien.js`** — Added `_empTimer`, `_terminalLockTimer`, `onEMP`, `onTerminalLockEMP`; both fire on their cooldowns (enrage-scaled).
+- **`src/scenes/GameScene.js`** — `onEMP` spawns an EMP toward the station; `onTerminalLockEMP` picks a random IDLE non-RELOAD/non-REPAIR terminal and fires a terminal lock EMP toward it (no-op if no eligible targets). Contact: EMP on station → `_triggerPowerLoss()`; terminal lock on terminal → `term.forceLock()`.
+
+## Session 10f — 2026-03-10
+
+### Boss Attack: Black Hole Projectile
+
+- **`src/entities/BossProjectile.js`** (new) — Slow-homing dark projectile. Draws a near-black core with concentric pulsing purple/violet rings. Homes toward Gerald at `CONFIG.BOSS.BLACK_HOLE_SPEED` (80 px/s). Absorbs `CONFIG.BOSS.BLACK_HOLE_HP` (30) projectile hits before dying.
+- **`src/config.js`** — `BLACK_HOLE_HP: 30`, `BLACK_HOLE_SPEED: 80`, `BLACK_HOLE_RADIUS: 14`, `ATTACK_COOLDOWNS.BLACK_HOLE: 8000`.
+- **`src/entities/aliens/BossAlien.js`** — Added `_blackHoleTimer` and `onBlackHole` callback; fires every `BLACK_HOLE` cooldown (scales with enrage multiplier).
+- **`src/scenes/GameScene.js`**:
+  - `this.bossProjectiles = []` maintained alongside `this.boss`; cleared on boss death.
+  - `onBlackHole` callback pushes a `BossProjectile` from the boss's current position.
+  - Update loop: homing movement, P2 shots destroy it (purple hit flash + death burst), snail contact calls `_warpSnail()`.
+  - `_warpSnail()` — cancels active hack, teleports Gerald 260–380 px from station at a random angle (clamped to play area), plays collapse/expand warp-ring visuals, plays teleport sound.
+  - `_spawnWarpRings(x, y, collapse)` — three staggered purple ring tweens.
+
+## Session 10e — 2026-03-10
+
+### FroggerMinigame: half-width sideways steps
+
+- **`src/minigames/FroggerMinigame.js`** — `COLS` doubled (7 → 14), `CELL_W` halved (26 → 13); `GRID_W` stays 182 px (14×13). Each A/D hop now moves the frog half the previous distance. Collision hitbox inset updated proportionally (9 → 3 px each side) to keep the 7 px hitbox aligned with the drawn 5 px-radius circle.
+
+## Session 10d — 2026-03-10
+
+### Boss tuning: minimum orbit distance + burst frequency
+
+- **`src/config.js`** — Three new/changed BOSS values:
+  - `MIN_ORBIT_DIST: 260` (new) — boss is never closer than 260 px to the station center (doubles the previous effective minimum of ~130 px from the ellipse short axis)
+  - `MAX_ORBIT_Y: 490` (new) — explicit y-ceiling that keeps the boss above the FroggerMinigame panel; previously this was an implicit side-effect of ORBIT_RADIUS_Y
+  - `ATTACK_COOLDOWNS.ALIEN_BURST: 5000` (was 7000) — burst fires every 5 s instead of 7 s (~40% more frequent)
+- **`src/entities/aliens/BossAlien.js`** — Orbit code now enforces both constraints after computing the ellipse position:
+  - If within `MIN_ORBIT_DIST` of station, boss is pushed outward along the radial direction
+  - `ny` clamped to ≤ `MAX_ORBIT_Y` so boss never enters the Frogger panel
+  - Same constraints applied to `_reenter()` tween target so boss doesn't land close-in after a phase shift
+
+## Session 10c — 2026-03-10
+
+### Boss Fight — Damage Detection Fix
+
+- **`src/entities/aliens/BossAlien.js`** — Collision radius increased 36→48 px to match the actual 96×96 sprite (visual radius = 48 px). Shots at the sprite edges were missing because the hitbox was smaller than the graphic. Added `console.log` inside `takeDamage` to report when damage is blocked vs applied.
+- **`src/scenes/GameScene.js`**:
+  - **Removed wobble tween** (`targets: this.boss, x: boss.x + 6`) from the boss hit path. That tween fought directly with the orbit code which overwrites `boss.x` every frame, causing Phaser's tween system to hold stale start/end values and corrupt the position. Replaced with a 80ms sprite alpha flash (sets `boss.sprite.alpha` to 0.2 then back to 1) which doesn't conflict with the Container's x/y.
+  - Fixed `return true` → `return false` for inactive projectiles in the boss collision filter so stale destroyed projectiles are cleaned up correctly.
+  - Added `console.log('[boss] hit!')` and `console.log('[boss] shield dropped')` to confirm the collision and shield-drop paths are being reached (aids debugging; can be removed after confirmation).
+
+## Session 10b — 2026-03-10
+
+### Boss Fight — Bug Fixes
+
+- **`src/entities/aliens/BossAlien.js`** — `takeDamage` no longer blocks damage when `_phaseShifting`. The boss was immune during the entire 550ms exit tween (still visible on screen), making it appear undamageable after the shield drops. Now only `shielded` and `_dying` gate damage; the boss takes hits even while flying away.
+- **`src/config.js`** — `BOSS.ORBIT_RADIUS` split into `ORBIT_RADIUS_X: 280` (horizontal) and `ORBIT_RADIUS_Y: 110` (vertical). The circular orbit with r=350 placed the boss at y≤710, deep inside the FroggerMinigame panel (centered at y=600, top at y=504). The ellipse keeps the boss within y=250–470, well above the panel. `PHASE_SHIFT_HP` raised 50→100 (boss now needs 10 hits before phase-shifting, giving players a fair damage window). `ALIEN_BURST_COUNT: 3` added (spawn count read from config). `ATTACK_COOLDOWNS.ALIEN_BURST` reduced 10 000→7 000ms so the burst fires noticeably during a fight.
+- **`src/entities/aliens/BossAlien.js`** — Orbit calculation uses `ORBIT_RADIUS_X` / `ORBIT_RADIUS_Y` for both the live orbit and `_reenter()` target position.
+- **`src/scenes/GameScene.js`** — `_spawnBoss()` uses the new ellipse axes for the spawn position. Burst callback reads `CONFIG.BOSS.ALIEN_BURST_COUNT` (3) instead of a hard-coded 2.
+
+## Session 10 — 2026-03-10
+
+### Boss Fight — The Overlord (Wave 10)
+
+- **`src/entities/aliens/BossAlien.js`** — New boss entity. Does not extend BaseAlien (has fully custom movement and damage logic):
+  - 200 HP; collision radius 36px; uses `alien-boss-{dir}` sprites loaded at 96×96
+  - **Orbit movement**: base angle drifts at `ORBIT_SPEED × 0.35` rad/s; a `±45°` sinusoidal oscillation is layered on top for a wave-pattern path around the station at `ORBIT_RADIUS` (350px)
+  - **Enrage at ≤100 HP**: orbit speed ×1.5, alien-burst cooldown ×0.7
+  - **Shield mechanic**: spawns with a crimson/gold rotating two-arc energy ring (`_drawShield`); all projectile hits are blocked while `shielded` is true — `flashShield()` fires a brief burst ring and plays `shieldReflect`. `dropShield()` / `raiseShield()` called externally by GameScene
+  - **Phase shift**: after accumulating every `PHASE_SHIFT_HP` (50) damage, boss flies off-screen (550ms `Power2.easeIn`), pauses 1.5s, then re-enters from a random new edge and tweens back to orbit (800ms). Phase shift re-raises the shield if it was dropped
+  - **Alien burst attack**: fires every `ATTACK_COOLDOWNS.ALIEN_BURST` (10 000ms), calls `onAlienBurst(x, y)` callback; GameScene spawns 2 FastAliens at boss position
+  - `takeDamage(amount)` returns false while shielded, phase-shifting, or dying; accumulates damage for phase-shift threshold
+
+- **`src/systems/WaveManager.js`** — Wave 10 config changed to `types: []`; `update()` now returns early when `cfg.types.length === 0` (boss wave — all alien spawning suppressed; boss manages its own attacks)
+
+- **`src/scenes/GameScene.js`**:
+  - Imports `BossAlien`
+  - Loads `alien-boss-{dir}` sprites at 96×96 in `preload()` (one per 8 directions, in the existing dir loop)
+  - `this.boss = null` initialised in `create()`
+  - `_wordsForWave(10)` now returns `CONFIG.BOSS.SHIELD_DROP_WORDS` (was `FROGGER_CROSSINGS`; both default to 3)
+  - `onWaveStart` drop-in callback calls `_spawnBoss()` on wave 10
+  - `_spawnBoss()`: places boss at right side of orbit radius, wires `onAlienBurst` → `spawnAlien('fast', x, y) × 2`, calls `hud.showBossBar()`
+  - `_startHack()` wave-10 branch: `onSuccess` now drops boss shield + schedules `raiseShield()` after `SHIELD_DOWN_DURATION` (5000ms); resets `hackProgress` to 0 and bar to "SHIELD: 0/3" so the player can break it again. Does **not** call `_completeWave()` (wave ends only when boss dies)
+  - Hack label in `onCrossing` changed to `'SHIELD'` so HUD reads "SHIELD: 1/3" etc.
+  - Boss update + projectile collision block added in `update()` before `checkProjectileCollisions` — boss is intentionally **not** in `this.aliens`, so CollisionSystem does not handle it. Hit: red flash arc, wobble tween, `takeDamage`, `hud.updateBossBar`. Kill: `_bossDeath()`
+  - `_bossDeath()`: sets `_dying`; heavy screen shake (600ms, 0.02 intensity); three staggered expanding rings; 8-flash rapid alpha pulse; 900ms later: two `spawnDeathBurst` calls (crimson + orange), `cameras.main.flash` (orange), boss destroyed, HUD bar hidden, +50 score, `_completeWave()`
+  - `spawnAlien(type, spawnX?, spawnY?)`: accepts optional position for boss alien-burst spawns (falls back to `_randomEdgePosition()` when omitted)
+
+- **`src/scenes/HUD.js`**:
+  - `updateHack(progress, threshold, label = 'HACK')`: optional third arg overrides the "HACK" prefix (used by wave 10 to show "SHIELD")
+  - `showBossBar(hp, maxHp)`: creates a 400px wide boss HP bar at top-center (y=50) with "THE OVERLORD" label above it. Red fill, current/max numeric label inside
+  - `updateBossBar(hp)`: updates fill width + HP text; briefly flashes fill white (120ms) on each hit
+  - `hideBossBar()`: destroys all boss-bar Phaser objects
+
+- **`src/config.js`** — Added `BOSS` section to `DEFAULTS`:
+  ```
+  HP: 200, PHASE_SHIFT_HP: 50, ORBIT_RADIUS: 350, ORBIT_SPEED: 0.4,
+  ENRAGE_HP: 100, ENRAGE_ORBIT_MULT: 1.5, ENRAGE_COOLDOWN_MULT: 0.7,
+  SHIELD_DROP_WORDS: 3, SHIELD_DOWN_DURATION: 5000,
+  ATTACK_COOLDOWNS: { ALIEN_BURST: 10000 }
+  ```
+
+## Session 9 — 2026-03-10
+
+### FroggerMinigame wired to Wave 10
+
+- **`src/scenes/GameScene.js`** — `_startHack()` now branches on `this.wave === 10` to launch `FroggerMinigame` instead of `HackMinigame`/`MathMinigame`. Callbacks map `onCrossing` → HUD + station progress, `onSuccess` → `_completeWave()`, `onFailure` → reset hack state (player can re-approach and retry). `FroggerMinigame` is imported at the top.
+- **`src/scenes/GameScene.js`** — `_wordsForWave(10)` now returns `CONFIG.MINIGAMES.FROGGER_CROSSINGS` so the HUD hack-progress bar tracks crossings (0-3) rather than a word count.
+- **`src/minigames/FroggerMinigame.js`** — Added optional `onCrossing(count)` callback, fired after each successful crossing so the caller can update external progress displays.
+- To test wave 10: in DEV_MODE, open the config editor from the menu and set `DEV_START_WAVE` to `10`.
+
+### FroggerMinigame
+
+- **`src/minigames/FroggerMinigame.js`** — New minigame for the boss fight shield-break mechanic. Full Frogger-style game rendered inside a 456×398 panel centred on the screen:
+  - 9×7 grid; row 0 = goal (green), row 6 = start (blue), rows 1–5 = traffic lanes
+  - 5 traffic lanes with escalating speed/density toward the goal: lane 5 is 55 px/s, lane 1 is 200 px/s; direction alternates per lane; 2 cars per lane
+  - Cars rendered with body, windscreen highlight, headlights (leading end), tail-lights (trailing end), per-lane colour
+  - Frog avatar: green circle with yellow eyes + dark pupils always facing upward (toward goal); turns red on death
+  - WASD hop movement (one cell per press, clamped at edges); 300 ms grace delay on start
+  - Hit detection: 6 px inset hitbox on frog, 2 px inset on cars; checked every tick AND immediately after each hop
+  - Getting hit → 600 ms red "✗ HIT!" flash, reset to centre of start row
+  - Reaching goal row → score increments, 600 ms green "✓ SAFE!" flash, reset; `onSuccess` fires when score reaches `FROGGER_CROSSINGS`
+  - Timer bar counts down; `onFailure` fires on expiry
+  - Controls flash overlay for 1.8 s at start: semi-opaque grid cover, large ▲ arrow, "W A S D — HOP / REACH THE OTHER SIDE" label, then fades
+  - Score displayed as `○ ○ ○` → `● ● ●` dot-fill in the header
+  - Implements `cancel()` contract (called by TeleportSystem)
+- **`src/config.js`** — Added `MINIGAMES.FROGGER_TIME_LIMIT` (45 000 ms) and `MINIGAMES.FROGGER_CROSSINGS` (3)
+- **`src/systems/SoundSynth.js`** — Added `_frogHop()`: quiet 520→420 Hz sine blip (gain 0.14, 70 ms) played on each successful hop
+
+### Boss Fight Design + Sprites
+
+- **Boss fight design locked** — Added Step 33 to `PLAN.md` documenting the full Overlord boss fight: 200 HP phase-shifting boss, crimson dreadnought saucer, Frogger minigame replaces HackMinigame for shield-break mechanic, four attack types (Black Hole teleport, EMP power loss, Terminal Lock EMP, Fast Alien burst), enrage at 50% HP, multi-stage death sequence, boss HP bar HUD addition.
+- **`scripts/generate-boss-sprite.js`** — New generator for 8 directional boss sprites (`assets/alien-boss-{dir}.svg`). Produces a 96×96 (2×) unique saucer design distinct from all regular alien palette swaps:
+  - Crimson dreadnought disc with 4 depth layers (vs 3 on regular aliens)
+  - 3 weapon pods at 0°/120°/240° on the disc face (dark socket + glowing emitter)
+  - 12 rim lights alternating crimson/gold at 30° spacing (vs 6 at 60°)
+  - Dome radius 20px, triple engine glow
+  - Enhanced boss frog: red pupils, angry V-brows, arm stubs visible gripping controls, 3-spike gold crown with coloured jewels, snarl mouth instead of smile
+  - Crown band sits at frog body's top edge; spike tips poke just above the dome glass at all 8 orientations
+- **`assets/sprites/PALETTE_SWAPS.md`** — Added boss entry documenting all colours and the unique geometry differences.
+
 ## Session 1 — 2026-02-28
 
 ### Completed Steps

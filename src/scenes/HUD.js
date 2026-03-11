@@ -94,8 +94,55 @@ export default class HUD {
         this.waveLabel.setText(`WAVE ${wave}`);
     }
 
-    updateHack(progress, threshold) {
-        this.hackProgressLabel.setText(`HACK: ${progress} / ${threshold}`);
+    updateHack(progress, threshold, label = 'HACK') {
+        this.hackProgressLabel.setText(`${label}: ${progress} / ${threshold}`);
+    }
+
+    // ── Boss HP bar ───────────────────────────────────────────────────────────
+
+    showBossBar(hp, maxHp) {
+        const scene  = this.scene;
+        const cx     = 640;
+        const BAR_W  = 400;
+        const BAR_H  = 14;
+        const barX   = cx - BAR_W / 2;
+        const barY   = 50;
+
+        this._bossMaxHp = maxHp;
+
+        this._bossLabel = scene.add.text(cx, barY - 14, 'THE OVERLORD', {
+            fontSize: '12px', fontFamily: 'monospace', color: '#ff4444',
+        }).setOrigin(0.5, 1).setDepth(100);
+
+        this._bossBg   = scene.add.rectangle(barX, barY, BAR_W, BAR_H, 0x330000).setOrigin(0, 0).setDepth(100);
+        this._bossFill = scene.add.rectangle(barX + 1, barY + 1, BAR_W - 2, BAR_H - 2, 0xff2200).setOrigin(0, 0).setDepth(100);
+
+        this._bossHpText = scene.add.text(cx, barY + BAR_H / 2, `${hp} / ${maxHp}`, {
+            fontSize: '10px', fontFamily: 'monospace', color: '#ffffff',
+        }).setOrigin(0.5, 0.5).setDepth(101);
+
+        this.updateBossBar(hp);
+    }
+
+    updateBossBar(hp) {
+        if (!this._bossFill) return;
+        const pct = Math.max(0, hp / this._bossMaxHp);
+        this._bossFill.width = Math.max(0, (400 - 2) * pct);
+        this._bossHpText.setText(`${Math.max(0, hp)} / ${this._bossMaxHp}`);
+
+        // Flash white on hit
+        this._bossFill.fillColor = 0xffffff;
+        this.scene.time.delayedCall(120, () => {
+            if (this._bossFill) this._bossFill.fillColor = 0xff2200;
+        });
+    }
+
+    hideBossBar() {
+        this._bossLabel?.destroy();
+        this._bossBg?.destroy();
+        this._bossFill?.destroy();
+        this._bossHpText?.destroy();
+        this._bossLabel = this._bossBg = this._bossFill = this._bossHpText = null;
     }
 
     updateGrab(statusText, statusColor) {

@@ -12,14 +12,14 @@ import { CONFIG } from '../config.js';
 const WAVE_CONFIGS = [
     { wave: 1,  spawnInterval: 2000, duration: 30000, types: ['basic'] },
     { wave: 2,  spawnInterval: 1800, duration: 35000, types: ['basic', 'fast'] },
-    { wave: 3,  spawnInterval: 1500, duration: 40000, types: ['basic', 'fast'] },
-    { wave: 4,  spawnInterval: 1400, duration: 40000, types: ['basic', 'fast', 'tank'] },
-    { wave: 5,  spawnInterval: 1200, duration: 45000, types: ['basic', 'fast', 'tank', 'bomber', 'shield'] },
-    { wave: 6,  spawnInterval: 1100, duration: 50000, types: ['basic', 'fast', 'tank', 'bomber', 'shield'] },
+    { wave: 3,  spawnInterval: 1500, duration: 40000, types: ['basic', 'fast', 'tank'] },
+    { wave: 4,  spawnInterval: 1400, duration: 40000, types: ['basic', 'tank', 'bomber'] },
+    { wave: 5,  spawnInterval: 1200, duration: 45000, types: ['basic', 'bomber', 'shield'] },
+    { wave: 6,  spawnInterval: 1100, duration: 50000, types: ['basic', 'fast', 'tank', 'shield'] },
     { wave: 7,  spawnInterval: 1000, duration: 50000, types: ['fast', 'tank', 'bomber', 'shield'] },
     { wave: 8,  spawnInterval:  900, duration: 55000, types: ['fast', 'tank', 'bomber', 'shield'] },
     { wave: 9,  spawnInterval:  800, duration: 55000, types: ['fast', 'tank', 'bomber', 'shield'] },
-    { wave: 10, spawnInterval:  700, duration: 65000, types: ['basic', 'fast', 'tank', 'bomber', 'shield'] },
+    { wave: 10, spawnInterval:  700, duration: 65000, types: [] }, // boss wave — no normal spawns
 ];
 
 const INTERMISSION_AFTER = new Set([3, 6, 9]);
@@ -83,6 +83,9 @@ export default class WaveManager {
 
         // Grace period — no spawning for the first N ms of each wave
         if (this.graceElapsed < CONFIG.WAVES.SPAWN_GRACE_MS) return;
+
+        // Boss wave — normal alien spawning suppressed; boss handles its own attacks
+        if (cfg.types.length === 0) return;
 
         // Spawn tick
         this.spawnAccumulator += delta;

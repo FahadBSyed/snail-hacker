@@ -1,6 +1,100 @@
 import { CONFIG } from '../config.js';
 import HealthDrop from '../entities/HealthDrop.js';
 
+/**
+ * Compute the lead-aim intercept point so a projectile travelling at `speed`
+ * px/s from (fromX, fromY) will meet a target moving at (tvx, tvy) px/s.
+ * Returns the world-space aim point; falls back to the target's current
+ * position if no positive solution exists.
+ */
+function _leadIntercept(fromX, fromY, targetX, targetY, tvx, tvy, speed) {
+    const rx = targetX - fromX;
+    const ry = targetY - fromY;
+    // Quadratic: (tvx²+tvy²-speed²)t² + 2(rx·tvx+ry·tvy)t + (rx²+ry²) = 0
+    const a = tvx * tvx + tvy * tvy - speed * speed;
+    const b = 2 * (rx * tvx + ry * tvy);
+    const c = rx * rx + ry * ry;
+
+    if (Math.abs(a) < 1) {
+        // Near-degenerate: target barely moves vs bullet speed
+        const t = Math.abs(b) > 0.001 ? -c / b : -1;
+        return t > 0
+            ? { x: targetX + tvx * t, y: targetY + tvy * t }
+            : { x: targetX, y: targetY };
+    }
+
+    const disc = b * b - 4 * a * c;
+    if (disc < 0) return { x: targetX, y: targetY };
+
+    const sqrtD = Math.sqrt(disc);
+    const t1 = (-b - sqrtD) / (2 * a);
+    const t2 = (-b + sqrtD) / (2 * a);
+    let t = -1;
+    if      (t1 > 0 && t2 > 0) t = Math.min(t1, t2);
+    else if (t1 > 0)            t = t1;
+    else if (t2 > 0)            t = t2;
+
+    return t > 0
+        ? { x: targetX + tvx * t, y: targetY + tvy * t }
+        : { x: targetX, y: targetY };
+}
+
+/**
+ * Attempt to ricochet `proj` after it hit `hitAlien` at (bx, by).
+ * Finds the nearest valid (non-shielded, non-dead) alien within
+ * CONFIG.RICOCHET.SEARCH_RADIUS, aims with lead prediction, and
+ * repositions the projectile to continue flying.
+ * Returns true if the ricochet happened (caller should NOT destroy proj).
+ */
+export function tryRicochetBullet(proj, scene, hitAlien, bx, by) {
+    const chance = CONFIG.RICOCHET.BASE_CHANCE * (CONFIG.RICOCHET.FALLOFF ** proj.ricochetBounces);
+    if (Math.random() > chance) return false;
+
+    // Find nearest valid alien
+    let nearest = null;
+    let nearestDist = CONFIG.RICOCHET.SEARCH_RADIUS;
+    for (const a of scene.aliens) {
+        if (!a.active || a._dying || a.shielded || a === hitAlien) continue;
+        const d = Phaser.Math.Distance.Between(bx, by, a.x, a.y);
+        if (d < nearestDist) { nearest = a; nearestDist = d; }
+    }
+    if (!nearest) return false;
+
+    // Compute target alien velocity (it moves toward snail/decoy)
+    const atkTarget = (scene.decoy && scene.decoy.active) ? scene.decoy : scene.snail;
+    const alienAngle = Phaser.Math.Angle.Between(nearest.x, nearest.y, atkTarget.x, atkTarget.y);
+    const speedMult  = scene.alienSpeedMultiplier || 1.0;
+    const tvx = Math.cos(alienAngle) * nearest.speed * speedMult;
+    const tvy = Math.sin(alienAngle) * nearest.speed * speedMult;
+
+    const bulletSpeed = Math.sqrt(proj.vx * proj.vx + proj.vy * proj.vy);
+    const aim = _leadIntercept(bx, by, nearest.x, nearest.y, tvx, tvy, bulletSpeed);
+    const aimAngle = Phaser.Math.Angle.Between(bx, by, aim.x, aim.y);
+
+    // Redirect
+    proj.vx = Math.cos(aimAngle) * bulletSpeed;
+    proj.vy = Math.sin(aimAngle) * bulletSpeed;
+    // Advance past the just-hit alien so the collision loop won't re-detect it
+    const clearDist = nearest.radius + CONFIG.PLAYER.PROJECTILE_RADIUS + 2;
+    proj.x = bx + Math.cos(aimAngle) * clearDist;
+    proj.y = by + Math.sin(aimAngle) * clearDist;
+    proj.ricochetBounces++;
+
+    // Cyan spark at bounce point
+    const spark = scene.add.arc(bx, by, 8, 0, 360, false, 0x44ffff, 0.9).setDepth(59);
+    scene.tweens.add({
+        targets: spark, scaleX: 3, scaleY: 3, alpha: 0,
+        duration: 250, ease: 'Power2.easeOut', onComplete: () => spark.destroy(),
+    });
+    // Ghost trail line toward next target
+    const trail = scene.add.graphics().setDepth(58);
+    trail.lineStyle(1, 0x44ffff, 0.55);
+    trail.lineBetween(bx, by, nearest.x, nearest.y);
+    scene.tweens.add({ targets: trail, alpha: 0, duration: 200, onComplete: () => trail.destroy() });
+
+    return true;
+}
+
 // ── Colour palette for death bursts ───────────────────────────────────────────
 export const BURST_COLORS = {
     basic:  0xdd3333,
@@ -136,9 +230,15 @@ export function checkProjectileCollisions(scene) {
                 break;
             }
 
-            proj.destroy();
             const isBomber = alien.alienType === 'bomber';
             const bx = alien.x, by = alien.y;
+
+            // Ricochet: attempt bounce before deciding whether to destroy
+            const ricocheted = scene.ricochetEnabled
+                ? tryRicochetBullet(proj, scene, alien, bx, by)
+                : false;
+            if (!ricocheted) proj.destroy();
+
             const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
 
             // Red flash overlay (works in Canvas renderer unlike setTint)
