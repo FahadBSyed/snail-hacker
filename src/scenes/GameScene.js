@@ -482,11 +482,27 @@ export default class GameScene extends Phaser.Scene {
         for (const img of this._propImages) img.destroy();
         this._propImages = [];
 
-        // Palette for this wave's background
+        // Palette for this wave's background.
+        // The raw palette colors are dark ambient tones (e.g. #4a2010).  Phaser's
+        // setTint() multiplies every pixel by the tint color, so a dark tint on a
+        // dark-grey sprite produces a near-black result.  We normalise each color
+        // so its brightest channel is 0xFF, preserving the hue ratios while making
+        // the tint actually visible.
         const bgIdx   = ((wave - 1) * 7) % 20;
         const palette = PROP_PALETTES[bgIdx];
-        const rockTint   = parseInt(palette.rock.slice(1),  16);
-        const floraTint  = parseInt(palette.flora.slice(1), 16);
+        const brighten = (hex) => {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            const maxC = Math.max(r, g, b);
+            if (maxC === 0) return 0xffffff;
+            const k = 255 / maxC;
+            return (Math.min(255, Math.round(r * k)) << 16) |
+                   (Math.min(255, Math.round(g * k)) <<  8) |
+                    Math.min(255, Math.round(b * k));
+        };
+        const rockTint  = brighten(palette.rock);
+        const floraTint = brighten(palette.flora);
 
         // Seeded PRNG (mulberry32) — deterministic per wave
         let seed = wave * 1_000_003 + 7;
