@@ -340,32 +340,38 @@ export default class IntermissionScene extends Phaser.Scene {
                 this.input.keyboard.off('keydown', keyListener);
                 this.soundSynth.play('upgradeSelect');
 
-                // Dim non-selected cards
+                // Slide non-selected cards down off-screen
                 cards.forEach((c, j) => {
                     if (j !== i) {
                         this.tweens.add({
-                            targets: c.container, alpha: 0.25, duration: 200,
+                            targets:  c.container,
+                            y:        cardY + 520,
+                            alpha:    0,
+                            duration: 360,
+                            delay:    j * 70,
+                            ease:     'Cubic.easeIn',
                         });
                     }
                 });
 
-                // Flash: rapid alpha pulse
+                // 3D flip: scaleX 1→0 (card turns edge-on), then 0→1 (card faces forward again).
+                // A subtle scaleY squeeze on the first half sells the perspective warp.
                 this.tweens.add({
                     targets:  container,
-                    alpha:    0.15,
-                    duration: 70,
-                    yoyo:     true,
-                    repeat:   4,
-                    ease:     'Sine.easeInOut',
-                    onComplete: () => container.setAlpha(1),
-                });
-
-                // Spin: full 360° rotation
-                this.tweens.add({
-                    targets:  container,
-                    angle:    360,
-                    duration: 520,
-                    ease:     'Cubic.easeInOut',
+                    scaleX:   0,
+                    scaleY:   0.88,
+                    duration: 190,
+                    ease:     'Sine.easeIn',
+                    onComplete: () => {
+                        drawCard(true); // brighten border on the "back face" reveal
+                        this.tweens.add({
+                            targets:  container,
+                            scaleX:   1,
+                            scaleY:   1,
+                            duration: 220,
+                            ease:     'Sine.easeOut',
+                        });
+                    },
                 });
 
                 // Record the upgrade and advance after the animation
