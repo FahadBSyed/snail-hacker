@@ -43,6 +43,7 @@ export default class TypingMinigame {
         const n  = this.phrase.length;
         const panelW = Math.max(280, n * 26 + 48);
 
+        this._baseX = cx;
         this.container = this.scene.add.container(cx, cy).setDepth(200);
 
         // Panel
@@ -107,6 +108,7 @@ export default class TypingMinigame {
             if (this.pointer < this.phrase.length) {
                 this.cursor.x = this._startX + this.pointer * this._charSpacing;
             }
+            this._wobble(false);
             if (this.pointer >= this.phrase.length) this._finish(true);
         } else {
             // Flash current char red, then back to default
@@ -116,7 +118,25 @@ export default class TypingMinigame {
             this.scene.time.delayedCall(160, () => {
                 if (!this.cancelled) cur.setColor('#777788');
             });
+            this._wobble(true);
         }
+    }
+
+    _wobble(violent) {
+        if (this._wobbleTween) this._wobbleTween.stop();
+        this.container.x = this._baseX;
+        const amp = violent ? 12 : 4;
+        const dur  = violent ? 45 : 65;
+        const reps = violent ? 4  : 1;
+        this._wobbleTween = this.scene.tweens.add({
+            targets:  this.container,
+            x:        this._baseX + amp,
+            duration: dur,
+            yoyo:     true,
+            repeat:   reps,
+            ease:     'Sine.easeInOut',
+            onComplete: () => { if (this.container?.active) this.container.x = this._baseX; },
+        });
     }
 
     _finish(success) {

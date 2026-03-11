@@ -63,6 +63,7 @@ export default class MathMinigame {
 
     _createUI() {
         const cx = 640, cy = 610;
+        this._baseX = cx;
         this.container = this.scene.add.container(cx, cy).setDepth(200);
 
         const panelW = 420;
@@ -136,6 +137,7 @@ export default class MathMinigame {
             this.wordsCompleted++;
             this._updateProgressUI();
             this.scene.soundSynth?.play('wordSuccess');
+            this._wobble(false);
             if (this.onWordComplete) this.onWordComplete(this.wordsCompleted);
 
             if (this.wordsCompleted >= this.wordsRequired) {
@@ -155,6 +157,7 @@ export default class MathMinigame {
             this.scene.soundSynth?.play('error');
             this._inputText.setColor('#ff4444');
             this._typed = '';
+            this._wobble(true);
             this.scene.time.delayedCall(300, () => {
                 if (!this.cancelled && this._inputText.active) {
                     this._inputText.setColor('#00ffcc');
@@ -162,6 +165,25 @@ export default class MathMinigame {
                 }
             });
         }
+    }
+
+    // ── Wobble feedback ───────────────────────────────────────────────────────
+
+    _wobble(violent) {
+        if (this._wobbleTween) this._wobbleTween.stop();
+        this.container.x = this._baseX;
+        const amp = violent ? 12 : 4;
+        const dur  = violent ? 45 : 65;
+        const reps = violent ? 4  : 1;
+        this._wobbleTween = this.scene.tweens.add({
+            targets:  this.container,
+            x:        this._baseX + amp,
+            duration: dur,
+            yoyo:     true,
+            repeat:   reps,
+            ease:     'Sine.easeInOut',
+            onComplete: () => { if (this.container?.active) this.container.x = this._baseX; },
+        });
     }
 
     // ── Progress ──────────────────────────────────────────────────────────────
