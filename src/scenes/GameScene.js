@@ -162,14 +162,14 @@ export default class GameScene extends Phaser.Scene {
 
         // Station + terminal sprites
         if (!this.textures.exists('station-mainframe')) {
-            this.load.svg('station-mainframe', 'assets/station-mainframe.svg', { width: 96, height: 96 });
+            this.load.svg('station-mainframe', 'assets/sprites/station/station-mainframe.svg', { width: 96, height: 96 });
         }
         if (!this.textures.exists('station-gun')) {
-            this.load.svg('station-gun', 'assets/station-gun.svg', { width: 48, height: 48 });
+            this.load.svg('station-gun', 'assets/sprites/station/station-gun.svg', { width: 48, height: 48 });
         }
         for (const key of ['terminal-reload', 'terminal-turret', 'terminal-shield', 'terminal-slow', 'terminal-repair']) {
             if (!this.textures.exists(key)) {
-                this.load.svg(key, `assets/${key}.svg`, { width: 64, height: 64 });
+                this.load.svg(key, `assets/sprites/terminal/${key}.svg`, { width: 64, height: 64 });
             }
         }
 
