@@ -5,9 +5,9 @@
  * colour palette changes per alien type.
  *
  * Output filenames:
- *   assets/alien-fast-{right,diag-right-down,down,…}.svg
- *   assets/alien-tank-{right,…}.svg
- *   assets/alien-bomber-{right,…}.svg
+ *   assets/sprites/alien/alien-fast-{right,diag-right-down,down,…}.svg
+ *   assets/sprites/alien/alien-tank-{right,…}.svg
+ *   assets/sprites/alien/alien-bomber-{right,…}.svg
  *
  * Run: node scripts/generate-alien-enemy-sprites.js
  */
@@ -17,7 +17,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outDir    = join(__dirname, '..', 'assets');
+const outDir    = join(__dirname, '..', 'assets', 'sprites', 'alien');
 mkdirSync(outDir, { recursive: true });
 
 const SIZE = 48;

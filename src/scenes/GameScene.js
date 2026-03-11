@@ -129,35 +129,35 @@ export default class GameScene extends Phaser.Scene {
 
         const svgSize = { width: 48, height: 48 };
         // Snail directional sprites
-        this.load.svg('snail-right', 'assets/snail-right.svg', svgSize);
-        this.load.svg('snail-left',  'assets/snail-left.svg',  svgSize);
-        this.load.svg('snail-up',    'assets/snail-up.svg',    svgSize);
-        this.load.svg('snail-down',  'assets/snail-down.svg',  svgSize);
+        this.load.svg('snail-right', 'assets/sprites/snail/snail-right.svg', svgSize);
+        this.load.svg('snail-left',  'assets/sprites/snail/snail-left.svg',  svgSize);
+        this.load.svg('snail-up',    'assets/sprites/snail/snail-up.svg',    svgSize);
+        this.load.svg('snail-down',  'assets/sprites/snail/snail-down.svg',  svgSize);
         // Walk, idle and damage animation frames
         for (const dir of ['right', 'left', 'up', 'down']) {
             for (let i = 0; i < 6; i++) {
                 const f = `f${String(i).padStart(2, '0')}`;
-                this.load.svg(`snail-walk-${dir}-${f}`, `assets/snail-walk-${dir}-${f}.svg`, svgSize);
+                this.load.svg(`snail-walk-${dir}-${f}`, `assets/sprites/snail/snail-walk-${dir}-${f}.svg`, svgSize);
             }
             for (let i = 0; i < 12; i++) {
                 const f = `f${String(i).padStart(2, '0')}`;
-                this.load.svg(`snail-idle-${dir}-${f}`, `assets/snail-idle-${dir}-${f}.svg`, svgSize);
+                this.load.svg(`snail-idle-${dir}-${f}`, `assets/sprites/snail/snail-idle-${dir}-${f}.svg`, svgSize);
             }
             for (let i = 0; i <= 15; i++) {
                 const f = `f${String(i).padStart(2, '0')}`;
-                this.load.svg(`snail-hit-${dir}-${f}`, `assets/snail-hit-${dir}-${f}.svg`, svgSize);
+                this.load.svg(`snail-hit-${dir}-${f}`, `assets/sprites/snail/snail-hit-${dir}-${f}.svg`, svgSize);
             }
         }
         // Alien sprites — 8 directions each
         const dirs = ['right', 'diag-right-down', 'down', 'diag-left-down',
                       'left',  'diag-left-up',    'up',   'diag-right-up'];
         for (const dir of dirs) {
-            this.load.svg(`alien-frog-${dir}`,    `assets/alien-frog-${dir}.svg`,    svgSize);
-            this.load.svg(`alien-fast-${dir}`,    `assets/alien-fast-${dir}.svg`,    svgSize);
-            this.load.svg(`alien-tank-${dir}`,    `assets/alien-tank-${dir}.svg`,    svgSize);
-            this.load.svg(`alien-bomber-${dir}`,  `assets/alien-bomber-${dir}.svg`,  svgSize);
-            this.load.svg(`alien-shield-${dir}`,  `assets/alien-shield-${dir}.svg`,  svgSize);
-            this.load.svg(`alien-boss-${dir}`,    `assets/alien-boss-${dir}.svg`,    { width: 96, height: 96 });
+            this.load.svg(`alien-frog-${dir}`,    `assets/sprites/alien/alien-frog-${dir}.svg`,    svgSize);
+            this.load.svg(`alien-fast-${dir}`,    `assets/sprites/alien/alien-fast-${dir}.svg`,    svgSize);
+            this.load.svg(`alien-tank-${dir}`,    `assets/sprites/alien/alien-tank-${dir}.svg`,    svgSize);
+            this.load.svg(`alien-bomber-${dir}`,  `assets/sprites/alien/alien-bomber-${dir}.svg`,  svgSize);
+            this.load.svg(`alien-shield-${dir}`,  `assets/sprites/alien/alien-shield-${dir}.svg`,  svgSize);
+            this.load.svg(`alien-boss-${dir}`,    `assets/sprites/alien/alien-boss-${dir}.svg`,    { width: 96, height: 96 });
         }
 
         // Station + terminal sprites

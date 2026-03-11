@@ -13,7 +13,7 @@
  *   f00=0.75  f01=0.45  f02=0.25  f03=0.10  f04–f07=0.00
  *   f08,f10,f12,f14=0.45  f09,f11,f13,f15=0.00
  *
- * Output: assets/snail-hit-{right,left,up,down}-f{00-15}.svg  (64 files)
+ * Output: assets/sprites/snail/snail-hit-{right,left,up,down}-f{00-15}.svg  (64 files)
  * Run:    node scripts/generate-damage-sprites.js
  */
 
@@ -22,7 +22,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUT = join(__dirname, '..', 'assets');
+const OUT = join(__dirname, '..', 'assets', 'sprites', 'snail');
 mkdirSync(OUT, { recursive: true });
 
 const SIZE   = 48;
