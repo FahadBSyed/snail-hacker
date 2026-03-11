@@ -967,7 +967,9 @@ export default class GameScene extends Phaser.Scene {
                 const hitFlash = this.add.arc(bx, by, this.boss.radius, 0, 360, false, 0x00ff88, 0.75).setDepth(58);
                 this.tweens.add({ targets: hitFlash, alpha: 0, duration: 240, onComplete: () => hitFlash.destroy() });
                 this.tweens.add({ targets: this.boss, x: bx + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
-                this.boss.takeDamageRaw(CONFIG.EMP.MINE_DAMAGE); // 30% reduction applied in BossAlien.takeDamageRaw
+                const dead = this.boss.takeDamageRaw(CONFIG.EMP.MINE_DAMAGE); // 30% reduction applied in BossAlien.takeDamageRaw
+                if (this.hud) this.hud.updateBossBar(this.boss.health);
+                if (dead) this._bossDeath();
             }
         }
     }
