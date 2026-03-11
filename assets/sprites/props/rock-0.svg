@@ -1,10 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 34" width="40" height="34">
-  <ellipse cx="20.00" cy="31.62" rx="14.40" ry="2.55" fill="#0c0c0c" opacity="0.34"/>
-  <path d="M2.80,13.94 L37.20,13.94 L34.10,29.92 L5.90,29.92 Z" fill="#4e4e4e"/>
-  <path d="M2.80,13.94 L37.20,13.94 L36.02,20.01 L3.98,20.01 Z" fill="#686868" opacity="0.55"/>
-  <path d="M4.66,23.53 L35.34,23.53 L34.10,29.92 L5.90,29.92 Z" fill="#1c1c1c" opacity="0.40"/>
-  <ellipse cx="20.00" cy="19.33" rx="16.51" ry="4.94" fill="#1c1c1c" opacity="0.38"/>
-  <ellipse cx="20.00" cy="13.94" rx="17.20" ry="7.48" fill="#868686"/>
-  <ellipse cx="16.22" cy="12.29" rx="10.66" ry="4.49" fill="#c2c2c2" opacity="0.46"/>
-  <ellipse cx="14.84" cy="11.70" rx="4.13" ry="1.65" fill="#f2f2f2" opacity="0.36"/>
+  <ellipse cx="20.00" cy="32.30" rx="15.20" ry="2.72" fill="#0c0c0c" opacity="0.35"/>
+  <polygon points="8.00,18.00 32.00,18.00 34.00,22.00 30.00,27.00 20.00,29.00 9.00,27.00 6.00,22.00" fill="#4e4e4e"/>
+  <polygon points="8.00,18.00 32.00,18.00 32.48,22.40 7.52,22.40" fill="#686868" opacity="0.50"/>
+  <polygon points="8.80,24.82 31.20,24.82 34.00,22.00 6.00,22.00" fill="#1c1c1c" opacity="0.38"/>
+  <ellipse cx="20.00" cy="19.20" rx="12.48" ry="2.40" fill="#1c1c1c" opacity="0.42"/>
+  <polygon points="7.00,13.00 14.00,7.00 22.00,6.00 30.00,8.00 36.00,13.00 32.00,18.00 20.00,20.00 8.00,18.00" fill="#868686"/>
+  <polygon points="12.01,12.04 15.86,8.74 20.26,8.19 24.66,9.29 27.96,12.04 25.76,14.79 19.16,15.89 12.56,14.79" fill="#c2c2c2" opacity="0.45"/>
+  <polygon points="14.29,11.11 16.25,9.43 18.49,9.15 20.73,9.71 22.41,11.11 21.29,12.51 17.93,13.07 14.57,12.51" fill="#f2f2f2" opacity="0.33"/>
+  <line x1="16.00" y1="10.00" x2="23.00" y2="16.00" stroke="#1c1c1c" stroke-width="0.9" opacity="0.55"/>
+  <line x1="24.00" y1="8.00" x2="28.00" y2="14.00" stroke="#1c1c1c" stroke-width="0.9" opacity="0.55"/>
+  <polygon points="7.00,13.00 14.00,7.00 22.00,6.00 30.00,8.00 36.00,13.00 32.00,18.00 20.00,20.00 8.00,18.00"   fill="none" stroke="#1c1c1c" stroke-width="0.9" stroke-linejoin="round" opacity="0.38"/>
+  <polygon points="8.00,18.00 32.00,18.00 34.00,22.00 30.00,27.00 20.00,29.00 9.00,27.00 6.00,22.00" fill="none" stroke="#1c1c1c" stroke-width="0.9" stroke-linejoin="round" opacity="0.32"/>
 </svg>

@@ -176,10 +176,10 @@ export default class GameScene extends Phaser.Scene {
         // ── Prop sprites (rocks + mushrooms) — loaded once, tinted per wave ──
         const PROP_SIZES = {
             'prop-rock-0':     { w: 40,  h: 34 },
-            'prop-rock-1':     { w: 60,  h: 40 },
-            'prop-rock-2':     { w: 48,  h: 58 },
+            'prop-rock-1':     { w: 60,  h: 38 },
+            'prop-rock-2':     { w: 46,  h: 56 },
             'prop-mushroom-0': { w: 32,  h: 52 },
-            'prop-mushroom-1': { w: 48,  h: 70 },
+            'prop-mushroom-1': { w: 48,  h: 68 },
         };
         for (const [key, sz] of Object.entries(PROP_SIZES)) {
             if (!this.textures.exists(key)) {

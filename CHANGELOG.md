@@ -1,5 +1,20 @@
 # SNAIL HACKER — Changelog
 
+## Session 10j — 2026-03-11
+
+### Prop Sprite Redesign: Angular Rocks + Connected Mushrooms
+
+- **`scripts/generate-prop-sprites.js`** — Full redesign of both prop types:
+  - **Rocks**: replaced smooth-ellipse top + trapezoid front (which read as a cylinder) with angular polygon silhouettes. Each rock variant is now defined by an explicit `topPoly` (8-vertex angular top face) and `frontPoly` (7-vertex angular front face) sharing a ridge edge. Added crack lines (1–3 thin dark lines across the top face) and two separate face-outline strokes — no cross-face diagonals. Three variants: compact boulder (40×34), wide flat slab (60×38), tall multi-faceted boulder (46×56).
+  - **Mushrooms**: fixed the cap/stem disconnect. `stemTopRatio` was set below `capCy + capRy` (the cap bottom), leaving a visible gap. Now `stemTopRatio` is set so the stem top is inside the cap dome (30% before cap bottom), and the cap dome/undershade elements are drawn after the stem, hiding the stem top and creating a clean visual join. Also increased `capRyRatio` from 0.22→0.26/0.28 for rounder caps. Sizes adjusted: mushroom-1 height 70→68.
+- **`GameScene.js` preload sizes** — Updated `PROP_SIZES` to match new SVG canvas dimensions: rock-1 `60×40→60×38`, rock-2 `48×58→46×56`, mushroom-1 `48×70→48×68`.
+
+### Prop Colorisation: Canvas 2D Multiply (replaces setTint)
+
+- **Root cause**: `Phaser.CANVAS` renderer ignores `Image.setTint()` entirely — it's a WebGL pipeline feature.
+- **`GameScene._colorisePropTexture(sourceKey, rgb, newKey)`** (new) — Creates a colourised copy of a greyscale prop texture using Canvas 2D: (1) draw greyscale source, (2) overlay solid tint rect with `globalCompositeOperation='multiply'` to colourize pixels (also fills transparent bg with tint), (3) re-draw source with `'destination-in'` to restore original alpha mask. Works in both Canvas and WebGL renderers.
+- **`GameScene._spawnProps()`** — Replaced `setTint(brightenedRGB)` on each image with: compute per-variant colorised texture keys (e.g. `cr-prop-rock-0-bg7`), call `_colorisePropTexture` once per unique source×bgIdx combination, then use the colorised key for `this.add.image()`. Colorised textures are cached in Phaser's texture manager for the session lifetime.
+
 ## Session 10i — 2026-03-11
 
 ### Prop Spawning: Rocks + Mushrooms in GameScene
