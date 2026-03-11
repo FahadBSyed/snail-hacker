@@ -428,7 +428,6 @@ export default class GameScene extends Phaser.Scene {
                 this.boardingShip = false;
                 if (this.escapeShip) { this.escapeShip.destroy(); this.escapeShip = null; }
                 this._escapeShipSound?.stop(); this._escapeShipSound = null;
-                this._swarmSound?.stop(); this._swarmSound = null;
 
                 // Position snail but keep it hidden and locked until drop-in completes
                 this.snail.setVisible(false);
@@ -1723,10 +1722,6 @@ export default class GameScene extends Phaser.Scene {
             this.soundSynth.play('alienSpawn');
         }
 
-        // Start swarm hum when the first alien appears
-        if (!this._swarmSound) {
-            this._swarmSound = this.soundSynth.playLooped('alienSwarm');
-        }
     }
 
     // ── Main update loop ──────────────────────────────────────────────────────
@@ -2017,24 +2012,6 @@ export default class GameScene extends Phaser.Scene {
             }
             return true;
         });
-
-        // Swarm sound — start when aliens are present, fade volume with proximity
-        if (this._swarmSound) {
-            if (this.aliens.length === 0) {
-                this._swarmSound.stop();
-                this._swarmSound = null;
-            } else {
-                let nearestDist = Infinity;
-                const sx = this.snail.x, sy = this.snail.y;
-                for (const a of this.aliens) {
-                    if (!a.active) continue;
-                    const d = Phaser.Math.Distance.Between(sx, sy, a.x, a.y);
-                    if (d < nearestDist) nearestDist = d;
-                }
-                const vol = Math.max(0, 1 - nearestDist / 750) * 0.40;
-                this._swarmSound.setVolume(vol);
-            }
-        }
 
         // Frog escapes — update movement and prune destroyed ones
         for (const frog of this.frogEscapes) {
