@@ -135,13 +135,13 @@ export default class MathMinigame {
 
     _checkAnswer() {
         if (parseInt(this._typed, 10) === this._answer) {
-            // Correct — flash the whole equation bright white-green
-            this._problemText.setColor('#ccffcc');
-            this._inputText.setColor('#ccffcc');
+            // Correct — white flash + scale pop
+            this._problemText.setColor('#ffffff');
+            this._inputText.setColor('#ffffff');
             this.wordsCompleted++;
             this._updateProgressUI();
             this.scene.soundSynth?.play('wordSuccess');
-            this._wobble(false);
+            this._flashSuccess();
             if (this.onWordComplete) this.onWordComplete(this.wordsCompleted);
 
             if (this.wordsCompleted >= this.wordsRequired) {
@@ -171,7 +171,20 @@ export default class MathMinigame {
         }
     }
 
-    // ── Wobble feedback ───────────────────────────────────────────────────────
+    // ── Success / error feedback ──────────────────────────────────────────────
+
+    _flashSuccess() {
+        if (this._wobbleTween) { this._wobbleTween.stop(); this._wordGroup.y = 0; }
+        this._wordGroup.setScale(1);
+        this.scene.tweens.add({
+            targets:  this._wordGroup,
+            scaleX:   1.18,
+            scaleY:   1.18,
+            duration: 100,
+            yoyo:     true,
+            ease:     'Sine.easeOut',
+        });
+    }
 
     _wobble(violent) {
         if (this._wobbleTween) this._wobbleTween.stop();

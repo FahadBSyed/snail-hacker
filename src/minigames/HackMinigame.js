@@ -143,11 +143,14 @@ export default class HackMinigame {
                 this.cursor.x = this._startX + this.pointer * this._charSpacing;
             }
 
-            this._wobble(false);
+            } else {
+                this._wobble(false);
+            }
 
             if (this.pointer >= this.phrase.length) {
-                // Word complete — flash all chars bright white-green
-                this.charTexts.forEach(t => { if (t.active) t.setColor('#ccffcc'); });
+                // Word complete — scale pop + white flash
+                this.charTexts.forEach(t => { if (t.active) t.setColor('#ffffff'); });
+                this._flashSuccess();
                 this.wordsCompleted++;
                 this._updateProgressUI();
                 this.scene.soundSynth?.play('wordSuccess');
@@ -175,6 +178,19 @@ export default class HackMinigame {
             });
             this._wobble(true);
         }
+    }
+
+    _flashSuccess() {
+        if (this._wobbleTween) { this._wobbleTween.stop(); this._wordGroup.y = 0; }
+        this._wordGroup.setScale(1);
+        this.scene.tweens.add({
+            targets:  this._wordGroup,
+            scaleX:   1.18,
+            scaleY:   1.18,
+            duration: 100,
+            yoyo:     true,
+            ease:     'Sine.easeOut',
+        });
     }
 
     _wobble(violent) {
