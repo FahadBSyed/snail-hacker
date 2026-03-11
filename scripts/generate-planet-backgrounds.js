@@ -4,9 +4,8 @@
  * Output: assets/backgrounds/bg-{00..19}.svg
  * Run:    node scripts/generate-planet-backgrounds.js
  *
- * Top-down means: no sky, no horizon. We're looking straight down at the
- * alien ground. Elements: ground texture patches, cracks/fissures, rocks
- * with drop shadows, craters, liquid pools, and alien flora viewed from above.
+ * Pure ground texture: color-palette blobs + multi-scale noise dots.
+ * No rocks, flora, pools, or craters — just a dirty/rocky surface feel.
  */
 import { writeFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
@@ -17,10 +16,6 @@ const outDir = join(__dirname, '..', 'assets', 'backgrounds');
 mkdirSync(outDir, { recursive: true });
 
 const W = 1280, H = 720;
-
-// Light comes from upper-left; shadows offset lower-right
-const SHADOW_DX = 5;
-const SHADOW_DY = 7;
 
 // ── Mulberry32 seeded PRNG ───────────────────────────────────────────────────
 function makePRNG(seed) {
@@ -57,168 +52,10 @@ function lighten(hex, amount) {
     const [r, g, b] = hexToRgb(hex);
     return rgbToHex([r + (255 - r) * amount, g + (255 - g) * amount, b + (255 - b) * amount]);
 }
-function f(n) { return n.toFixed(1); }   // helper: 1 decimal place
+function f(n) { return n.toFixed(1); }
 function fi(n) { return Math.round(n).toString(); }
 
-// ── Top-down element generators ───────────────────────────────────────────────
-// All elements are centered at (0,0); caller wraps in <g transform="translate(x,y)">
-
-// Irregular boulder/rock seen from directly above, with drop shadow
-function topRock(rng, color, s = 1) {
-    const rx   = (10 + rng() * 18) * s;
-    const ry   = (7  + rng() * 12) * s;
-    const rot  = rng() * 360;
-    const shad = darken(color, 0.45);
-    const hi   = lighten(color, 0.22);
-    // Shadow is offset body, slightly stretched
-    return `<g transform="rotate(${fi(rot)})">
-<ellipse cx="${f(SHADOW_DX)}" cy="${f(SHADOW_DY)}" rx="${f(rx * 1.08)}" ry="${f(ry * 0.9)}" fill="${shad}" opacity="0.45"/>
-<ellipse rx="${f(rx)}" ry="${f(ry)}" fill="${color}" opacity="0.92"/>
-<ellipse cx="${f(-rx * 0.22)}" cy="${f(-ry * 0.28)}" rx="${f(rx * 0.38)}" ry="${f(ry * 0.28)}" fill="${hi}" opacity="0.28"/>
-</g>`;
-}
-
-// Small pebble cluster
-function topPebbles(rng, color, s = 1) {
-    const n = 3 + Math.floor(rng() * 5);
-    let svg = '';
-    for (let i = 0; i < n; i++) {
-        const ox  = (rng() * 2 - 1) * 14 * s;
-        const oy  = (rng() * 2 - 1) * 10 * s;
-        const pr  = (2 + rng() * 5) * s;
-        const pc  = rng() > 0.5 ? lighten(color, 0.1) : darken(color, 0.1);
-        svg += `<circle cx="${f(ox + SHADOW_DX * 0.5)}" cy="${f(oy + SHADOW_DY * 0.5)}" r="${f(pr * 1.05)}" fill="${darken(color, 0.4)}" opacity="0.35"/>`;
-        svg += `<circle cx="${f(ox)}" cy="${f(oy)}" r="${f(pr)}" fill="${pc}" opacity="0.88"/>`;
-    }
-    return svg;
-}
-
-// Crater with rim, dark floor, and shadow crescent on lower-right wall
-function topCrater(rng, rimColor, floorColor, s = 1) {
-    const r    = (18 + rng() * 28) * s;
-    const rimW = r * 0.18;
-    const shad = darken(floorColor, 0.3);
-    const hi   = lighten(rimColor, 0.15);
-    return `<circle r="${f(r + rimW)}" fill="${hi}" opacity="0.45"/>
-<circle r="${f(r + rimW * 0.5)}" fill="${rimColor}" opacity="0.6"/>
-<circle r="${f(r)}" fill="${floorColor}" opacity="0.95"/>
-<ellipse cx="${f(r * 0.22)}" cy="${f(r * 0.28)}" rx="${f(r * 0.72)}" ry="${f(r * 0.52)}" fill="${shad}" opacity="0.45"/>`;
-}
-
-// Liquid pool / acid pit — smooth ellipse with specular highlight
-function topPool(rng, color, s = 1) {
-    const rx   = (16 + rng() * 28) * s;
-    const ry   = (8  + rng() * 16) * s;
-    const rot  = rng() * 360;
-    const spec = lighten(color, 0.35);
-    const edge = darken(color, 0.2);
-    return `<g transform="rotate(${fi(rot)})">
-<ellipse rx="${f(rx * 1.06)}" ry="${f(ry * 1.06)}" fill="${edge}" opacity="0.4"/>
-<ellipse rx="${f(rx)}" ry="${f(ry)}" fill="${color}" opacity="0.75"/>
-<ellipse cx="${f(-rx * 0.18)}" cy="${f(-ry * 0.2)}" rx="${f(rx * 0.38)}" ry="${f(ry * 0.28)}" fill="${spec}" opacity="0.18"/>
-</g>`;
-}
-
-// Alien rosette plant — N leaves radiating from centre, viewed from above
-function topRosette(rng, color, s = 1) {
-    const n      = 5 + Math.floor(rng() * 5);
-    const leafRx = (7 + rng() * 9) * s;
-    const leafRy = (2.5 + rng() * 3) * s;
-    const reach  = leafRx * 0.7;
-    const center = lighten(color, 0.25);
-    let svg = '';
-    for (let i = 0; i < n; i++) {
-        const angle = (i / n) * 360;
-        const cx    = Math.cos(angle * Math.PI / 180) * reach;
-        const cy    = Math.sin(angle * Math.PI / 180) * reach;
-        svg += `<ellipse cx="${f(cx)}" cy="${f(cy)}" rx="${f(leafRx)}" ry="${f(leafRy)}" transform="rotate(${f(angle)},${f(cx)},${f(cy)})" fill="${color}" opacity="${f(0.7 + rng() * 0.25)}"/>`;
-    }
-    svg += `<circle cx="0" cy="0" r="${f(leafRy * 1.3)}" fill="${center}" opacity="0.8"/>`;
-    return svg;
-}
-
-// Crystal cluster — star polygon(s) viewed from directly above
-function topCrystal(rng, color, s = 1) {
-    const count = 2 + Math.floor(rng() * 3);
-    let svg = '';
-    for (let c = 0; c < count; c++) {
-        const n     = 4 + Math.floor(rng() * 4);
-        const r     = (7 + rng() * 14) * s;
-        const inner = r * (0.3 + rng() * 0.25);
-        const rot   = rng() * 360;
-        const ox    = (rng() * 2 - 1) * 8 * s;
-        const oy    = (rng() * 2 - 1) * 6 * s;
-        const shad  = darken(color, 0.35);
-        let pts = '';
-        for (let i = 0; i < n * 2; i++) {
-            const ang = ((i / (n * 2)) * 360 + rot) * Math.PI / 180;
-            const rad = i % 2 === 0 ? r : inner;
-            pts += `${f(ox + Math.cos(ang) * rad)},${f(oy + Math.sin(ang) * rad)} `;
-        }
-        // shadow
-        let ptsSh = '';
-        for (let i = 0; i < n * 2; i++) {
-            const ang = ((i / (n * 2)) * 360 + rot) * Math.PI / 180;
-            const rad = i % 2 === 0 ? r : inner;
-            ptsSh += `${f(ox + SHADOW_DX * 0.6 + Math.cos(ang) * rad)},${f(oy + SHADOW_DY * 0.6 + Math.sin(ang) * rad)} `;
-        }
-        svg += `<polygon points="${ptsSh.trim()}" fill="${shad}" opacity="0.35"/>`;
-        svg += `<polygon points="${pts.trim()}" fill="${color}" opacity="0.82"/>`;
-        svg += `<polygon points="${pts.trim()}" fill="${lighten(color, 0.4)}" transform="scale(0.38) translate(${f(ox / 0.38)},${f(oy / 0.38)})" opacity="0.45"/>`;
-    }
-    return svg;
-}
-
-// Lichen / moss patch — irregular blob
-function topLichen(rng, color, s = 1) {
-    const rx  = (12 + rng() * 16) * s;
-    const ry  = (8  + rng() * 12) * s;
-    const rot = rng() * 360;
-    // Irregular blob using multiple overlapping ellipses
-    const n = 4 + Math.floor(rng() * 4);
-    let svg = '';
-    for (let i = 0; i < n; i++) {
-        const angle = (i / n) * Math.PI * 2;
-        const ex  = Math.cos(angle) * rx * (0.5 + rng() * 0.4);
-        const ey  = Math.sin(angle) * ry * (0.4 + rng() * 0.5);
-        const erx = (4 + rng() * rx * 0.6) * s;
-        const ery = (3 + rng() * ry * 0.5) * s;
-        svg += `<ellipse cx="${f(ex)}" cy="${f(ey)}" rx="${f(erx)}" ry="${f(ery)}" fill="${color}" opacity="${f(0.35 + rng() * 0.3)}"/>`;
-    }
-    return `<g transform="rotate(${fi(rot)})">${svg}</g>`;
-}
-
-// Crack / fissure — branching bezier path
-function makeCrack(rng, color, x, y, angle, len, depth) {
-    const ex  = x + Math.cos(angle) * len;
-    const ey  = y + Math.sin(angle) * len;
-    const mx  = (x + ex) / 2 + (rng() * 2 - 1) * len * 0.3;
-    const my  = (y + ey) / 2 + (rng() * 2 - 1) * len * 0.15;
-    const sw  = f(0.4 + rng() * 0.9 + depth * 0.3);
-    const op  = f(0.28 + rng() * 0.28);
-    let svg = `<path d="M${f(x)},${f(y)} Q${f(mx)},${f(my)} ${f(ex)},${f(ey)}" stroke="${color}" stroke-width="${sw}" fill="none" opacity="${op}" stroke-linecap="round"/>`;
-    if (depth > 0) {
-        // Branch
-        if (rng() > 0.45) {
-            const bAngle = angle + (rng() * 2 - 1) * 0.9;
-            const midX   = mx;
-            const midY   = my;
-            svg += makeCrack(rng, color, midX, midY, bAngle, len * (0.45 + rng() * 0.3), depth - 1);
-        }
-        // Continue
-        if (rng() > 0.35) {
-            const nextAngle = angle + (rng() * 2 - 1) * 0.35;
-            svg += makeCrack(rng, color, ex, ey, nextAngle, len * (0.5 + rng() * 0.35), depth - 1);
-        }
-    }
-    return svg;
-}
-
 // ── 20 top-down biome palettes ────────────────────────────────────────────────
-// base: dominant ground    alt: secondary ground patch
-// dark: shadow/crack       rock: rock/boulder color
-// flora: plants/lichen     crystal: crystal formations
-// pool: liquid pools       rim: crater rim (lighter)   floor: crater floor (darker)
 const PALETTES = [
     // 00 — Rust Crags: red-brown volcanic rock, iron dust
     { name: 'rust-crags',
@@ -337,16 +174,38 @@ function makeGroundTexture(rng, pal, count) {
     return out.join('\n  ');
 }
 
-// ── Fine stipple: tiny dots simulating surface grain ─────────────────────────
-function makeStipple(rng, pal, count) {
+// ── Rocky noise: multi-scale dots simulating grit, pebble dust, mineral flecks
+function makeNoise(rng, pal, count) {
     const out = [];
     for (let i = 0; i < count; i++) {
-        const x  = rng() * W;
-        const y  = rng() * H;
-        const r  = f(0.6 + rng() * 1.4);
-        const col = rng() > 0.6 ? lighten(pal.base, 0.12) : darken(pal.base, 0.15);
-        const op  = f(0.15 + rng() * 0.25);
-        out.push(`<circle cx="${f(x)}" cy="${f(y)}" r="${r}" fill="${col}" opacity="${op}"/>`);
+        const x = rng() * W;
+        const y = rng() * H;
+
+        // Three size classes: fine dust, medium grit, coarse pebble-dust
+        const roll = rng();
+        let r, op;
+        if (roll < 0.65) {
+            // fine dust
+            r  = 0.5 + rng() * 1.2;
+            op = f(0.10 + rng() * 0.18);
+        } else if (roll < 0.90) {
+            // medium grit
+            r  = 1.5 + rng() * 2.5;
+            op = f(0.08 + rng() * 0.14);
+        } else {
+            // coarse fleck
+            r  = 3.0 + rng() * 4.0;
+            op = f(0.05 + rng() * 0.10);
+        }
+
+        // Bias toward lighter or darker than base
+        const tint = rng();
+        let col;
+        if (tint < 0.35)      col = lighten(pal.base, 0.08 + rng() * 0.18);
+        else if (tint < 0.65) col = darken(pal.base,  0.10 + rng() * 0.20);
+        else                   col = lerpColor(pal.base, pal.alt, rng());
+
+        out.push(`<circle cx="${f(x)}" cy="${f(y)}" r="${f(r)}" fill="${col}" opacity="${op}"/>`);
     }
     return out.join('\n  ');
 }
@@ -355,115 +214,21 @@ function makeStipple(rng, pal, count) {
 function generateBG(index, pal) {
     const rng = makePRNG(index * 137 + 42);
 
-    // Ground texture blobs
+    // Large ground-colour variation blobs
     const texture = makeGroundTexture(rng, pal, 35 + Math.floor(rng() * 20));
 
-    // Cracks / fissures
-    const crackLines = [];
-    const crackCount = 5 + Math.floor(rng() * 8);
-    for (let i = 0; i < crackCount; i++) {
-        const cx    = rng() * W;
-        const cy    = rng() * H;
-        const angle = rng() * Math.PI * 2;
-        const len   = 60 + rng() * 120;
-        crackLines.push(makeCrack(rng, pal.dark, cx, cy, angle, len, 3));
-    }
-
-    // Liquid pools (drawn early so rocks sit on top)
-    const poolEls = [];
-    const poolCount = 1 + Math.floor(rng() * 4);
-    for (let i = 0; i < poolCount; i++) {
-        const px = rng() * W;
-        const py = rng() * H;
-        const ps = 0.7 + rng() * 1.4;
-        poolEls.push(`<g transform="translate(${f(px)},${f(py)})">${topPool(rng, pal.pool, ps)}</g>`);
-    }
-
-    // Craters
-    const craterEls = [];
-    const craterCount = 1 + Math.floor(rng() * 3);
-    for (let i = 0; i < craterCount; i++) {
-        const cx = rng() * W;
-        const cy = rng() * H;
-        const cs = 0.7 + rng() * 1.6;
-        craterEls.push(`<g transform="translate(${f(cx)},${f(cy)})">${topCrater(rng, pal.rim, pal.floor, cs)}</g>`);
-    }
-
-    // Lichen / moss patches
-    const lichenEls = [];
-    const lichenCount = 8 + Math.floor(rng() * 10);
-    for (let i = 0; i < lichenCount; i++) {
-        const lx = rng() * W;
-        const ly = rng() * H;
-        const ls = 0.6 + rng() * 1.2;
-        lichenEls.push(`<g transform="translate(${f(lx)},${f(ly)})">${topLichen(rng, pal.flora, ls)}</g>`);
-    }
-
-    // Rocks (mid-size)
-    const rockEls = [];
-    const rockCount = 10 + Math.floor(rng() * 12);
-    for (let i = 0; i < rockCount; i++) {
-        const rx = rng() * W;
-        const ry = rng() * H;
-        const rs = 0.5 + rng() * 1.2;
-        const inner = rng() > 0.35 ? topRock(rng, pal.rock, rs) : topPebbles(rng, pal.rock, rs);
-        rockEls.push(`<g transform="translate(${f(rx)},${f(ry)})">${inner}</g>`);
-    }
-
-    // Crystals
-    const crystalEls = [];
-    const crystalCount = 4 + Math.floor(rng() * 6);
-    for (let i = 0; i < crystalCount; i++) {
-        const cx = rng() * W;
-        const cy = rng() * H;
-        const cs = 0.6 + rng() * 1.0;
-        crystalEls.push(`<g transform="translate(${f(cx)},${f(cy)})">${topCrystal(rng, pal.crystal, cs)}</g>`);
-    }
-
-    // Alien rosette flora
-    const floraEls = [];
-    const floraCount = 8 + Math.floor(rng() * 10);
-    for (let i = 0; i < floraCount; i++) {
-        const fx  = rng() * W;
-        const fy  = rng() * H;
-        const fs  = 0.6 + rng() * 1.1;
-        const fop = f(0.55 + rng() * 0.4);
-        floraEls.push(`<g transform="translate(${f(fx)},${f(fy)})" opacity="${fop}">${topRosette(rng, pal.flora, fs)}</g>`);
-    }
-
-    // Fine stipple grain
-    const stipple = makeStipple(rng, pal, 80 + Math.floor(rng() * 60));
+    // Dense multi-scale noise for rocky/dirty feel
+    const noise = makeNoise(rng, pal, 600 + Math.floor(rng() * 300));
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
   <!-- Base ground fill -->
   <rect width="${W}" height="${H}" fill="${pal.base}"/>
 
-  <!-- Ground texture blobs -->
+  <!-- Ground colour variation blobs -->
   ${texture}
 
-  <!-- Fine surface stipple -->
-  ${stipple}
-
-  <!-- Cracks and fissures -->
-  ${crackLines.join('\n  ')}
-
-  <!-- Liquid pools -->
-  ${poolEls.join('\n  ')}
-
-  <!-- Craters -->
-  ${craterEls.join('\n  ')}
-
-  <!-- Lichen / moss patches -->
-  ${lichenEls.join('\n  ')}
-
-  <!-- Crystal formations -->
-  ${crystalEls.join('\n  ')}
-
-  <!-- Rocks and pebbles -->
-  ${rockEls.join('\n  ')}
-
-  <!-- Alien rosette flora -->
-  ${floraEls.join('\n  ')}
+  <!-- Rocky / dirty surface noise -->
+  ${noise}
 </svg>`;
 }
 

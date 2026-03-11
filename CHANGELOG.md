@@ -1,5 +1,14 @@
 # SNAIL HACKER — Changelog
 
+## Session 10h — 2026-03-11
+
+### Background Rework: Ground Texture Only
+
+- **`scripts/generate-planet-backgrounds.js`** — Removed all terrain detail generators (`topRock`, `topPebbles`, `topCrater`, `topPool`, `topRosette`, `topCrystal`, `topLichen`, `makeCrack`). Backgrounds now consist solely of: base fill, large overlapping ground-colour-variation blobs (`makeGroundTexture`), and dense multi-scale noise dots (`makeNoise`).
+- **`makeNoise`** replaces the old fine stipple. Uses three size classes (fine dust 0.5–1.7 px, medium grit 1.5–4 px, coarse fleck 3–7 px) at low opacities, biased toward palette-derived lighter/darker/alt tints. 600–900 dots per background give a subtle rocky/dirty surface feel without any recognisable objects.
+- All 20 palette biomes preserved unchanged.
+- **`assets/backgrounds/bg-{00..19}.svg`** — Regenerated.
+
 ## Session 10g — 2026-03-10
 
 ### Boss Attacks: EMP + Terminal Lock EMP Projectiles
