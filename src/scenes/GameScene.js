@@ -478,31 +478,56 @@ export default class GameScene extends Phaser.Scene {
      * screen edges.
      */
     _spawnProps(wave) {
-        // Clear old props
+        // Clear old prop images
         for (const img of this._propImages) img.destroy();
         this._propImages = [];
 
-        // Palette for this wave's background.
-        // The raw palette colors are dark ambient tones (e.g. #4a2010).  Phaser's
-        // setTint() multiplies every pixel by the tint color, so a dark tint on a
-        // dark-grey sprite produces a near-black result.  We normalise each color
-        // so its brightest channel is 0xFF, preserving the hue ratios while making
-        // the tint actually visible.
+        // Palette index for this wave (mirrors background selection formula)
         const bgIdx   = ((wave - 1) * 7) % 20;
         const palette = PROP_PALETTES[bgIdx];
-        const brighten = (hex) => {
+
+        // Normalise dark palette hex to a full-range tint RGB (brightest channel → 255)
+        // so the multiply colorisation produces a visible, correctly-hued result.
+        const brightenHex = (hex) => {
             const r = parseInt(hex.slice(1, 3), 16);
             const g = parseInt(hex.slice(3, 5), 16);
             const b = parseInt(hex.slice(5, 7), 16);
-            const maxC = Math.max(r, g, b);
-            if (maxC === 0) return 0xffffff;
+            const maxC = Math.max(r, g, b) || 1;
             const k = 255 / maxC;
-            return (Math.min(255, Math.round(r * k)) << 16) |
-                   (Math.min(255, Math.round(g * k)) <<  8) |
-                    Math.min(255, Math.round(b * k));
+            return {
+                r: Math.min(255, Math.round(r * k)),
+                g: Math.min(255, Math.round(g * k)),
+                b: Math.min(255, Math.round(b * k)),
+            };
         };
-        const rockTint  = brighten(palette.rock);
-        const floraTint = brighten(palette.flora);
+        const rockRGB  = brightenHex(palette.rock);
+        const floraRGB = brightenHex(palette.flora);
+
+        // Build colorised texture keys keyed to bgIdx so they're cached and
+        // reused if the same background recurs.
+        const rockKey  = `prop-rock-tinted-${bgIdx}`;
+        const floraKey = `prop-mushroom-tinted-${bgIdx}`;
+
+        // Colorise each unique base key for this bg if not already cached.
+        // Using Canvas 2D: draw greyscale → multiply blend tint colour →
+        // destination-in with original to restore correct transparency.
+        const ROCK_KEYS     = ['prop-rock-0', 'prop-rock-1', 'prop-rock-2'];
+        const MUSHROOM_KEYS = ['prop-mushroom-0', 'prop-mushroom-1'];
+
+        const ensureColorised = (sourceKeys, rgb, cachePrefix) => {
+            const out = [];
+            for (const src of sourceKeys) {
+                const key = `${cachePrefix}-${src}-bg${bgIdx}`;
+                if (!this.textures.exists(key)) {
+                    this._colorisePropTexture(src, rgb, key);
+                }
+                out.push(key);
+            }
+            return out;
+        };
+
+        const rockKeys     = ensureColorised(ROCK_KEYS,     rockRGB,  'cr');
+        const mushroomKeys = ensureColorised(MUSHROOM_KEYS, floraRGB, 'cm');
 
         // Seeded PRNG (mulberry32) — deterministic per wave
         let seed = wave * 1_000_003 + 7;
@@ -522,46 +547,67 @@ export default class GameScene extends Phaser.Scene {
 
         const placed = [];
 
-        const tryPlace = (key, tint, count) => {
-            let spawned = 0;
-            let tries   = 0;
-            while (spawned < count && tries < count * MAX_TRIES) {
+        const tryPlace = (key) => {
+            let tries = 0;
+            while (tries < MAX_TRIES) {
                 tries++;
                 const x = MARGIN + rng() * (W - MARGIN * 2);
                 const y = MARGIN + rng() * (H - MARGIN * 2);
-
-                // Reject if inside station clear zone
                 const dx = x - 640, dy = y - 360;
                 if (dx * dx + dy * dy < CLEAR_R * CLEAR_R) continue;
-
-                // Reject if too close to another prop
                 const tooClose = placed.some(p => {
                     const px = p.x - x, py = p.y - y;
                     return px * px + py * py < MIN_GAP * MIN_GAP;
                 });
                 if (tooClose) continue;
-
                 placed.push({ x, y });
-                const img = this.add.image(x, y, key)
-                    .setTint(tint)
-                    .setDepth(-0.5);
-                this._propImages.push(img);
-                spawned++;
+                this._propImages.push(this.add.image(x, y, key).setDepth(-0.5));
+                return;
             }
         };
 
-        // Rocks: cycle through 3 variants; slightly more rocks than mushrooms
         const rockCount     = 10 + Math.floor(rng() * 6); // 10–15
         const mushroomCount =  5 + Math.floor(rng() * 4); //  5–8
 
-        for (let i = 0; i < rockCount; i++) {
-            const variant = Math.floor(rng() * 3);
-            tryPlace(`prop-rock-${variant}`, rockTint, 1);
-        }
-        for (let i = 0; i < mushroomCount; i++) {
-            const variant = Math.floor(rng() * 2);
-            tryPlace(`prop-mushroom-${variant}`, floraTint, 1);
-        }
+        for (let i = 0; i < rockCount;     i++) tryPlace(rockKeys[Math.floor(rng() * rockKeys.length)]);
+        for (let i = 0; i < mushroomCount; i++) tryPlace(mushroomKeys[Math.floor(rng() * mushroomKeys.length)]);
+    }
+
+    /**
+     * Creates a colourised copy of a greyscale prop texture and registers it
+     * under `newKey` in the Phaser texture cache.
+     *
+     * Method: Canvas 2D multiply compositing.
+     *   1. Draw the greyscale source onto an offscreen canvas.
+     *   2. Overlay a solid rect of the tint colour with 'multiply' blend —
+     *      this colourises the pixels but also fills transparent areas.
+     *   3. Re-draw the original source with 'destination-in' to restore the
+     *      correct alpha (transparent pixels outside the prop shape).
+     */
+    _colorisePropTexture(sourceKey, rgb, newKey) {
+        const texSrc = this.textures.get(sourceKey).source[0];
+        const src = texSrc.image;               // HTMLCanvasElement or HTMLImageElement
+        const w   = texSrc.width;
+        const h   = texSrc.height;
+
+        const canvas = document.createElement('canvas');
+        canvas.width  = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+
+        // 1. Greyscale base
+        ctx.drawImage(src, 0, 0);
+
+        // 2. Multiply tint (colorises but makes transparent bg opaque)
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = `rgb(${rgb.r},${rgb.g},${rgb.b})`;
+        ctx.fillRect(0, 0, w, h);
+
+        // 3. Restore original alpha mask
+        ctx.globalCompositeOperation = 'destination-in';
+        ctx.drawImage(src, 0, 0);
+
+        this.textures.addCanvas(newKey, canvas);
     }
 
     _wordsForWave(wave) {
