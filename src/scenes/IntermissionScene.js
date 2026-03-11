@@ -15,7 +15,7 @@ const FLAVOR_TEXT = {
 // Passive upgrades apply instantly on selection — no terminal is spawned.
 const PASSIVE_UPGRADES = new Set(['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET', 'QUICK_GRAB']);
 
-const ACTIVE_POOL  = ['CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR', 'DRONE', 'DECOY'];
+const ACTIVE_POOL  = ['CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR', 'DRONE', 'DECOY', 'EMP_MINES'];
 const PASSIVE_POOL = ['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET', 'QUICK_GRAB'];
 
 // All upgrade types that can be offered.
@@ -36,6 +36,7 @@ function getUpgradeDefs() {
         REPAIR:       { label: 'REPAIR KIT',     color: 0x44ff88, desc: `Hack to restore\n+${repairHp} HP to Gerald's shell.` },
         DRONE:        { label: 'AUTO DRONE',     color: 0xffdd44, desc: `Drone fires within ${droneFirstSecs}s\nof each round, then every\n${droneCoolSecs}s after.` },
         DECOY:        { label: 'DECOY LURE',     color: 0xff44cc, desc: `Hack to deploy a lure\nthat draws all aliens\naway for ${Math.round(CONFIG.TERMINALS.DECOY_DURATION / 1000)}s.` },
+        EMP_MINES:    { label: 'EMP MINES',      color: 0x00ff88, desc: `Hack to deploy proximity\nmines every ${Math.round(CONFIG.TERMINALS.EMP_SPAWN_INTERVAL / 1000)}s. Explode on\ncontact, bypass shields.` },
         RICOCHET:     { label: 'RICOCHET',        color: 0x44ffff, desc: `80% chance shots bounce\nto the nearest enemy.\nChance halves each hop.` },
         QUICK_GRAB:   { label: 'QUICK GRAB',      color: 0xcc88ff, desc: `Halves the grab hand\ncooldown (${CONFIG.GRAB.COOLDOWN}s → ${CONFIG.GRAB.COOLDOWN / 2}s)\nbetween grabs.` },
         HEALTH_BOOST: { label: 'HEALTH BOOST',   color: 0xff6666, desc: `Gerald's max health\nincreases by 50%.` },

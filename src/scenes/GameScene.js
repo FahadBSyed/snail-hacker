@@ -24,6 +24,7 @@ import HealthDrop from '../entities/HealthDrop.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
 import Decoy from '../entities/Decoy.js';
+import EmpMine from '../entities/EmpMine.js';
 import HUD from './HUD.js';
 import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions, BURST_COLORS } from '../systems/CollisionSystem.js';
 
@@ -210,6 +211,7 @@ export default class GameScene extends Phaser.Scene {
         this.ammo    = CONFIG.PLAYER.STARTING_AMMO;
         this.ammoMax = CONFIG.PLAYER.MAX_AMMO;
         this.projectiles = [];
+        this.mines       = [];
 
         // ── Passive upgrades — applied every wave from the persistent list ───────
         this._laserMode      = false;
@@ -261,6 +263,7 @@ export default class GameScene extends Phaser.Scene {
         this.grabSystem = new GrabHandSystem(this, {
             snail:      this.snail,
             getBattery: () => this.battery,
+            getMines:   () => this.mines,
             onPickup: () => {
                 // Cancel any active hack or terminal minigame
                 if (this.activeHack) this.activeHack.cancel();
@@ -521,6 +524,15 @@ export default class GameScene extends Phaser.Scene {
                         onSuccess:      () => this._activateDecoy(),
                     });
                     break;
+                case 'EMP_MINES':
+                    term = new Terminal(this, x, y, {
+                        label:          'EMP',
+                        cooldown:       CONFIG.TERMINALS.EMP_COOLDOWN,
+                        color:          0x00ff88,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => this._activateEmpMines(),
+                    });
+                    break;
                 default:
                     break;
             }
@@ -680,6 +692,97 @@ export default class GameScene extends Phaser.Scene {
 
         this.decoy = new Decoy(this, x, y);
         this.soundSynth.play('slowActivate'); // reuse a sci-fi activation sound
+    }
+
+    _activateEmpMines() {
+        // Cancel any previous spawner still running
+        if (this._empSpawnTimer) { this._empSpawnTimer.remove(false); this._empSpawnTimer = null; }
+
+        const spawnMine = () => {
+            const angle = Math.random() * Math.PI * 2;
+            const dist  = 120 + Math.random() * 230; // 120–350 px from center
+            const x = Phaser.Math.Clamp(640 + Math.cos(angle) * dist, 60, 1220);
+            const y = Phaser.Math.Clamp(360 + Math.sin(angle) * dist, 60, 660);
+            this.mines.push(new EmpMine(this, x, y));
+        };
+
+        spawnMine(); // first mine immediately
+
+        let spawned = 1;
+        const maxMines = Math.floor(CONFIG.TERMINALS.EMP_ACTIVE_DURATION / CONFIG.TERMINALS.EMP_SPAWN_INTERVAL);
+        this._empSpawnTimer = this.time.addEvent({
+            delay:    CONFIG.TERMINALS.EMP_SPAWN_INTERVAL,
+            loop:     true,
+            callback: () => {
+                spawnMine();
+                spawned++;
+                if (spawned >= maxMines) {
+                    this._empSpawnTimer.remove(false);
+                    this._empSpawnTimer = null;
+                }
+            },
+        });
+    }
+
+    /**
+     * Detonate a mine: deal CONFIG.EMP.MINE_DAMAGE to every alien within
+     * BLAST_RADIUS, bypassing shields. Shows an EMP ring + flash visual.
+     */
+    _empExplode(mine) {
+        const { x, y } = mine;
+        mine.destroy();
+
+        this.soundSynth.play('explosion');
+
+        // Expanding EMP ring
+        const ring = this.add.circle(x, y, 8, 0x00ff88, 0).setDepth(70);
+        ring.setStrokeStyle(3, 0x00ff88, 0.95);
+        this.tweens.add({
+            targets: ring,
+            scaleX:  CONFIG.EMP.BLAST_RADIUS / 8,
+            scaleY:  CONFIG.EMP.BLAST_RADIUS / 8,
+            alpha:   0,
+            duration: 500, ease: 'Power2.easeOut',
+            onComplete: () => ring.destroy(),
+        });
+
+        // Central flash
+        const flash = this.add.circle(x, y, 24, 0x00ff88, 0.8).setDepth(71);
+        this.tweens.add({
+            targets: flash, alpha: 0, scaleX: 2.5, scaleY: 2.5,
+            duration: 280, onComplete: () => flash.destroy(),
+        });
+
+        // Damage all aliens in blast radius — shields are bypassed
+        for (const alien of this.aliens) {
+            if (!alien.active || alien._dying) continue;
+            const dist = Phaser.Math.Distance.Between(x, y, alien.x, alien.y);
+            if (dist >= CONFIG.EMP.BLAST_RADIUS) continue;
+
+            // Green hit flash on each affected alien
+            const bx = alien.x, by = alien.y;
+            const hitFlash = this.add.arc(bx, by, alien.radius, 0, 360, false, 0x00ff88, 0.75).setDepth(58);
+            this.tweens.add({ targets: hitFlash, alpha: 0, duration: 240, onComplete: () => hitFlash.destroy() });
+            this.tweens.add({ targets: alien, x: bx + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+
+            const isBomber = alien.alienType === 'bomber';
+            const died = alien.takeDamage(CONFIG.EMP.MINE_DAMAGE);
+            if (died) {
+                this.score++;
+                this.hud.updateScore(this.score);
+                const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
+                alien._dying = true;
+                this.time.delayedCall(200, () => {
+                    if (!alien.active) return;
+                    spawnDeathBurst(this, bx, by, burstColor);
+                    if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                        this.healthDrops.push(new HealthDrop(this, bx, by));
+                    }
+                    if (isBomber) checkBomberBlast(this, bx, by);
+                    alien.destroy();
+                });
+            }
+        }
     }
 
     _startHack() {
@@ -1447,6 +1550,29 @@ export default class GameScene extends Phaser.Scene {
             }
             return p.update(time, delta);
         });
+
+        // EMP mines — check alien contact and trigger explosions
+        if (this.mines.length > 0) {
+            const surviving = [];
+            for (const mine of this.mines) {
+                if (!mine.active) continue;
+                if (mine.state !== 'ground') { surviving.push(mine); continue; }
+
+                let triggered = false;
+                for (const alien of this.aliens) {
+                    if (!alien.active || alien._dying) continue;
+                    const d = Phaser.Math.Distance.Between(mine.x, mine.y, alien.x, alien.y);
+                    if (d < mine.triggerRadius + alien.radius) { triggered = true; break; }
+                }
+
+                if (triggered) {
+                    this._empExplode(mine); // mine.destroy() called inside
+                } else {
+                    surviving.push(mine);
+                }
+            }
+            this.mines = surviving;
+        }
 
         // Aliens — move and check contact with snail or decoy
         this.aliens = this.aliens.filter(alien => {

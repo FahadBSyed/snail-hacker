@@ -92,6 +92,16 @@ export const DEFAULTS = {
         DECOY_DURATION:       12000,  // ms — how long the decoy lure lasts
         DECOY_COOLDOWN:       22000,  // ms — terminal cooldown after deploying decoy
         DECOY_HEALTH:         60,     // HP — aliens chip away at this; 0 destroys decoy early
+        EMP_SPAWN_INTERVAL:    5000,  // ms between each mine spawn while active
+        EMP_ACTIVE_DURATION:  25000,  // ms of continuous mine spawning (5 mines total)
+        EMP_COOLDOWN:         30000,  // ms — terminal cooldown after activation
+    },
+
+    EMP: {
+        MINE_DAMAGE:       30,   // damage dealt to all aliens in blast — ignores shields
+        MINE_TRIGGER_DIST: 16,   // px added to alien.radius — how close alien must be
+        BLAST_RADIUS:      90,   // px — explosion AoE
+        MINE_PICKUP_DIST:  45,   // px — cursor proximity to grab a mine
     },
 
     CANNON: {

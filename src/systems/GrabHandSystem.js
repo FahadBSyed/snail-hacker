@@ -65,6 +65,7 @@ export default class GrabHandSystem {
         this.snail      = opts.snail;
         this.onPickup   = opts.onPickup   || (() => {});
         this.getBattery = opts.getBattery || (() => null);
+        this.getMines   = opts.getMines   || (() => []);
         this.canvas     = scene.game.canvas;
 
         // null | 'snail' | Battery instance
@@ -105,7 +106,7 @@ export default class GrabHandSystem {
             let candidate    = null;
             let candidateDist = Infinity;
 
-            // Battery has grab priority if it's on the ground and in range
+            // Battery priority if on ground and in range
             if (battery && battery.state === 'ground') {
                 const d = Phaser.Math.Distance.Between(pointer.x, pointer.y, battery.x, battery.y);
                 if (d <= CONFIG.BATTERY.MOUSE_PICKUP_DIST) {
@@ -113,7 +114,16 @@ export default class GrabHandSystem {
                 }
             }
 
-            // Snail wins on tie (or if battery is not in range)
+            // Mines compete with battery — nearest wins
+            for (const mine of this.getMines()) {
+                if (mine.state !== 'ground' || !mine.active) continue;
+                const d = Phaser.Math.Distance.Between(pointer.x, pointer.y, mine.x, mine.y);
+                if (d <= mine.mousePickupDist && d < candidateDist) {
+                    candidate = mine; candidateDist = d;
+                }
+            }
+
+            // Snail wins only if closer than all items
             const snailDist = Phaser.Math.Distance.Between(
                 pointer.x, pointer.y, this.snail.x, this.snail.y,
             );
@@ -271,18 +281,18 @@ export default class GrabHandSystem {
             this._applyDangle(this.snail, delta);
 
         } else if (this.heldTarget) {
-            // Battery drag
-            const battery = this.heldTarget;
-            this._moveToward(battery, pointer, CONFIG.GRAB.MAX_SPEED, delta);
-            this._applyDangle(battery, delta);
+            // Item drag (battery or mine)
+            const item = this.heldTarget;
+            this._moveToward(item, pointer, CONFIG.GRAB.MAX_SPEED, delta);
+            this._applyDangle(item, delta);
 
-            // Auto-release when max drag distance from pickup origin is reached
-            const dragDist = Phaser.Math.Distance.Between(
-                battery.x, battery.y,
-                this.batteryGrabOrigin.x, this.batteryGrabOrigin.y,
-            );
-            if (dragDist >= CONFIG.BATTERY.MOUSE_MAX_DRAG) {
-                this._drop();
+            // Battery-only: auto-release when max drag distance is exceeded
+            if (item === this.getBattery() && this.batteryGrabOrigin) {
+                const dragDist = Phaser.Math.Distance.Between(
+                    item.x, item.y,
+                    this.batteryGrabOrigin.x, this.batteryGrabOrigin.y,
+                );
+                if (dragDist >= CONFIG.BATTERY.MOUSE_MAX_DRAG) this._drop();
             }
 
         } else {
@@ -295,6 +305,14 @@ export default class GrabHandSystem {
                     pointer.x, pointer.y, battery.x, battery.y,
                 );
                 if (d <= CONFIG.BATTERY.MOUSE_PICKUP_DIST) nearGrabbable = true;
+            }
+
+            if (!nearGrabbable) {
+                for (const mine of this.getMines()) {
+                    if (mine.state !== 'ground' || !mine.active) continue;
+                    const d = Phaser.Math.Distance.Between(pointer.x, pointer.y, mine.x, mine.y);
+                    if (d <= mine.mousePickupDist) { nearGrabbable = true; break; }
+                }
             }
 
             if (!nearGrabbable) {
@@ -316,7 +334,7 @@ export default class GrabHandSystem {
 
     get statusText() {
         if (this.heldTarget === 'snail') return 'GRAB: SNAIL';
-        if (this.heldTarget)             return 'GRAB: BATTERY';
+        if (this.heldTarget)             return `GRAB: ${this.heldTarget.grabLabel || 'BATTERY'}`;
         if (this.onCooldown)             return `GRAB: ${Math.ceil(this.cooldownRemaining)}s`;
         return 'GRAB: READY';
     }
