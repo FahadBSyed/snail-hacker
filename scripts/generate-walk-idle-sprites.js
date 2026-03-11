@@ -7,13 +7,13 @@
  *   - Sine-wave ripple animates along the BOTTOM of the prism (muscular sole wave).
  *   - Eye stalks bob vertically with each stride.
  *   - Shell drawn LAST so it sits visually on top of the yellow body.
- *   Output: assets/snail-walk-{right,left,up,down}-f{00..05}.svg  (24 files)
+ *   Output: assets/sprites/snail/snail-walk-{right,left,up,down}-f{00..05}.svg  (24 files)
  *
  * Idle animation — 12 frames, 8 fps (125 ms each ≈ 1.5 s loop):
  *   - Foot prism is flat (no wave).
  *   - Eye stalks gently drift side-to-side.
  *   - Single blink at frame 6 (half-close at 5, closed at 6, half-open at 7).
- *   Output: assets/snail-idle-{right,left,up,down}-f{00..11}.svg  (48 files)
+ *   Output: assets/sprites/snail/snail-idle-{right,left,up,down}-f{00..11}.svg  (48 files)
  *
  * Run: node scripts/generate-walk-idle-sprites.js
  */
@@ -23,7 +23,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUT = join(__dirname, '..', 'assets');
+const OUT = join(__dirname, '..', 'assets', 'sprites', 'snail');
 mkdirSync(OUT, { recursive: true });
 
 const SIZE = 48;

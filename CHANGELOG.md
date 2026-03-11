@@ -1,5 +1,129 @@
 # SNAIL HACKER — Changelog
 
+## Session 10k — 2026-03-11
+
+### Aliens Always Render Above Other Sprites
+
+- **`src/entities/aliens/BaseAlien.js`** — added `setDepth(45)` in the constructor. All alien types (basic, fast, tank, bomber, shield, boss) now render at depth 45, above y-sorted terrain (0–7.2), decoy (39–41), frog escape (40), battery (42), and EMP mines (44). They stay below death-burst effects (53+), the escape ship (50), HUD (100), and cursor (1000).
+
+### Snail Collision vs World Obstacles
+
+The snail now collides with the hacking station, terminals, rocks, and mushrooms using circle-vs-circle resolution. Collision is skipped while P2's grab hand is carrying the snail (state `'GRABBED'`). On drop, the snail is automatically pushed out on the next frame(s) if it landed inside an obstacle.
+
+- **`src/config.js`** — new `PROPS` block: `SNAIL_RADIUS` (18 px), `TERMINAL_RADIUS` (26 px), `ROCK_RADIUS` (16 px), `MUSH_RADIUS` (13 px).
+- **`src/scenes/GameScene.js`**:
+  - `_spawnProps`: each `Phaser.GameObjects.Image` now gets `img._colRadius` tagged at creation time (`MUSH_RADIUS` for mushroom keys starting with `'cm'`, `ROCK_RADIUS` otherwise).
+  - `_resolveSnailCollisions()` — new method; builds an obstacle list (station + active terminals + active props), then runs up to 4 push-out passes per frame so the snail is always ejected even when wedged between two objects. Re-clamps to screen bounds after any push.
+  - `update()` — calls `_resolveSnailCollisions()` immediately after `snail.update()`, before the slime trail, so the corrected position feeds all downstream systems.
+
+### Y-Sort Depth Layer for Props, Terminals, Station, and Snail
+
+All world-space objects (rocks, mushrooms, terminals, hacking station, snail) now share the same Y-sorted depth layer. Objects lower on screen (higher Y) render in front of objects higher on screen, giving correct overlap when the snail walks behind or in front of props.
+
+- **`src/scenes/GameScene.js`**:
+  - Props (rocks/mushrooms) created with `setDepth(y / 100)` instead of a fixed `-0.5`. Since props are static, depth is set once at spawn.
+  - In `update()`, after terminal proximity checks: snail, station, and all terminals call `setDepth(entity.y / 100)` each frame. The `/ 100` normalization keeps all Y-sorted objects in roughly the `0–7.2` depth range, safely below existing effect layers (projectile trails at 29–31, hit flashes at 58, slow field at 50–71, drone at 60, teleport at 80–90, HUD at 100+).
+
+
+
+### Escape Frogs — Decorative Post-Kill Frog Spawning
+
+After every alien explosion fully fades (~680 ms after death), a small frog appears at the kill site and hops off-screen. Frogs cannot be shot, do not interact with anything, and are silently ignored by all game systems.
+
+- **`src/entities/FrogEscape.js`** (new) — `Phaser.GameObjects.Container`; not in `scene.aliens` so the projectile/collision loop ignores it entirely.
+  - Picks the cardinal direction toward the nearest screen edge.
+  - Fades in over 280 ms, then idles ~1.4 s with a gentle scale-breathe tween.
+  - Hops at 190 px/s, cycling the 4-frame hop animation at ~9 fps.
+  - Self-destructs 80 px past the screen edge.
+- **`src/systems/CollisionSystem.js`** — `spawnDeathBurst` gains an optional `onComplete` callback (5th param). Fires when the main pulse tween completes (480 ms). Both existing call sites in CollisionSystem now pass `() => scene.spawnFrogEscape?.(x, y)`.
+- **`src/scenes/GameScene.js`**:
+  - Preloads 20 frog SVGs from `assets/sprites/frog/` in `preload()`.
+  - `this.frogEscapes = []` in `create()`; capped at 5 concurrent by `spawnFrogEscape()`.
+  - `spawnFrogEscape(x, y)` method added near `spawnAlien`.
+  - Frog update + array pruning added to `update()`.
+  - All 5 `spawnDeathBurst` call sites in GameScene pass the frog spawn callback.
+
+### On-Foot Frog Sprites + Hop Animation Frames
+
+- **`scripts/generate-frog-sprites.js`** (new) — Generates 20 SVGs of the alien frog passenger on foot, without the flying saucer. Uses the same rotation trick as the saucer scripts: geometry is defined once in local coords (+x forward), and a `translate(24,24) rotate(deg)` transform produces all four cardinal directions.
+  - **4 neutral idle sprites**: `assets/sprites/frog/frog-{right,left,up,down}.svg` — relaxed standing pose, four legs visible.
+  - **16 hop frames** (4 dirs × 4 frames): `assets/sprites/frog/frog-hop-{dir}-f{00-03}.svg`
+    - **f00** land/squash — wide body, legs splayed outward on impact
+    - **f01** crouch — all legs pulled in, body compact, storing energy
+    - **f02** leap — body elongated in travel direction, back legs sweeping back, front legs tucked
+    - **f03** glide — back legs fully trailing, front legs reaching forward to land
+  - Draw order: back legs → torso (belly highlight ellipse) → head/eyes/face → front legs.
+  - Colours match the saucer frog passenger exactly (`#3cb83c` body, `#dde840` eyes, `#1d6b1d` outlines).
+
+### Blob Drop Shadows on Gerald and Aliens
+
+- **Approach**: a `Graphics` ellipse added as the first child of each entity Container (rendered before the sprite, therefore always behind it). Costs one `fillEllipse` per entity per frame — negligible on `Phaser.CANVAS`.
+- **`src/entities/aliens/BaseAlien._initSprite()`** — shadow ellipse `(2, 10, 44×14 px)`, alpha 0.35 — applies automatically to BasicAlien, FastAlien, TankAlien, BomberAlien, ShieldAlien.
+- **`src/entities/aliens/BossAlien` constructor** — shadow ellipse `(3, 14, 62×20 px)`, alpha 0.35 — proportionally larger for the 96×96 boss sprite.
+- **`src/entities/Snail` constructor** — shadow ellipse `(2, 12, 46×16 px)`, alpha 0.30 — slightly softer than alien shadows.
+
+### Victory Fanfare Sound Effect
+
+- **`src/systems/SoundSynth.js` — `_victory()`** — New procedural sound played on the Victory screen. Three-part structure:
+  - **Ascending arpeggio** (0.00 s): 8 notes over two octaves of C major (C4–E6), staggered 90 ms apart, each with a sine fundamental and triangle octave shimmer.
+  - **Chord swell** (0.72 s): four-voice sustained pad (C4 G4 C5 E5) with a slow 550 ms attack then fade over 1.8 s.
+  - **Bell shimmer** (1.60 s): three high sine partials (C7 E7 G7) with long 1.8 s decay, giving a glittering tail.
+- **`src/scenes/VictoryScene.js`** — Calls `soundSynth.play('victory')` at the top of `create()`.
+
+### Asset Reorganisation: station + terminal SVGs
+
+- Moved `assets/station-*.svg` → `assets/sprites/station/` (2 files).
+- Moved `assets/terminal-*.svg` → `assets/sprites/terminal/` (5 files).
+- Updated load paths in `src/scenes/GameScene.js`.
+- Updated `scripts/generate-station-sprites.js` to write to `stationDir` / `terminalDir` based on filename prefix.
+
+## Session 10j — 2026-03-11
+
+### Prop Sprite Redesign: Angular Rocks + Connected Mushrooms
+
+- **`scripts/generate-prop-sprites.js`** — Full redesign of both prop types:
+  - **Rocks**: replaced smooth-ellipse top + trapezoid front (which read as a cylinder) with angular polygon silhouettes. Each rock variant is now defined by an explicit `topPoly` (8-vertex angular top face) and `frontPoly` (7-vertex angular front face) sharing a ridge edge. Added crack lines (1–3 thin dark lines across the top face) and two separate face-outline strokes — no cross-face diagonals. Three variants: compact boulder (40×34), wide flat slab (60×38), tall multi-faceted boulder (46×56).
+  - **Mushrooms**: fixed the cap/stem disconnect. `stemTopRatio` was set below `capCy + capRy` (the cap bottom), leaving a visible gap. Now `stemTopRatio` is set so the stem top is inside the cap dome (30% before cap bottom), and the cap dome/undershade elements are drawn after the stem, hiding the stem top and creating a clean visual join. Also increased `capRyRatio` from 0.22→0.26/0.28 for rounder caps. Sizes adjusted: mushroom-1 height 70→68.
+- **`GameScene.js` preload sizes** — Updated `PROP_SIZES` to match new SVG canvas dimensions: rock-1 `60×40→60×38`, rock-2 `48×58→46×56`, mushroom-1 `48×70→48×68`.
+
+### Prop Colorisation: Canvas 2D Multiply (replaces setTint)
+
+- **Root cause**: `Phaser.CANVAS` renderer ignores `Image.setTint()` entirely — it's a WebGL pipeline feature.
+- **`GameScene._colorisePropTexture(sourceKey, rgb, newKey)`** (new) — Creates a colourised copy of a greyscale prop texture using Canvas 2D: (1) draw greyscale source, (2) overlay solid tint rect with `globalCompositeOperation='multiply'` to colourize pixels (also fills transparent bg with tint), (3) re-draw source with `'destination-in'` to restore original alpha mask. Works in both Canvas and WebGL renderers.
+- **`GameScene._spawnProps()`** — Replaced `setTint(brightenedRGB)` on each image with: compute per-variant colorised texture keys (e.g. `cr-prop-rock-0-bg7`), call `_colorisePropTexture` once per unique source×bgIdx combination, then use the colorised key for `this.add.image()`. Colorised textures are cached in Phaser's texture manager for the session lifetime.
+
+## Session 10i — 2026-03-11
+
+### Prop Spawning: Rocks + Mushrooms in GameScene
+
+- **`src/data/propPalettes.js`** (new) — Runtime palette table (20 entries matching the 20 background biomes). Each entry has `rock` and `flora` hex colors used to tint props via Phaser's `setTint()`.
+- **`GameScene.preload()`** — Loads the 5 prop SVGs (`prop-rock-{0,1,2}`, `prop-mushroom-{0,1}`) once into the texture cache on first visit.
+- **`GameScene._spawnProps(wave)`** (new) — Destroys all existing prop images and respawns them for the given wave:
+  - Derives `bgIdx = ((wave-1)*7) % 20` to select the matching palette.
+  - Uses a mulberry32 PRNG seeded by wave number for deterministic-but-varied layouts.
+  - Spawns 10–15 rocks and 5–8 mushrooms using rejection sampling: props stay ≥60 px from screen edges and ≥240 px from the station center (640,360), with ≥38 px spacing between props.
+  - Props are placed at depth −0.5, above the background (−1) and below all game entities (0+).
+- **`GameScene.create()`** — Initialises `this._propImages = []` and calls `_spawnProps(startWave)` immediately after the background image.
+- **`GameScene onWaveStart`** — Calls `_spawnProps(wave)` at the top of each new wave so the layout refreshes with the new background palette.
+
+### Prop Sprites: Greyscale Rocks + Mushrooms (Oblique Top-Down)
+
+- **`scripts/generate-prop-sprites.js`** (new) — Generates 5 greyscale prop SVGs in Pokemon Gen 2/3 oblique top-down style: only the top face (ellipse) and south-facing front face (trapezoid) are visible — no left/right sides. Three rock variants and two mushroom variants.
+- **Rock structure** (back-to-front draw order): ground drop-shadow → front face trapezoid with upper-light and lower-dark shading bands → brow-shadow dark crescent (creates visual depth at the top/front junction) → top face ellipse → broad highlight + specular spot.
+- **Mushroom structure**: ground shadow → stem front face (rounded rect with left-highlight / right-shadow) → stem top ellipse → cap undershade ellipse (dark rim below cap) → cap dome ellipse → broad highlight + specular → wart spots (halo + light centre + dark core triple-layer) → cap rim edge stroke.
+- **Pure greyscale** (#0c0c0c–#f2f2f2). Apply `gameObject.setTint(0xRRGGBB)` in Phaser to map any palette colour across the full luminance range at runtime — no shader needed.
+- **`assets/sprites/props/rock-{0,1,2}.svg`** — 40×34, 60×40, 48×58 (compact round, wide flat slab, tall boulder).
+- **`assets/sprites/props/mushroom-{0,1}.svg`** — 32×52, 48×70 (single stalk, large dome).
+
+## Session 10h — 2026-03-11
+
+### Background Rework: Ground Texture Only
+
+- **`scripts/generate-planet-backgrounds.js`** — Removed all terrain detail generators (`topRock`, `topPebbles`, `topCrater`, `topPool`, `topRosette`, `topCrystal`, `topLichen`, `makeCrack`). Backgrounds now consist solely of: base fill, large overlapping ground-colour-variation blobs (`makeGroundTexture`), and dense multi-scale noise dots (`makeNoise`).
+- **`makeNoise`** replaces the old fine stipple. Uses three size classes (fine dust 0.5–1.7 px, medium grit 1.5–4 px, coarse fleck 3–7 px) at low opacities, biased toward palette-derived lighter/darker/alt tints. 600–900 dots per background give a subtle rocky/dirty surface feel without any recognisable objects.
+- All 20 palette biomes preserved unchanged.
+- **`assets/backgrounds/bg-{00..19}.svg`** — Regenerated.
+
 ## Session 10g — 2026-03-10
 
 ### Boss Attacks: EMP + Terminal Lock EMP Projectiles

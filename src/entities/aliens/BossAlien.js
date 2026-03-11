@@ -42,6 +42,11 @@ export default class BossAlien extends Phaser.GameObjects.Container {
         this.onTerminalLockEMP = opts.onTerminalLockEMP || null;
 
         // ── Sprite ──────────────────────────────────────────────────────────────
+        const _shadow = scene.add.graphics();
+        _shadow.fillStyle(0x000000, 0.35);
+        _shadow.fillEllipse(3, 14, 62, 20);
+        this.add(_shadow);
+
         this.sprite = scene.add.image(0, 0, 'alien-boss-right');
         this.add(this.sprite);
         this.facing = 'right';

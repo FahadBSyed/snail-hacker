@@ -41,6 +41,9 @@ export const SOUND_OVERRIDES = {
          { url: 'assets/sounds/damage-b.mp3', volume: 0.4 },
          { url: 'assets/sounds/damage-c.mp3', volume: 0.3 }
     ],
+    grab: [
+        { url: 'assets/sounds/grab.mp3', volume: 0.6 }
+    ],
     ship: [
         { url: 'assets/sounds/ship-a.mp3', volume: 0.6 }
     ],

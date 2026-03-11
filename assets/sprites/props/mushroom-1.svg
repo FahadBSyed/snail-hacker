@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 68" width="48" height="68">
+  <ellipse cx="24.00" cy="64.60" rx="19.20" ry="3.74" fill="#0c0c0c" opacity="0.30"/>
+  <rect x="15.84" y="39.44" width="16.32" height="22.44" rx="3.26" fill="#a4a4a4"/>
+  <rect x="15.84" y="39.44" width="4.90" height="22.44" rx="3.26" fill="#f2f2f2" opacity="0.28"/>
+  <rect x="27.10" y="39.44" width="5.06" height="22.44" rx="3.26" fill="#363636" opacity="0.35"/>
+  <rect x="15.84" y="55.60" width="16.32" height="6.28" rx="3.26" fill="#363636" opacity="0.28"/>
+  <ellipse cx="24.00" cy="33.59" rx="19.87" ry="9.14" fill="#1c1c1c" opacity="0.48"/>
+  <ellipse cx="24.00" cy="23.12" rx="22.08" ry="19.04" fill="#686868"/>
+  <ellipse cx="20.03" cy="19.31" rx="13.69" ry="11.04" fill="#c2c2c2" opacity="0.50"/>
+  <ellipse cx="17.82" cy="17.41" rx="4.86" ry="3.81" fill="#f2f2f2" opacity="0.42"/>
+  <ellipse cx="17.38" cy="21.22" rx="2.87" ry="2.00" fill="#dedede" opacity="0.26"/>
+  <ellipse cx="17.38" cy="21.22" rx="2.21" ry="1.56" fill="#c2c2c2" opacity="0.58"/>
+  <ellipse cx="17.77" cy="21.50" rx="0.93" ry="0.66" fill="#686868" opacity="0.34"/>
+  <ellipse cx="29.74" cy="19.69" rx="2.58" ry="1.80" fill="#dedede" opacity="0.26"/>
+  <ellipse cx="29.74" cy="19.69" rx="1.99" ry="1.41" fill="#c2c2c2" opacity="0.58"/>
+  <ellipse cx="30.10" cy="19.95" rx="0.83" ry="0.59" fill="#686868" opacity="0.34"/>
+  <ellipse cx="26.21" cy="24.26" rx="2.01" ry="1.40" fill="#dedede" opacity="0.26"/>
+  <ellipse cx="26.21" cy="24.26" rx="1.55" ry="1.09" fill="#c2c2c2" opacity="0.58"/>
+  <ellipse cx="26.49" cy="24.46" rx="0.65" ry="0.46" fill="#686868" opacity="0.34"/>
+  <ellipse cx="21.35" cy="25.98" rx="1.44" ry="1.00" fill="#dedede" opacity="0.26"/>
+  <ellipse cx="21.35" cy="25.98" rx="1.10" ry="0.78" fill="#c2c2c2" opacity="0.58"/>
+  <ellipse cx="21.55" cy="26.12" rx="0.46" ry="0.33" fill="#686868" opacity="0.34"/>
+  <ellipse cx="24.00" cy="23.12" rx="22.08" ry="19.04" fill="none" stroke="#1c1c1c" stroke-width="1.3" opacity="0.42"/>
+</svg>

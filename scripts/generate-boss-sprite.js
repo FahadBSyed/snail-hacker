@@ -9,7 +9,7 @@
  *   - Wider dome (r=20) with double glass ring
  *   - Triple engine glow
  *
- * Output: assets/alien-boss-{right,diag-right-down,down,...}.svg  (8 files)
+ * Output: assets/sprites/alien/alien-boss-{right,diag-right-down,down,...}.svg  (8 files)
  * Run: node scripts/generate-boss-sprite.js
  */
 
@@ -18,7 +18,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outDir    = join(__dirname, '..', 'assets');
+const outDir    = join(__dirname, '..', 'assets', 'sprites', 'alien');
 mkdirSync(outDir, { recursive: true });
 
 const SIZE = 96;

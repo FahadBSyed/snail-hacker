@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 48 48" width="48" height="48">
+
+  <!-- Back legs (drawn first — behind body) -->
+  <g transform="translate(24,24) rotate(270)" stroke="#1d6b1d" stroke-width="3" fill="none"
+     stroke-linecap="round" stroke-linejoin="round">
+    <path d="M -8,-3 C -15,-5  -18,-2  -16,4"/>
+    <path d="M -8,3  C -15,5   -18,2   -16,-4"/>
+  </g>
+
+  <!-- Torso + belly highlight -->
+  <g transform="translate(24,24) rotate(270)">
+    <ellipse cx="-1" cy="0" rx="11" ry="7" fill="#3cb83c"/>
+    <ellipse cx="0" cy="0" rx="6.05" ry="3.85" fill="#5acc5a" opacity="0.35"/>
+  </g>
+
+  <!-- Head and face -->
+  <g transform="translate(24,24) rotate(270)">
+    <circle cx="7" cy="0" r="6.5" fill="#3cb83c"/>
+
+    <!-- Upper eye (bulges upward from head) -->
+    <circle cx="10" cy="-7" r="3.5" fill="#dde840"/>
+    <circle cx="10.8" cy="-6.5" r="1.6" fill="#111100"/>
+    <circle cx="9.2" cy="-8.2" r="0.6" fill="white"/>
+
+    <!-- Lower eye (bulges downward from head) -->
+    <circle cx="10" cy="7" r="3.5" fill="#dde840"/>
+    <circle cx="10.8" cy="7.5" r="1.6" fill="#111100"/>
+    <circle cx="9.2" cy="5.8" r="0.6" fill="white"/>
+
+    <!-- Nostrils -->
+    <circle cx="5" cy="-1.5" r="1" fill="#1d6b1d"/>
+    <circle cx="5" cy="1.5"  r="1" fill="#1d6b1d"/>
+
+    <!-- Smile -->
+    <path d="M 6 2.5 Q 11 4 6 6"
+          stroke="#1d6b1d" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- Front legs (drawn last — in front of body) -->
+  <g transform="translate(24,24) rotate(270)" stroke="#1d6b1d" stroke-width="2.5" fill="none"
+     stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 9,-4  C 12,-2   13,0    11,4"/>
+    <path d="M 9,4   C 12,2    13,0    11,-4"/>
+  </g>
+
+</svg>

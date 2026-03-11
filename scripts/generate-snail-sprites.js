@@ -8,7 +8,7 @@
  *   up    — rear view, shell prominent, antennae splayed, moving away
  *   down  — front view, face/eyes visible, antennae up, moving toward camera
  *
- * Output: assets/snail-{right,left,up,down}.svg
+ * Output: assets/sprites/snail/snail-{right,left,up,down}.svg
  *
  * Run: node scripts/generate-snail-sprites.js
  */
@@ -18,7 +18,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outDir = join(__dirname, '..', 'assets');
+const outDir = join(__dirname, '..', 'assets', 'sprites', 'snail');
 mkdirSync(outDir, { recursive: true });
 
 const SIZE = 48; // viewBox is 48x48

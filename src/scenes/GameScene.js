@@ -21,12 +21,14 @@ import SequenceMinigame from '../minigames/SequenceMinigame.js';
 import TypingMinigame from '../minigames/TypingMinigame.js';
 import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
+import FrogEscape from '../entities/FrogEscape.js'; // decorative escape frogs
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
 import Decoy from '../entities/Decoy.js';
 import EmpMine from '../entities/EmpMine.js';
 import HUD from './HUD.js';
 import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions, BURST_COLORS } from '../systems/CollisionSystem.js';
+import { PROP_PALETTES } from '../data/propPalettes.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -128,47 +130,71 @@ export default class GameScene extends Phaser.Scene {
 
         const svgSize = { width: 48, height: 48 };
         // Snail directional sprites
-        this.load.svg('snail-right', 'assets/snail-right.svg', svgSize);
-        this.load.svg('snail-left',  'assets/snail-left.svg',  svgSize);
-        this.load.svg('snail-up',    'assets/snail-up.svg',    svgSize);
-        this.load.svg('snail-down',  'assets/snail-down.svg',  svgSize);
+        this.load.svg('snail-right', 'assets/sprites/snail/snail-right.svg', svgSize);
+        this.load.svg('snail-left',  'assets/sprites/snail/snail-left.svg',  svgSize);
+        this.load.svg('snail-up',    'assets/sprites/snail/snail-up.svg',    svgSize);
+        this.load.svg('snail-down',  'assets/sprites/snail/snail-down.svg',  svgSize);
         // Walk, idle and damage animation frames
         for (const dir of ['right', 'left', 'up', 'down']) {
             for (let i = 0; i < 6; i++) {
                 const f = `f${String(i).padStart(2, '0')}`;
-                this.load.svg(`snail-walk-${dir}-${f}`, `assets/snail-walk-${dir}-${f}.svg`, svgSize);
+                this.load.svg(`snail-walk-${dir}-${f}`, `assets/sprites/snail/snail-walk-${dir}-${f}.svg`, svgSize);
             }
             for (let i = 0; i < 12; i++) {
                 const f = `f${String(i).padStart(2, '0')}`;
-                this.load.svg(`snail-idle-${dir}-${f}`, `assets/snail-idle-${dir}-${f}.svg`, svgSize);
+                this.load.svg(`snail-idle-${dir}-${f}`, `assets/sprites/snail/snail-idle-${dir}-${f}.svg`, svgSize);
             }
             for (let i = 0; i <= 15; i++) {
                 const f = `f${String(i).padStart(2, '0')}`;
-                this.load.svg(`snail-hit-${dir}-${f}`, `assets/snail-hit-${dir}-${f}.svg`, svgSize);
+                this.load.svg(`snail-hit-${dir}-${f}`, `assets/sprites/snail/snail-hit-${dir}-${f}.svg`, svgSize);
             }
         }
+        // On-foot frog sprites (4 cardinal directions, idle + 4 hop frames each)
+        for (const dir of ['right', 'left', 'up', 'down']) {
+            this.load.svg(`frog-${dir}`, `assets/sprites/frog/frog-${dir}.svg`, svgSize);
+            for (const frame of ['f00', 'f01', 'f02', 'f03']) {
+                this.load.svg(`frog-hop-${dir}-${frame}`,
+                    `assets/sprites/frog/frog-hop-${dir}-${frame}.svg`, svgSize);
+            }
+        }
+
         // Alien sprites — 8 directions each
         const dirs = ['right', 'diag-right-down', 'down', 'diag-left-down',
                       'left',  'diag-left-up',    'up',   'diag-right-up'];
         for (const dir of dirs) {
-            this.load.svg(`alien-frog-${dir}`,    `assets/alien-frog-${dir}.svg`,    svgSize);
-            this.load.svg(`alien-fast-${dir}`,    `assets/alien-fast-${dir}.svg`,    svgSize);
-            this.load.svg(`alien-tank-${dir}`,    `assets/alien-tank-${dir}.svg`,    svgSize);
-            this.load.svg(`alien-bomber-${dir}`,  `assets/alien-bomber-${dir}.svg`,  svgSize);
-            this.load.svg(`alien-shield-${dir}`,  `assets/alien-shield-${dir}.svg`,  svgSize);
-            this.load.svg(`alien-boss-${dir}`,    `assets/alien-boss-${dir}.svg`,    { width: 96, height: 96 });
+            this.load.svg(`alien-frog-${dir}`,    `assets/sprites/alien/alien-frog-${dir}.svg`,    svgSize);
+            this.load.svg(`alien-fast-${dir}`,    `assets/sprites/alien/alien-fast-${dir}.svg`,    svgSize);
+            this.load.svg(`alien-tank-${dir}`,    `assets/sprites/alien/alien-tank-${dir}.svg`,    svgSize);
+            this.load.svg(`alien-bomber-${dir}`,  `assets/sprites/alien/alien-bomber-${dir}.svg`,  svgSize);
+            this.load.svg(`alien-shield-${dir}`,  `assets/sprites/alien/alien-shield-${dir}.svg`,  svgSize);
+            this.load.svg(`alien-boss-${dir}`,    `assets/sprites/alien/alien-boss-${dir}.svg`,    { width: 96, height: 96 });
         }
 
         // Station + terminal sprites
         if (!this.textures.exists('station-mainframe')) {
-            this.load.svg('station-mainframe', 'assets/station-mainframe.svg', { width: 96, height: 96 });
+            this.load.svg('station-mainframe', 'assets/sprites/station/station-mainframe.svg', { width: 96, height: 96 });
         }
         if (!this.textures.exists('station-gun')) {
-            this.load.svg('station-gun', 'assets/station-gun.svg', { width: 48, height: 48 });
+            this.load.svg('station-gun', 'assets/sprites/station/station-gun.svg', { width: 48, height: 48 });
         }
         for (const key of ['terminal-reload', 'terminal-turret', 'terminal-shield', 'terminal-slow', 'terminal-repair']) {
             if (!this.textures.exists(key)) {
-                this.load.svg(key, `assets/${key}.svg`, { width: 64, height: 64 });
+                this.load.svg(key, `assets/sprites/terminal/${key}.svg`, { width: 64, height: 64 });
+            }
+        }
+
+        // ── Prop sprites (rocks + mushrooms) — loaded once, tinted per wave ──
+        const PROP_SIZES = {
+            'prop-rock-0':     { w: 40,  h: 34 },
+            'prop-rock-1':     { w: 60,  h: 38 },
+            'prop-rock-2':     { w: 46,  h: 56 },
+            'prop-mushroom-0': { w: 32,  h: 52 },
+            'prop-mushroom-1': { w: 48,  h: 68 },
+        };
+        for (const [key, sz] of Object.entries(PROP_SIZES)) {
+            if (!this.textures.exists(key)) {
+                const file = key.replace('prop-', '') + '.svg'; // rock-0.svg etc.
+                this.load.svg(key, `assets/sprites/props/${file}`, { width: sz.w, height: sz.h });
             }
         }
     }
@@ -176,6 +202,10 @@ export default class GameScene extends Phaser.Scene {
     create() {
         // ── Alien planet surface background ──────────────────────────────────
         this.add.image(640, 360, this.bgKey).setDepth(-1);
+
+        // ── Prop decorations (rocks + mushrooms) ──────────────────────────────
+        this._propImages = [];
+        this._spawnProps(this.startWave);
 
         this.input.mouse.disableContextMenu();
 
@@ -383,6 +413,7 @@ export default class GameScene extends Phaser.Scene {
         // ── Game state ────────────────────────────────────────────────────────
         this.aliens      = [];
         this.healthDrops = [];
+        this.frogEscapes = [];
         this.score       = this.startScore;
         this.wave        = this.startWave;
 
@@ -408,6 +439,7 @@ export default class GameScene extends Phaser.Scene {
             onSpawn: (type) => this.spawnAlien(type),
             onWaveStart: (wave) => {
                 this.wave          = wave;
+                this._spawnProps(wave);
                 this.hackProgress  = 0;
                 this.hackThreshold = this._wordsForWave(wave);
                 this.escapePhase  = false;
@@ -448,6 +480,148 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Destroy any existing prop images and respawn rocks + mushrooms for the
+     * given wave.  Palette color is derived from the wave's background index so
+     * props always match the ground tone.  Positions are pseudo-random (seeded
+     * per wave) and use rejection sampling to avoid the central safe zone and
+     * screen edges.
+     */
+    _spawnProps(wave) {
+        // Clear old prop images
+        for (const img of this._propImages) img.destroy();
+        this._propImages = [];
+
+        // Palette index for this wave (mirrors background selection formula)
+        const bgIdx   = ((wave - 1) * 7) % 20;
+        const palette = PROP_PALETTES[bgIdx];
+
+        // Normalise dark palette hex to a full-range tint RGB (brightest channel → 255)
+        // so the multiply colorisation produces a visible, correctly-hued result.
+        const brightenHex = (hex) => {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            const maxC = Math.max(r, g, b) || 1;
+            const k = 255 / maxC;
+            return {
+                r: Math.min(255, Math.round(r * k)),
+                g: Math.min(255, Math.round(g * k)),
+                b: Math.min(255, Math.round(b * k)),
+            };
+        };
+        const rockRGB  = brightenHex(palette.rock);
+        const floraRGB = brightenHex(palette.flora);
+
+        // Build colorised texture keys keyed to bgIdx so they're cached and
+        // reused if the same background recurs.
+        const rockKey  = `prop-rock-tinted-${bgIdx}`;
+        const floraKey = `prop-mushroom-tinted-${bgIdx}`;
+
+        // Colorise each unique base key for this bg if not already cached.
+        // Using Canvas 2D: draw greyscale → multiply blend tint colour →
+        // destination-in with original to restore correct transparency.
+        const ROCK_KEYS     = ['prop-rock-0', 'prop-rock-1', 'prop-rock-2'];
+        const MUSHROOM_KEYS = ['prop-mushroom-0', 'prop-mushroom-1'];
+
+        const ensureColorised = (sourceKeys, rgb, cachePrefix) => {
+            const out = [];
+            for (const src of sourceKeys) {
+                const key = `${cachePrefix}-${src}-bg${bgIdx}`;
+                if (!this.textures.exists(key)) {
+                    this._colorisePropTexture(src, rgb, key);
+                }
+                out.push(key);
+            }
+            return out;
+        };
+
+        const rockKeys     = ensureColorised(ROCK_KEYS,     rockRGB,  'cr');
+        const mushroomKeys = ensureColorised(MUSHROOM_KEYS, floraRGB, 'cm');
+
+        // Seeded PRNG (mulberry32) — deterministic per wave
+        let seed = wave * 1_000_003 + 7;
+        const rng = () => {
+            seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+            let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+            return ((t ^ t >>> 14) >>> 0) / 4_294_967_296;
+        };
+
+        // Arena constraints
+        const W = 1280, H = 720;
+        const MARGIN    = 60;   // keep props away from screen edges
+        const CLEAR_R   = 240;  // keep props away from station center (640,360)
+        const MIN_GAP   = 38;   // minimum distance between any two prop centers
+        const MAX_TRIES = 40;
+
+        const placed = [];
+
+        const tryPlace = (key) => {
+            let tries = 0;
+            while (tries < MAX_TRIES) {
+                tries++;
+                const x = MARGIN + rng() * (W - MARGIN * 2);
+                const y = MARGIN + rng() * (H - MARGIN * 2);
+                const dx = x - 640, dy = y - 360;
+                if (dx * dx + dy * dy < CLEAR_R * CLEAR_R) continue;
+                const tooClose = placed.some(p => {
+                    const px = p.x - x, py = p.y - y;
+                    return px * px + py * py < MIN_GAP * MIN_GAP;
+                });
+                if (tooClose) continue;
+                placed.push({ x, y });
+                const img = this.add.image(x, y, key).setDepth(y / 100);
+                img._colRadius = key.startsWith('cm') ? CONFIG.PROPS.MUSH_RADIUS : CONFIG.PROPS.ROCK_RADIUS;
+                this._propImages.push(img);
+                return;
+            }
+        };
+
+        const rockCount     = 1 + Math.floor(rng() * 2); // 3-4
+        const mushroomCount =  1 + Math.floor(rng() * 2); //  3-4
+
+        for (let i = 0; i < rockCount;     i++) tryPlace(rockKeys[Math.floor(rng() * rockKeys.length)]);
+        for (let i = 0; i < mushroomCount; i++) tryPlace(mushroomKeys[Math.floor(rng() * mushroomKeys.length)]);
+    }
+
+    /**
+     * Creates a colourised copy of a greyscale prop texture and registers it
+     * under `newKey` in the Phaser texture cache.
+     *
+     * Method: Canvas 2D multiply compositing.
+     *   1. Draw the greyscale source onto an offscreen canvas.
+     *   2. Overlay a solid rect of the tint colour with 'multiply' blend —
+     *      this colourises the pixels but also fills transparent areas.
+     *   3. Re-draw the original source with 'destination-in' to restore the
+     *      correct alpha (transparent pixels outside the prop shape).
+     */
+    _colorisePropTexture(sourceKey, rgb, newKey) {
+        const texSrc = this.textures.get(sourceKey).source[0];
+        const src = texSrc.image;               // HTMLCanvasElement or HTMLImageElement
+        const w   = texSrc.width;
+        const h   = texSrc.height;
+
+        const canvas = document.createElement('canvas');
+        canvas.width  = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+
+        // 1. Greyscale base
+        ctx.drawImage(src, 0, 0);
+
+        // 2. Multiply tint (colorises but makes transparent bg opaque)
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = `rgb(${rgb.r},${rgb.g},${rgb.b})`;
+        ctx.fillRect(0, 0, w, h);
+
+        // 3. Restore original alpha mask
+        ctx.globalCompositeOperation = 'destination-in';
+        ctx.drawImage(src, 0, 0);
+
+        this.textures.addCanvas(newKey, canvas);
+    }
 
     _wordsForWave(wave) {
         if (wave === 10) return CONFIG.BOSS.SHIELD_DROP_WORDS;
@@ -774,7 +948,8 @@ export default class GameScene extends Phaser.Scene {
                 alien._dying = true;
                 this.time.delayedCall(200, () => {
                     if (!alien.active) return;
-                    spawnDeathBurst(this, bx, by, burstColor);
+                    spawnDeathBurst(this, bx, by, burstColor,
+                        () => this.spawnFrogEscape(bx, by));
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                         this.healthDrops.push(new HealthDrop(this, bx, by));
                     }
@@ -929,7 +1104,8 @@ export default class GameScene extends Phaser.Scene {
                 alien._dying = true;
                 this.time.delayedCall(200, () => {
                     if (!alien.active) return;
-                    spawnDeathBurst(this, bx, by, BURST_COLORS[alien.alienType] || 0xffffff);
+                    spawnDeathBurst(this, bx, by, BURST_COLORS[alien.alienType] || 0xffffff,
+                        () => this.spawnFrogEscape(bx, by));
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                         this.healthDrops.push(new HealthDrop(this, bx, by));
                     }
@@ -1048,7 +1224,8 @@ export default class GameScene extends Phaser.Scene {
             nearest._dying = true;
             this.time.delayedCall(200, () => {
                 if (!nearest.active) return;
-                spawnDeathBurst(this, bx, by, BURST_COLORS[nearest.alienType] || 0xffffff);
+                spawnDeathBurst(this, bx, by, BURST_COLORS[nearest.alienType] || 0xffffff,
+                    () => this.spawnFrogEscape(bx, by));
                 if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                     this.healthDrops.push(new HealthDrop(this, bx, by));
                 }
@@ -1425,6 +1602,72 @@ export default class GameScene extends Phaser.Scene {
         this.scene.pause();
     }
 
+    // ── Frog escape (decorative) ───────────────────────────────────────────────
+
+    /**
+     * Spawn a decorative escape frog at (x, y) — called by spawnDeathBurst's
+     * onComplete once the explosion has fully faded.
+     * Capped at 5 concurrent frogs so late-wave kills don't flood the screen.
+     */
+    /**
+     * Push the snail out of any overlapping world obstacles (station, terminals, props).
+     * Skipped entirely while the snail is being dragged by P2's grab hand.
+     * Called after snail.update() every frame; runs up to 4 resolution passes so the
+     * snail is always pushed clear even when wedged between two obstacles.
+     */
+    _resolveSnailCollisions() {
+        if (this.snail.state === 'GRABBED') return;
+
+        const snailR = CONFIG.PROPS.SNAIL_RADIUS;
+
+        // Collect all circular obstacles for this frame
+        const obstacles = [];
+        obstacles.push({ x: this.station.x, y: this.station.y, r: CONFIG.STATION.RADIUS });
+        for (const term of this.terminals) {
+            if (term.active) obstacles.push({ x: term.x, y: term.y, r: CONFIG.PROPS.TERMINAL_RADIUS });
+        }
+        for (const prop of this._propImages) {
+            if (prop.active) obstacles.push({ x: prop.x, y: prop.y, r: prop._colRadius });
+        }
+
+        // Iterative push-out — repeated passes handle the snail wedged between two objects
+        for (let iter = 0; iter < 4; iter++) {
+            let anyOverlap = false;
+            for (const obs of obstacles) {
+                const dx = this.snail.x - obs.x;
+                const dy = this.snail.y - obs.y;
+                const distSq = dx * dx + dy * dy;
+                const minDist = snailR + obs.r;
+                if (distSq < minDist * minDist) {
+                    anyOverlap = true;
+                    const dist = Math.sqrt(distSq);
+                    if (dist < 0.001) {
+                        // Exactly on top — nudge right to break the tie
+                        this.snail.x += minDist;
+                    } else {
+                        const push = minDist - dist;
+                        this.snail.x += (dx / dist) * push;
+                        this.snail.y += (dy / dist) * push;
+                    }
+                }
+            }
+            if (!anyOverlap) break;
+        }
+
+        // Re-clamp to screen bounds after any push
+        const margin = 24;
+        this.snail.x = Phaser.Math.Clamp(this.snail.x, margin, 1280 - margin);
+        this.snail.y = Phaser.Math.Clamp(this.snail.y, margin, 720 - margin);
+    }
+
+    spawnFrogEscape(x, y) {
+        if (!this.active) return;
+        if (Math.random() >= 0.25) return;
+        if (this.frogEscapes.filter(f => f.active).length >= 5) return;
+        const frog = new FrogEscape(this, x, y);
+        this.frogEscapes.push(frog);
+    }
+
     // ── Alien spawning ─────────────────────────────────────────────────────────
 
     _randomEdgePosition() {
@@ -1464,6 +1707,7 @@ export default class GameScene extends Phaser.Scene {
         this.grabSystem.update(delta);
         this.hud.updateGrab(this.grabSystem.statusText, this.grabSystem.statusColor);
         if (!this.boardingShip) this.snail.update(time, delta);
+        this._resolveSnailCollisions();
         this.slimeTrail.update(this.snail, delta);
 
         // ── Drone orbit animation ─────────────────────────────────────────────
@@ -1533,6 +1777,14 @@ export default class GameScene extends Phaser.Scene {
             terminal.updateProximity(this.snail);
         }
 
+        // Y-sort: snail, station, and terminals share the same depth layer.
+        // Depth = y / 100 so objects lower on screen render in front.
+        this.snail.setDepth(this.snail.y / 100);
+        this.station.setDepth(this.station.y / 100);
+        for (const terminal of this.terminals) {
+            terminal.setDepth(terminal.y / 100);
+        }
+
         // Projectiles + trail particles
         this.projectiles = this.projectiles.filter(p => {
             if (!p.active) return false;
@@ -1583,7 +1835,8 @@ export default class GameScene extends Phaser.Scene {
                 const bx = alien.x, by = alien.y;
                 const burstColor = BURST_COLORS[alien.alienType] || 0xff4444;
                 alien.destroy();
-                spawnDeathBurst(this, bx, by, burstColor);
+                spawnDeathBurst(this, bx, by, burstColor,
+                    () => this.spawnFrogEscape(bx, by));
                 if (this.decoy && this.decoy.active) {
                     this.decoy.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                 }
@@ -1601,7 +1854,8 @@ export default class GameScene extends Phaser.Scene {
                 } else if (this.snail.shielded) {
                     // Shield absorbs the hit — kill the alien, play shield sound, no damage
                     this.soundSynth.play('shieldReflect');
-                    spawnDeathBurst(this, bx, by, burstColor);
+                    spawnDeathBurst(this, bx, by, burstColor,
+                        () => this.spawnFrogEscape(bx, by));
                 } else {
                     const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                     this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
@@ -1731,6 +1985,12 @@ export default class GameScene extends Phaser.Scene {
             }
             return true;
         });
+
+        // Frog escapes — update movement and prune destroyed ones
+        for (const frog of this.frogEscapes) {
+            if (frog.active) frog.update(delta);
+        }
+        this.frogEscapes = this.frogEscapes.filter(f => f.active);
 
         // Cleanup
         this.projectiles     = this.projectiles.filter(p => p.active);

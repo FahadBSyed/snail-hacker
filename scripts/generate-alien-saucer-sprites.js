@@ -11,7 +11,7 @@
  * of movement. The engine glow is placed on the opposite (trailing) side.
  *
  * Output filenames match the texture keys in BasicAlien.js:
- *   assets/alien-frog-{right,diag-right-down,down,diag-left-down,
+ *   assets/sprites/alien/alien-frog-{right,diag-right-down,down,diag-left-down,
  *                       left,diag-left-up,up,diag-right-up}.svg
  *
  * Run: node scripts/generate-alien-saucer-sprites.js
@@ -22,7 +22,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outDir    = join(__dirname, '..', 'assets');
+const outDir    = join(__dirname, '..', 'assets', 'sprites', 'alien');
 mkdirSync(outDir, { recursive: true });
 
 const SIZE = 48; // viewBox width and height

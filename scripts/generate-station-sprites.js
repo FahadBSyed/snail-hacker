@@ -8,13 +8,13 @@
  *   — pixel-art-ish sharp edges, no blur filters
  *
  * Output files:
- *   assets/station-mainframe.svg        — mainframe body (static)
- *   assets/station-gun.svg              — turret gun (rotated at runtime)
- *   assets/terminal-reload.svg
- *   assets/terminal-turret.svg
- *   assets/terminal-shield.svg
- *   assets/terminal-slow.svg
- *   assets/terminal-repair.svg
+ *   assets/sprites/station/station-mainframe.svg  — mainframe body (static)
+ *   assets/sprites/station/station-gun.svg        — turret gun (rotated at runtime)
+ *   assets/sprites/terminal/terminal-reload.svg
+ *   assets/sprites/terminal/terminal-turret.svg
+ *   assets/sprites/terminal/terminal-shield.svg
+ *   assets/sprites/terminal/terminal-slow.svg
+ *   assets/sprites/terminal/terminal-repair.svg
  *
  * Run: node scripts/generate-station-sprites.js
  */
@@ -24,8 +24,10 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outDir    = join(__dirname, '..', 'assets');
-mkdirSync(outDir, { recursive: true });
+const stationDir  = join(__dirname, '..', 'assets', 'sprites', 'station');
+const terminalDir = join(__dirname, '..', 'assets', 'sprites', 'terminal');
+mkdirSync(stationDir,  { recursive: true });
+mkdirSync(terminalDir, { recursive: true });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function svg(w, h, inner) {
@@ -408,7 +410,8 @@ const sprites = {
 };
 
 for (const [filename, content] of Object.entries(sprites)) {
-    const path = join(outDir, filename);
+    const dir  = filename.startsWith('station-') ? stationDir : terminalDir;
+    const path = join(dir, filename);
     writeFileSync(path, content, 'utf-8');
     console.log(`✔  ${path}`);
 }
