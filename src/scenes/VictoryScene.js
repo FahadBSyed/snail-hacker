@@ -11,6 +11,10 @@ export default class VictoryScene extends Phaser.Scene {
     create() {
         const cx = 640;
 
+        // Victory fanfare
+        const soundSynth = this.registry.get('soundSynth');
+        soundSynth?.play('victory');
+
         // Background
         this.add.rectangle(640, 360, 1280, 720, 0x000008, 1);
         for (let i = 0; i < 150; i++) {

@@ -550,6 +550,52 @@ export default class SoundSynth {
         };
     }
 
+    /**
+     * Victory fanfare — triumphant 8-note major arpeggio with harmonics,
+     * followed by a sustained chord swell and a final bell shimmer.
+     *
+     * Structure:
+     *   0.00 s — ascending arpeggio (C4 E4 G4 C5 E5 G5 C6 E6), staggered 90 ms
+     *   0.72 s — warm chord swell (C4 + G4 + C5 + E5) with slow attack
+     *   1.60 s — glittering high sine shimmer (C7 E7 G7) on top
+     */
+    _victory() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+
+        // Arpeggio notes: two octaves of C major
+        const arpNotes = [261.6, 329.6, 392.0, 523.2, 659.3, 784.0, 1046.5, 1318.5];
+        arpNotes.forEach((freq, i) => {
+            const st   = t + i * 0.09;
+            const decay = 0.55 + i * 0.05;
+            // Fundamental
+            const g = this._gain(ctx, 0.26, st, decay);
+            this._osc(ctx, 'sine', freq, freq, st, decay - 0.02, g);
+            // Octave shimmer
+            const g2 = this._gain(ctx, 0.09, st, decay * 0.7);
+            this._osc(ctx, 'triangle', freq * 2, freq * 2, st, decay * 0.65, g2);
+        });
+
+        // Chord swell — four-voice sustained pad
+        const swellStart = t + 0.72;
+        const swellDur   = 1.8;
+        [[261.6, 0.22], [392.0, 0.18], [523.2, 0.20], [659.3, 0.14]].forEach(([freq, amp]) => {
+            const g = ctx.createGain();
+            g.gain.setValueAtTime(0.0001, swellStart);
+            g.gain.exponentialRampToValueAtTime(amp * this.volume, swellStart + 0.55);
+            g.gain.exponentialRampToValueAtTime(0.0001, swellStart + swellDur);
+            g.connect(ctx.destination);
+            this._osc(ctx, 'sine', freq, freq, swellStart, swellDur, g);
+        });
+
+        // Bell shimmer at the top — three high sine notes with long decay
+        const shimmerStart = t + 1.60;
+        [2093.0, 2637.0, 3136.0].forEach((freq, i) => {
+            const st = shimmerStart + i * 0.11;
+            const g  = this._gain(ctx, 0.14, st, 1.8);
+            this._osc(ctx, 'sine', freq, freq * 0.98, st, 1.75, g);
+        });
+    }
+
     /** New wave beginning — two sharp alert beeps. */
     _waveStart() {
         const ctx = this._ctx_get(), t = ctx.currentTime;

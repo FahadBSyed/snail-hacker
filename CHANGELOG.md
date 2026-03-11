@@ -1,5 +1,22 @@
 # SNAIL HACKER — Changelog
 
+## Session 10k — 2026-03-11
+
+### Victory Fanfare Sound Effect
+
+- **`src/systems/SoundSynth.js` — `_victory()`** — New procedural sound played on the Victory screen. Three-part structure:
+  - **Ascending arpeggio** (0.00 s): 8 notes over two octaves of C major (C4–E6), staggered 90 ms apart, each with a sine fundamental and triangle octave shimmer.
+  - **Chord swell** (0.72 s): four-voice sustained pad (C4 G4 C5 E5) with a slow 550 ms attack then fade over 1.8 s.
+  - **Bell shimmer** (1.60 s): three high sine partials (C7 E7 G7) with long 1.8 s decay, giving a glittering tail.
+- **`src/scenes/VictoryScene.js`** — Calls `soundSynth.play('victory')` at the top of `create()`.
+
+### Asset Reorganisation: station + terminal SVGs
+
+- Moved `assets/station-*.svg` → `assets/sprites/station/` (2 files).
+- Moved `assets/terminal-*.svg` → `assets/sprites/terminal/` (5 files).
+- Updated load paths in `src/scenes/GameScene.js`.
+- Updated `scripts/generate-station-sprites.js` to write to `stationDir` / `terminalDir` based on filename prefix.
+
 ## Session 10j — 2026-03-11
 
 ### Prop Sprite Redesign: Angular Rocks + Connected Mushrooms
