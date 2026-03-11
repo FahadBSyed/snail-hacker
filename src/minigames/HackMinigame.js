@@ -105,6 +105,7 @@ export default class HackMinigame {
         if (this.charTexts) {
             this.charTexts.forEach(t => { if (t.active) t.destroy(); });
         }
+        if (this._cursorTween) { this._cursorTween.stop(); this._cursorTween = null; }
         if (this.cursor && this.cursor.active) this.cursor.destroy();
 
         const n           = this.phrase.length;
@@ -123,6 +124,10 @@ export default class HackMinigame {
         // Cursor underline beneath the next character to type
         this.cursor = this.scene.add.rectangle(startX, 9, 18, 2, 0x00ffcc, 0.9).setOrigin(0.5);
         this._wordGroup.add(this.cursor);
+        this._cursorTween = this.scene.tweens.add({
+            targets: this.cursor, alpha: 0, duration: 500,
+            ease: 'Stepped', yoyo: true, repeat: -1,
+        });
         this._startX      = startX;
         this._charSpacing = charSpacing;
     }

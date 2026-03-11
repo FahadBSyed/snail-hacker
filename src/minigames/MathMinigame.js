@@ -110,6 +110,17 @@ export default class MathMinigame {
             fontSize: '24px', fontFamily: 'monospace', color: '#00ffcc',
         }).setOrigin(0, 0.5);
         this._wordGroup.add(this._inputText);
+
+        // Blink the cursor when no digits have been typed yet
+        if (this._blinkTimer) this._blinkTimer.remove(false);
+        this._cursorVisible = true;
+        this._blinkTimer = this.scene.time.addEvent({
+            delay: 530, loop: true, callback: () => {
+                if (this.cancelled || this._typed.length > 0) return;
+                this._cursorVisible = !this._cursorVisible;
+                this._inputText.setText(this._cursorVisible ? '_' : ' ');
+            },
+        });
     }
 
     // ── Input handling ────────────────────────────────────────────────────────
@@ -229,6 +240,7 @@ export default class MathMinigame {
     }
 
     _cleanup() {
+        if (this._blinkTimer) { this._blinkTimer.remove(false); this._blinkTimer = null; }
         if (this.keyHandler) this.scene.input.keyboard.off('keydown', this.keyHandler);
         if (this.container && this.container.active) this.container.destroy();
     }
