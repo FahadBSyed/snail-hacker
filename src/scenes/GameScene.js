@@ -1609,6 +1609,7 @@ export default class GameScene extends Phaser.Scene {
      */
     spawnFrogEscape(x, y) {
         if (!this.active) return;
+        if (Math.random() >= 0.25) return;
         if (this.frogEscapes.filter(f => f.active).length >= 5) return;
         const frog = new FrogEscape(this, x, y);
         this.frogEscapes.push(frog);
