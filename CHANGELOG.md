@@ -7,6 +7,7 @@
 EMP mine explosions now penetrate the boss's energy shield, consistent with how they already bypass ShieldAlien shields. Because the EMP is not intended as the primary damage source against the boss, damage is reduced to 70% of `CONFIG.EMP.MINE_DAMAGE` when hitting the boss. Phase-shift accumulation is still tracked correctly so EMP hits can still contribute to triggering phase shifts.
 
 - **`src/entities/aliens/BossAlien.js`** — added `takeDamageRaw(amount)` override. Skips the shield check (raw bypass), applies `amount * 0.7`, updates `_damageAccum`, and triggers `_phaseShift()` at the normal threshold. Still respects `_dying` guard.
+- **`src/scenes/GameScene.js`** — fixed mine proximity trigger and `_empExplode` blast loop to also check `this.boss`. The boss was never in `this.aliens`, so mines never detonated near it and it was never caught in the blast damage loop.
 
 ### Aliens Always Render Above Other Sprites
 

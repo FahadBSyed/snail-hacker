@@ -958,6 +958,18 @@ export default class GameScene extends Phaser.Scene {
                 });
             }
         }
+
+        // Also damage the boss if in blast radius (boss is not in this.aliens)
+        if (this.boss && this.boss.active && !this.boss._dying) {
+            const dist = Phaser.Math.Distance.Between(x, y, this.boss.x, this.boss.y);
+            if (dist < CONFIG.EMP.BLAST_RADIUS) {
+                const bx = this.boss.x, by = this.boss.y;
+                const hitFlash = this.add.arc(bx, by, this.boss.radius, 0, 360, false, 0x00ff88, 0.75).setDepth(58);
+                this.tweens.add({ targets: hitFlash, alpha: 0, duration: 240, onComplete: () => hitFlash.destroy() });
+                this.tweens.add({ targets: this.boss, x: bx + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+                this.boss.takeDamageRaw(CONFIG.EMP.MINE_DAMAGE); // 30% reduction applied in BossAlien.takeDamageRaw
+            }
+        }
     }
 
     _startHack() {
@@ -1815,6 +1827,10 @@ export default class GameScene extends Phaser.Scene {
                     if (!alien.active || alien._dying) continue;
                     const d = Phaser.Math.Distance.Between(mine.x, mine.y, alien.x, alien.y);
                     if (d < mine.triggerRadius + alien.radius) { triggered = true; break; }
+                }
+                if (!triggered && this.boss && this.boss.active && !this.boss._dying) {
+                    const d = Phaser.Math.Distance.Between(mine.x, mine.y, this.boss.x, this.boss.y);
+                    if (d < mine.triggerRadius + this.boss.radius) triggered = true;
                 }
 
                 if (triggered) {
