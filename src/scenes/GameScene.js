@@ -27,6 +27,7 @@ import Decoy from '../entities/Decoy.js';
 import EmpMine from '../entities/EmpMine.js';
 import HUD from './HUD.js';
 import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions, BURST_COLORS } from '../systems/CollisionSystem.js';
+import { PROP_PALETTES } from '../data/propPalettes.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -171,11 +172,30 @@ export default class GameScene extends Phaser.Scene {
                 this.load.svg(key, `assets/${key}.svg`, { width: 64, height: 64 });
             }
         }
+
+        // ── Prop sprites (rocks + mushrooms) — loaded once, tinted per wave ──
+        const PROP_SIZES = {
+            'prop-rock-0':     { w: 40,  h: 34 },
+            'prop-rock-1':     { w: 60,  h: 40 },
+            'prop-rock-2':     { w: 48,  h: 58 },
+            'prop-mushroom-0': { w: 32,  h: 52 },
+            'prop-mushroom-1': { w: 48,  h: 70 },
+        };
+        for (const [key, sz] of Object.entries(PROP_SIZES)) {
+            if (!this.textures.exists(key)) {
+                const file = key.replace('prop-', '') + '.svg'; // rock-0.svg etc.
+                this.load.svg(key, `assets/sprites/props/${file}`, { width: sz.w, height: sz.h });
+            }
+        }
     }
 
     create() {
         // ── Alien planet surface background ──────────────────────────────────
         this.add.image(640, 360, this.bgKey).setDepth(-1);
+
+        // ── Prop decorations (rocks + mushrooms) ──────────────────────────────
+        this._propImages = [];
+        this._spawnProps(this.startWave);
 
         this.input.mouse.disableContextMenu();
 
@@ -408,6 +428,7 @@ export default class GameScene extends Phaser.Scene {
             onSpawn: (type) => this.spawnAlien(type),
             onWaveStart: (wave) => {
                 this.wave          = wave;
+                this._spawnProps(wave);
                 this.hackProgress  = 0;
                 this.hackThreshold = this._wordsForWave(wave);
                 this.escapePhase  = false;
@@ -448,6 +469,84 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Destroy any existing prop images and respawn rocks + mushrooms for the
+     * given wave.  Palette color is derived from the wave's background index so
+     * props always match the ground tone.  Positions are pseudo-random (seeded
+     * per wave) and use rejection sampling to avoid the central safe zone and
+     * screen edges.
+     */
+    _spawnProps(wave) {
+        // Clear old props
+        for (const img of this._propImages) img.destroy();
+        this._propImages = [];
+
+        // Palette for this wave's background
+        const bgIdx   = ((wave - 1) * 7) % 20;
+        const palette = PROP_PALETTES[bgIdx];
+        const rockTint   = parseInt(palette.rock.slice(1),  16);
+        const floraTint  = parseInt(palette.flora.slice(1), 16);
+
+        // Seeded PRNG (mulberry32) — deterministic per wave
+        let seed = wave * 1_000_003 + 7;
+        const rng = () => {
+            seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+            let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+            return ((t ^ t >>> 14) >>> 0) / 4_294_967_296;
+        };
+
+        // Arena constraints
+        const W = 1280, H = 720;
+        const MARGIN    = 60;   // keep props away from screen edges
+        const CLEAR_R   = 240;  // keep props away from station center (640,360)
+        const MIN_GAP   = 38;   // minimum distance between any two prop centers
+        const MAX_TRIES = 40;
+
+        const placed = [];
+
+        const tryPlace = (key, tint, count) => {
+            let spawned = 0;
+            let tries   = 0;
+            while (spawned < count && tries < count * MAX_TRIES) {
+                tries++;
+                const x = MARGIN + rng() * (W - MARGIN * 2);
+                const y = MARGIN + rng() * (H - MARGIN * 2);
+
+                // Reject if inside station clear zone
+                const dx = x - 640, dy = y - 360;
+                if (dx * dx + dy * dy < CLEAR_R * CLEAR_R) continue;
+
+                // Reject if too close to another prop
+                const tooClose = placed.some(p => {
+                    const px = p.x - x, py = p.y - y;
+                    return px * px + py * py < MIN_GAP * MIN_GAP;
+                });
+                if (tooClose) continue;
+
+                placed.push({ x, y });
+                const img = this.add.image(x, y, key)
+                    .setTint(tint)
+                    .setDepth(-0.5);
+                this._propImages.push(img);
+                spawned++;
+            }
+        };
+
+        // Rocks: cycle through 3 variants; slightly more rocks than mushrooms
+        const rockCount     = 10 + Math.floor(rng() * 6); // 10–15
+        const mushroomCount =  5 + Math.floor(rng() * 4); //  5–8
+
+        for (let i = 0; i < rockCount; i++) {
+            const variant = Math.floor(rng() * 3);
+            tryPlace(`prop-rock-${variant}`, rockTint, 1);
+        }
+        for (let i = 0; i < mushroomCount; i++) {
+            const variant = Math.floor(rng() * 2);
+            tryPlace(`prop-mushroom-${variant}`, floraTint, 1);
+        }
+    }
 
     _wordsForWave(wave) {
         if (wave === 10) return CONFIG.BOSS.SHIELD_DROP_WORDS;

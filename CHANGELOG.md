@@ -2,6 +2,18 @@
 
 ## Session 10i — 2026-03-11
 
+### Prop Spawning: Rocks + Mushrooms in GameScene
+
+- **`src/data/propPalettes.js`** (new) — Runtime palette table (20 entries matching the 20 background biomes). Each entry has `rock` and `flora` hex colors used to tint props via Phaser's `setTint()`.
+- **`GameScene.preload()`** — Loads the 5 prop SVGs (`prop-rock-{0,1,2}`, `prop-mushroom-{0,1}`) once into the texture cache on first visit.
+- **`GameScene._spawnProps(wave)`** (new) — Destroys all existing prop images and respawns them for the given wave:
+  - Derives `bgIdx = ((wave-1)*7) % 20` to select the matching palette.
+  - Uses a mulberry32 PRNG seeded by wave number for deterministic-but-varied layouts.
+  - Spawns 10–15 rocks and 5–8 mushrooms using rejection sampling: props stay ≥60 px from screen edges and ≥240 px from the station center (640,360), with ≥38 px spacing between props.
+  - Props are placed at depth −0.5, above the background (−1) and below all game entities (0+).
+- **`GameScene.create()`** — Initialises `this._propImages = []` and calls `_spawnProps(startWave)` immediately after the background image.
+- **`GameScene onWaveStart`** — Calls `_spawnProps(wave)` at the top of each new wave so the layout refreshes with the new background palette.
+
 ### Prop Sprites: Greyscale Rocks + Mushrooms (Oblique Top-Down)
 
 - **`scripts/generate-prop-sprites.js`** (new) — Generates 5 greyscale prop SVGs in Pokemon Gen 2/3 oblique top-down style: only the top face (ellipse) and south-facing front face (trapezoid) are visible — no left/right sides. Three rock variants and two mushroom variants.
