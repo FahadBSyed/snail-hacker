@@ -107,15 +107,20 @@ export const BURST_COLORS = {
 /**
  * Expanding flash + debris-dot burst at (x, y).
  * Called on alien kill and when clearing aliens at wave end.
+ *
+ * @param {function|null} onComplete  Optional callback fired when the main
+ *   pulse tween finishes (~480 ms) — i.e. once the explosion has fully faded.
+ *   Used to spawn decorative escape frogs at the right moment.
  */
-export function spawnDeathBurst(scene, x, y, color = 0xff4444) {
+export function spawnDeathBurst(scene, x, y, color = 0xff4444, onComplete = null) {
     scene.soundSynth.play('explosion');
 
-    // Expanding light pulse
+    // Expanding light pulse — onComplete fires when this fully fades
     const pulse = scene.add.circle(x, y, 6, 0xff3300, 0.45).setDepth(53);
     scene.tweens.add({
         targets: pulse, scaleX: 9, scaleY: 9, alpha: 0,
-        duration: 480, ease: 'Power2.easeOut', onComplete: () => pulse.destroy(),
+        duration: 480, ease: 'Power2.easeOut',
+        onComplete: () => { pulse.destroy(); if (onComplete) onComplete(); },
     });
 
     // Bright inner flash
@@ -181,7 +186,8 @@ export function checkBomberBlast(scene, bx, by) {
                 a._dying = true;
                 scene.time.delayedCall(120, () => {
                     if (!a.active) return;
-                    spawnDeathBurst(scene, ax, ay, burstColor);
+                    spawnDeathBurst(scene, ax, ay, burstColor,
+                        () => scene.spawnFrogEscape?.(ax, ay));
                     if (wasChainBomber) checkBomberBlast(scene, ax, ay);
                     a.destroy();
                 });
@@ -263,7 +269,8 @@ export function checkProjectileCollisions(scene) {
                 alien._dying = true;
                 scene.time.delayedCall(200, () => {
                     if (!alien.active) return;
-                    spawnDeathBurst(scene, bx, by, burstColor);
+                    spawnDeathBurst(scene, bx, by, burstColor,
+                        () => scene.spawnFrogEscape?.(bx, by));
 
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                         scene.healthDrops.push(new HealthDrop(scene, bx, by));

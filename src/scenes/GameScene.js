@@ -21,6 +21,7 @@ import SequenceMinigame from '../minigames/SequenceMinigame.js';
 import TypingMinigame from '../minigames/TypingMinigame.js';
 import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
+import FrogEscape from '../entities/FrogEscape.js'; // decorative escape frogs
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
 import Decoy from '../entities/Decoy.js';
@@ -148,6 +149,15 @@ export default class GameScene extends Phaser.Scene {
                 this.load.svg(`snail-hit-${dir}-${f}`, `assets/sprites/snail/snail-hit-${dir}-${f}.svg`, svgSize);
             }
         }
+        // On-foot frog sprites (4 cardinal directions, idle + 4 hop frames each)
+        for (const dir of ['right', 'left', 'up', 'down']) {
+            this.load.svg(`frog-${dir}`, `assets/sprites/frog/frog-${dir}.svg`, svgSize);
+            for (const frame of ['f00', 'f01', 'f02', 'f03']) {
+                this.load.svg(`frog-hop-${dir}-${frame}`,
+                    `assets/sprites/frog/frog-hop-${dir}-${frame}.svg`, svgSize);
+            }
+        }
+
         // Alien sprites — 8 directions each
         const dirs = ['right', 'diag-right-down', 'down', 'diag-left-down',
                       'left',  'diag-left-up',    'up',   'diag-right-up'];
@@ -403,6 +413,7 @@ export default class GameScene extends Phaser.Scene {
         // ── Game state ────────────────────────────────────────────────────────
         this.aliens      = [];
         this.healthDrops = [];
+        this.frogEscapes = [];
         this.score       = this.startScore;
         this.wave        = this.startWave;
 
@@ -935,7 +946,8 @@ export default class GameScene extends Phaser.Scene {
                 alien._dying = true;
                 this.time.delayedCall(200, () => {
                     if (!alien.active) return;
-                    spawnDeathBurst(this, bx, by, burstColor);
+                    spawnDeathBurst(this, bx, by, burstColor,
+                        () => this.spawnFrogEscape(bx, by));
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                         this.healthDrops.push(new HealthDrop(this, bx, by));
                     }
@@ -1090,7 +1102,8 @@ export default class GameScene extends Phaser.Scene {
                 alien._dying = true;
                 this.time.delayedCall(200, () => {
                     if (!alien.active) return;
-                    spawnDeathBurst(this, bx, by, BURST_COLORS[alien.alienType] || 0xffffff);
+                    spawnDeathBurst(this, bx, by, BURST_COLORS[alien.alienType] || 0xffffff,
+                        () => this.spawnFrogEscape(bx, by));
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                         this.healthDrops.push(new HealthDrop(this, bx, by));
                     }
@@ -1209,7 +1222,8 @@ export default class GameScene extends Phaser.Scene {
             nearest._dying = true;
             this.time.delayedCall(200, () => {
                 if (!nearest.active) return;
-                spawnDeathBurst(this, bx, by, BURST_COLORS[nearest.alienType] || 0xffffff);
+                spawnDeathBurst(this, bx, by, BURST_COLORS[nearest.alienType] || 0xffffff,
+                    () => this.spawnFrogEscape(bx, by));
                 if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                     this.healthDrops.push(new HealthDrop(this, bx, by));
                 }
@@ -1586,6 +1600,20 @@ export default class GameScene extends Phaser.Scene {
         this.scene.pause();
     }
 
+    // ── Frog escape (decorative) ───────────────────────────────────────────────
+
+    /**
+     * Spawn a decorative escape frog at (x, y) — called by spawnDeathBurst's
+     * onComplete once the explosion has fully faded.
+     * Capped at 5 concurrent frogs so late-wave kills don't flood the screen.
+     */
+    spawnFrogEscape(x, y) {
+        if (!this.active) return;
+        if (this.frogEscapes.filter(f => f.active).length >= 5) return;
+        const frog = new FrogEscape(this, x, y);
+        this.frogEscapes.push(frog);
+    }
+
     // ── Alien spawning ─────────────────────────────────────────────────────────
 
     _randomEdgePosition() {
@@ -1744,7 +1772,8 @@ export default class GameScene extends Phaser.Scene {
                 const bx = alien.x, by = alien.y;
                 const burstColor = BURST_COLORS[alien.alienType] || 0xff4444;
                 alien.destroy();
-                spawnDeathBurst(this, bx, by, burstColor);
+                spawnDeathBurst(this, bx, by, burstColor,
+                    () => this.spawnFrogEscape(bx, by));
                 if (this.decoy && this.decoy.active) {
                     this.decoy.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                 }
@@ -1762,7 +1791,8 @@ export default class GameScene extends Phaser.Scene {
                 } else if (this.snail.shielded) {
                     // Shield absorbs the hit — kill the alien, play shield sound, no damage
                     this.soundSynth.play('shieldReflect');
-                    spawnDeathBurst(this, bx, by, burstColor);
+                    spawnDeathBurst(this, bx, by, burstColor,
+                        () => this.spawnFrogEscape(bx, by));
                 } else {
                     const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                     this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
@@ -1892,6 +1922,12 @@ export default class GameScene extends Phaser.Scene {
             }
             return true;
         });
+
+        // Frog escapes — update movement and prune destroyed ones
+        for (const frog of this.frogEscapes) {
+            if (frog.active) frog.update(delta);
+        }
+        this.frogEscapes = this.frogEscapes.filter(f => f.active);
 
         // Cleanup
         this.projectiles     = this.projectiles.filter(p => p.active);

@@ -2,6 +2,23 @@
 
 ## Session 10k — 2026-03-11
 
+### Escape Frogs — Decorative Post-Kill Frog Spawning
+
+After every alien explosion fully fades (~680 ms after death), a small frog appears at the kill site and hops off-screen. Frogs cannot be shot, do not interact with anything, and are silently ignored by all game systems.
+
+- **`src/entities/FrogEscape.js`** (new) — `Phaser.GameObjects.Container`; not in `scene.aliens` so the projectile/collision loop ignores it entirely.
+  - Picks the cardinal direction toward the nearest screen edge.
+  - Fades in over 280 ms, then idles ~1.4 s with a gentle scale-breathe tween.
+  - Hops at 190 px/s, cycling the 4-frame hop animation at ~9 fps.
+  - Self-destructs 80 px past the screen edge.
+- **`src/systems/CollisionSystem.js`** — `spawnDeathBurst` gains an optional `onComplete` callback (5th param). Fires when the main pulse tween completes (480 ms). Both existing call sites in CollisionSystem now pass `() => scene.spawnFrogEscape?.(x, y)`.
+- **`src/scenes/GameScene.js`**:
+  - Preloads 20 frog SVGs from `assets/sprites/frog/` in `preload()`.
+  - `this.frogEscapes = []` in `create()`; capped at 5 concurrent by `spawnFrogEscape()`.
+  - `spawnFrogEscape(x, y)` method added near `spawnAlien`.
+  - Frog update + array pruning added to `update()`.
+  - All 5 `spawnDeathBurst` call sites in GameScene pass the frog spawn callback.
+
 ### On-Foot Frog Sprites + Hop Animation Frames
 
 - **`scripts/generate-frog-sprites.js`** (new) — Generates 20 SVGs of the alien frog passenger on foot, without the flying saucer. Uses the same rotation trick as the saucer scripts: geometry is defined once in local coords (+x forward), and a `translate(24,24) rotate(deg)` transform produces all four cardinal directions.
