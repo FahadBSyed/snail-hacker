@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import EscapeShip from '../entities/EscapeShip.js';
 
 const FLAVOR_TEXT = {
     1: ['Not bad for a snail.', 'Gerald flexes his antenna.', 'They keep coming.'],
@@ -96,6 +97,10 @@ export default class IntermissionScene extends Phaser.Scene {
             return;
         }
 
+        // Escape ship flies in from bottom-left, idles at bottom-center,
+        // then flies out bottom-right when the player makes a choice.
+        this._spawnEscapeShip();
+
         // Determine available upgrades and whether this is an upgrade selection wave.
         // Odd waves offer actives; even waves offer passives.
         const pool      = this.wave % 2 === 0 ? PASSIVE_POOL : ACTIVE_POOL;
@@ -144,6 +149,23 @@ export default class IntermissionScene extends Phaser.Scene {
         const offered = Phaser.Utils.Array.Shuffle(available.slice())
             .slice(0, CONFIG.UPGRADES.CARDS_OFFERED);
         this._showUpgradeCards(offered, cx, 390);
+    }
+
+    // ── Escape ship ───────────────────────────────────────────────────────────
+
+    _spawnEscapeShip() {
+        // Start off-screen bottom-left and fly to bottom-center.
+        this._escapeShip = new EscapeShip(this, -140, 840, { skipIntro: true });
+        this._escapeShip.setDepth(10); // behind UI text
+
+        this.tweens.add({
+            targets:  this._escapeShip,
+            x:        640,
+            y:        620,
+            duration: 900,
+            ease:     'Cubic.easeOut',
+            onComplete: () => this._escapeShip.startHoverBob(),
+        });
     }
 
     // ── Normal (non-upgrade) layout ───────────────────────────────────────────
@@ -374,10 +396,10 @@ export default class IntermissionScene extends Phaser.Scene {
                     },
                 });
 
-                // Record the upgrade and advance after the animation
+                // Record the upgrade; ship exit in _advance() acts as the timing gate.
                 const angle = this._findSafeUpgradeAngle();
                 this.upgrades = [...this.upgrades, { type, angle }];
-                this.time.delayedCall(600, () => this._advance());
+                this._advance();
             };
 
             container.on('pointerdown', select);
@@ -421,6 +443,23 @@ export default class IntermissionScene extends Phaser.Scene {
         this._advanced = true;
         if (this.countdownTimer) this.countdownTimer.remove(false);
 
+        if (this._escapeShip) {
+            // Stop hover bob, then fly the ship out bottom-right before transitioning.
+            this.tweens.killTweensOf(this._escapeShip);
+            this.tweens.add({
+                targets:  this._escapeShip,
+                x:        1440,
+                y:        860,
+                duration: 580,
+                ease:     'Cubic.easeIn',
+                onComplete: () => this._doAdvance(),
+            });
+        } else {
+            this._doAdvance();
+        }
+    }
+
+    _doAdvance() {
         if (this._startupMode) {
             if (this.upgrades.length < this._targetWave - 1) {
                 // Need more upgrades — loop back

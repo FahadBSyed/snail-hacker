@@ -2,6 +2,17 @@
 
 ## Session 10k — 2026-03-11
 
+### Escape Ship Flythrough in Intermission Scene
+
+The `EscapeShip` now appears in every normal (non-startup) intermission. It flies in from off-screen bottom-left to the bottom-center of the screen (`Cubic.easeOut`, 900ms), then idles with its hover-bob animation. When the player makes any choice (card select, key press, or countdown expiry), the ship exits by flying out to the bottom-right (`Cubic.easeIn`, 580ms); the scene only transitions once the ship has cleared the screen.
+
+- **`src/scenes/IntermissionScene.js`**:
+  - Added `import EscapeShip` at the top.
+  - `create()` calls `_spawnEscapeShip()` for all non-startup paths.
+  - New `_spawnEscapeShip()` spawns the ship at `(-140, 840)` with `skipIntro: true`, tweens it to `(640, 620)`, then calls `startHoverBob()` on arrival.
+  - `_advance()` now kills hover-bob tweens and flies the ship out to `(1440, 860)` before calling `_doAdvance()` (extracted from the old `_advance()`).
+  - Card `select()` calls `_advance()` directly — the ship exit tween replaces the old 600ms fixed delay.
+
 ### Upgrade Card Entrance and Selection Animations
 
 Upgrade cards in the intermission scene now animate in and respond visually to selection.
