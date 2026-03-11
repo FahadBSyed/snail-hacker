@@ -572,7 +572,9 @@ export default class GameScene extends Phaser.Scene {
                 });
                 if (tooClose) continue;
                 placed.push({ x, y });
-                this._propImages.push(this.add.image(x, y, key).setDepth(y / 100));
+                const img = this.add.image(x, y, key).setDepth(y / 100);
+                img._colRadius = key.startsWith('cm') ? CONFIG.PROPS.MUSH_RADIUS : CONFIG.PROPS.ROCK_RADIUS;
+                this._propImages.push(img);
                 return;
             }
         };
@@ -1607,6 +1609,57 @@ export default class GameScene extends Phaser.Scene {
      * onComplete once the explosion has fully faded.
      * Capped at 5 concurrent frogs so late-wave kills don't flood the screen.
      */
+    /**
+     * Push the snail out of any overlapping world obstacles (station, terminals, props).
+     * Skipped entirely while the snail is being dragged by P2's grab hand.
+     * Called after snail.update() every frame; runs up to 4 resolution passes so the
+     * snail is always pushed clear even when wedged between two obstacles.
+     */
+    _resolveSnailCollisions() {
+        if (this.snail.state === 'GRABBED') return;
+
+        const snailR = CONFIG.PROPS.SNAIL_RADIUS;
+
+        // Collect all circular obstacles for this frame
+        const obstacles = [];
+        obstacles.push({ x: this.station.x, y: this.station.y, r: CONFIG.STATION.RADIUS });
+        for (const term of this.terminals) {
+            if (term.active) obstacles.push({ x: term.x, y: term.y, r: CONFIG.PROPS.TERMINAL_RADIUS });
+        }
+        for (const prop of this._propImages) {
+            if (prop.active) obstacles.push({ x: prop.x, y: prop.y, r: prop._colRadius });
+        }
+
+        // Iterative push-out — repeated passes handle the snail wedged between two objects
+        for (let iter = 0; iter < 4; iter++) {
+            let anyOverlap = false;
+            for (const obs of obstacles) {
+                const dx = this.snail.x - obs.x;
+                const dy = this.snail.y - obs.y;
+                const distSq = dx * dx + dy * dy;
+                const minDist = snailR + obs.r;
+                if (distSq < minDist * minDist) {
+                    anyOverlap = true;
+                    const dist = Math.sqrt(distSq);
+                    if (dist < 0.001) {
+                        // Exactly on top — nudge right to break the tie
+                        this.snail.x += minDist;
+                    } else {
+                        const push = minDist - dist;
+                        this.snail.x += (dx / dist) * push;
+                        this.snail.y += (dy / dist) * push;
+                    }
+                }
+            }
+            if (!anyOverlap) break;
+        }
+
+        // Re-clamp to screen bounds after any push
+        const margin = 24;
+        this.snail.x = Phaser.Math.Clamp(this.snail.x, margin, 1280 - margin);
+        this.snail.y = Phaser.Math.Clamp(this.snail.y, margin, 720 - margin);
+    }
+
     spawnFrogEscape(x, y) {
         if (!this.active) return;
         if (Math.random() >= 0.25) return;
@@ -1654,6 +1707,7 @@ export default class GameScene extends Phaser.Scene {
         this.grabSystem.update(delta);
         this.hud.updateGrab(this.grabSystem.statusText, this.grabSystem.statusColor);
         if (!this.boardingShip) this.snail.update(time, delta);
+        this._resolveSnailCollisions();
         this.slimeTrail.update(this.snail, delta);
 
         // ── Drone orbit animation ─────────────────────────────────────────────

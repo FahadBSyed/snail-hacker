@@ -2,6 +2,16 @@
 
 ## Session 10k — 2026-03-11
 
+### Snail Collision vs World Obstacles
+
+The snail now collides with the hacking station, terminals, rocks, and mushrooms using circle-vs-circle resolution. Collision is skipped while P2's grab hand is carrying the snail (state `'GRABBED'`). On drop, the snail is automatically pushed out on the next frame(s) if it landed inside an obstacle.
+
+- **`src/config.js`** — new `PROPS` block: `SNAIL_RADIUS` (18 px), `TERMINAL_RADIUS` (26 px), `ROCK_RADIUS` (16 px), `MUSH_RADIUS` (13 px).
+- **`src/scenes/GameScene.js`**:
+  - `_spawnProps`: each `Phaser.GameObjects.Image` now gets `img._colRadius` tagged at creation time (`MUSH_RADIUS` for mushroom keys starting with `'cm'`, `ROCK_RADIUS` otherwise).
+  - `_resolveSnailCollisions()` — new method; builds an obstacle list (station + active terminals + active props), then runs up to 4 push-out passes per frame so the snail is always ejected even when wedged between two objects. Re-clamps to screen bounds after any push.
+  - `update()` — calls `_resolveSnailCollisions()` immediately after `snail.update()`, before the slime trail, so the corrected position feeds all downstream systems.
+
 ### Y-Sort Depth Layer for Props, Terminals, Station, and Snail
 
 All world-space objects (rocks, mushrooms, terminals, hacking station, snail) now share the same Y-sorted depth layer. Objects lower on screen (higher Y) render in front of objects higher on screen, giving correct overlap when the snail walks behind or in front of props.

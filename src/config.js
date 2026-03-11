@@ -130,6 +130,13 @@ export const DEFAULTS = {
         SEARCH_RADIUS: 400,   // px — max distance to find next ricochet target
     },
 
+    PROPS: {
+        SNAIL_RADIUS:    18,  // px — snail collision circle
+        TERMINAL_RADIUS: 26,  // px — terminal collision circle
+        ROCK_RADIUS:     16,  // px — rock prop collision circle
+        MUSH_RADIUS:     13,  // px — mushroom prop collision circle
+    },
+
     INTERMISSION: {
         HEAL_AMOUNT:       20,  // HP restored to snail between waves
         AUTO_ADVANCE_SECS: 5,   // seconds before auto-advancing
