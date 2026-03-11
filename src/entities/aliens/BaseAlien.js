@@ -16,6 +16,7 @@ export default class BaseAlien extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
         super(scene, x, y);
         scene.add.existing(this);
+        this.setDepth(45);  // fly above terrain, props, snail, station, and ground items
         this.facing = 'right';
     }
 

@@ -2,6 +2,10 @@
 
 ## Session 10k — 2026-03-11
 
+### Aliens Always Render Above Other Sprites
+
+- **`src/entities/aliens/BaseAlien.js`** — added `setDepth(45)` in the constructor. All alien types (basic, fast, tank, bomber, shield, boss) now render at depth 45, above y-sorted terrain (0–7.2), decoy (39–41), frog escape (40), battery (42), and EMP mines (44). They stay below death-burst effects (53+), the escape ship (50), HUD (100), and cursor (1000).
+
 ### Snail Collision vs World Obstacles
 
 The snail now collides with the hacking station, terminals, rocks, and mushrooms using circle-vs-circle resolution. Collision is skipped while P2's grab hand is carrying the snail (state `'GRABBED'`). On drop, the snail is automatically pushed out on the next frame(s) if it landed inside an obstacle.
