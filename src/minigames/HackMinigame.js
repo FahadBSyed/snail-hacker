@@ -93,6 +93,10 @@ export default class HackMinigame {
         this.container.add(this.progressLabel);
         this._progressBarW = barW;
 
+        // Word group — only the characters and cursor wobble, not the whole panel
+        this._wordGroup = this.scene.add.container(0, 0);
+        this.container.add(this._wordGroup);
+
         this._buildWordDisplay();
     }
 
@@ -113,12 +117,12 @@ export default class HackMinigame {
                 fontSize: '20px', fontFamily: 'monospace', color: '#777788',
             }).setOrigin(0.5);
             this.charTexts.push(ch);
-            this.container.add(ch);
+            this._wordGroup.add(ch);
         }
 
         // Cursor underline beneath the next character to type
         this.cursor = this.scene.add.rectangle(startX, 9, 18, 2, 0x00ffcc, 0.9).setOrigin(0.5);
-        this.container.add(this.cursor);
+        this._wordGroup.add(this.cursor);
         this._startX      = startX;
         this._charSpacing = charSpacing;
     }
@@ -138,6 +142,8 @@ export default class HackMinigame {
             if (this.pointer < this.phrase.length) {
                 this.cursor.x = this._startX + this.pointer * this._charSpacing;
             }
+
+            this._wobble(false);
 
             if (this.pointer >= this.phrase.length) {
                 // Word complete
@@ -167,7 +173,25 @@ export default class HackMinigame {
             this.scene.time.delayedCall(160, () => {
                 if (!this.cancelled && cur.active) cur.setColor('#777788');
             });
+            this._wobble(true);
         }
+    }
+
+    _wobble(violent) {
+        if (this._wobbleTween) this._wobbleTween.stop();
+        this._wordGroup.y = 0;
+        const amp = violent ? 10 : 3;
+        const dur  = violent ? 40 : 60;
+        const reps = violent ? 5  : 1;
+        this._wobbleTween = this.scene.tweens.add({
+            targets:  this._wordGroup,
+            y:        amp,
+            duration: dur,
+            yoyo:     true,
+            repeat:   reps,
+            ease:     'Sine.easeInOut',
+            onComplete: () => { if (this._wordGroup?.active) this._wordGroup.y = 0; },
+        });
     }
 
     _updateProgressUI() {
