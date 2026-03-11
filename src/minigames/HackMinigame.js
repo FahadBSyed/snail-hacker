@@ -141,9 +141,6 @@ export default class HackMinigame {
 
             if (this.pointer < this.phrase.length) {
                 this.cursor.x = this._startX + this.pointer * this._charSpacing;
-            }
-
-            } else {
                 this._wobble(false);
             }
 
