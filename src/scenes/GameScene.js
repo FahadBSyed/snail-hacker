@@ -428,6 +428,7 @@ export default class GameScene extends Phaser.Scene {
                 this.boardingShip = false;
                 if (this.escapeShip) { this.escapeShip.destroy(); this.escapeShip = null; }
                 this._escapeShipSound?.stop(); this._escapeShipSound = null;
+                this._swarmSound?.stop(); this._swarmSound = null;
 
                 // Position snail but keep it hidden and locked until drop-in completes
                 this.snail.setVisible(false);
@@ -440,6 +441,8 @@ export default class GameScene extends Phaser.Scene {
                 this.hud.updateWave(this.wave);
                 this.hud.updateHack(this.hackProgress, this.hackThreshold);
                 this.soundSynth.play('waveStart');
+                this._waveFirstAlienSpawned = false;
+                this._startRibbetTimer();
                 this.logDebug(`Wave ${wave} started — need ${this.hackThreshold} words`);
 
                 // Pause alien spawning until drop-in completes
@@ -1656,12 +1659,28 @@ export default class GameScene extends Phaser.Scene {
         this.snail.y = Phaser.Math.Clamp(this.snail.y, margin, 720 - margin);
     }
 
+    /** Schedule a sporadic ribbet while aliens are alive; re-schedules itself. */
+    _startRibbetTimer() {
+        if (this._ribbetTimer) { this._ribbetTimer.remove(false); this._ribbetTimer = null; }
+        const scheduleNext = () => {
+            const delay = Phaser.Math.Between(3500, 9000);
+            this._ribbetTimer = this.time.delayedCall(delay, () => {
+                if (this.aliens.some(a => a.active)) {
+                    this.soundSynth?.play('alienRibbet');
+                }
+                scheduleNext();
+            });
+        };
+        scheduleNext();
+    }
+
     spawnFrogEscape(x, y) {
         if (!this.sys.isActive()) return;
         if (Math.random() >= 0.25) return;
         if (this.frogEscapes.filter(f => f.active).length >= 5) return;
         const frog = new FrogEscape(this, x, y);
         this.frogEscapes.push(frog);
+        this.soundSynth.play('alienRibbet');
     }
 
     // ── Alien spawning ─────────────────────────────────────────────────────────
@@ -1695,6 +1714,19 @@ export default class GameScene extends Phaser.Scene {
             alien.speed = alien.speed * CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER;
         }
         this.aliens.push(alien);
+
+        // Spawn sound: always for the first alien of a wave, 30% chance after
+        if (!this._waveFirstAlienSpawned) {
+            this._waveFirstAlienSpawned = true;
+            this.soundSynth.play('alienSpawn');
+        } else if (Math.random() < 0.3) {
+            this.soundSynth.play('alienSpawn');
+        }
+
+        // Start swarm hum when the first alien appears
+        if (!this._swarmSound) {
+            this._swarmSound = this.soundSynth.playLooped('alienSwarm');
+        }
     }
 
     // ── Main update loop ──────────────────────────────────────────────────────
@@ -1985,6 +2017,24 @@ export default class GameScene extends Phaser.Scene {
             }
             return true;
         });
+
+        // Swarm sound — start when aliens are present, fade volume with proximity
+        if (this._swarmSound) {
+            if (this.aliens.length === 0) {
+                this._swarmSound.stop();
+                this._swarmSound = null;
+            } else {
+                let nearestDist = Infinity;
+                const sx = this.snail.x, sy = this.snail.y;
+                for (const a of this.aliens) {
+                    if (!a.active) continue;
+                    const d = Phaser.Math.Distance.Between(sx, sy, a.x, a.y);
+                    if (d < nearestDist) nearestDist = d;
+                }
+                const vol = Math.max(0, 1 - nearestDist / 750) * 0.40;
+                this._swarmSound.setVolume(vol);
+            }
+        }
 
         // Frog escapes — update movement and prune destroyed ones
         for (const frog of this.frogEscapes) {

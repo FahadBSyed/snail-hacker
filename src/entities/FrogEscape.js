@@ -90,6 +90,7 @@ export default class FrogEscape extends Phaser.GameObjects.Container {
         // Start hop frame cycle
         this._frameIdx = 0;
         this._img.setTexture(`frog-hop-${this._dir}-f00`);
+        this.scene.soundSynth?.play('frogEscapeHop');
         this._frameCycle = this.scene.time.addEvent({
             delay:    Math.round(1000 / HOP_FPS),
             loop:     true,
@@ -97,6 +98,8 @@ export default class FrogEscape extends Phaser.GameObjects.Container {
                 if (!this.active) return;
                 this._frameIdx = (this._frameIdx + 1) % 4;
                 this._img.setTexture(`frog-hop-${this._dir}-${HOP_FRAMES[this._frameIdx]}`);
+                // Play hop thud on each full cycle wrap
+                if (this._frameIdx === 0) this.scene.soundSynth?.play('frogEscapeHop');
             },
         });
     }
