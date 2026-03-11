@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 70" width="48" height="70">
+  <ellipse cx="24.00" cy="65.80" rx="19.20" ry="4.90" fill="#0c0c0c" opacity="0.30"/>
+  <rect x="15.84" y="45.50" width="16.32" height="17.50" rx="3.67" fill="#a4a4a4"/>
+  <rect x="15.84" y="45.50" width="5.30" height="17.50" rx="3.67" fill="#f2f2f2" opacity="0.30"/>
+  <rect x="26.86" y="45.50" width="5.30" height="17.50" rx="3.67" fill="#363636" opacity="0.38"/>
+  <rect x="15.84" y="57.75" width="16.32" height="5.25" rx="3.67" fill="#363636" opacity="0.30"/>
+  <ellipse cx="24.00" cy="45.50" rx="8.57" ry="3.92" fill="#c2c2c2"/>
+  <ellipse cx="24.00" cy="32.84" rx="19.43" ry="8.40" fill="#1c1c1c" opacity="0.45"/>
+  <ellipse cx="24.00" cy="23.10" rx="22.08" ry="16.80" fill="#686868"/>
+  <ellipse cx="20.03" cy="20.08" rx="13.25" ry="9.58" fill="#c2c2c2" opacity="0.48"/>
+  <ellipse cx="18.26" cy="18.40" rx="4.42" ry="3.02" fill="#f2f2f2" opacity="0.40"/>
+  <ellipse cx="17.38" cy="21.42" rx="2.87" ry="1.76" fill="#dedede" opacity="0.28"/>
+  <ellipse cx="17.38" cy="21.42" rx="2.21" ry="1.38" fill="#c2c2c2" opacity="0.60"/>
+  <ellipse cx="17.77" cy="21.67" rx="0.93" ry="0.58" fill="#686868" opacity="0.35"/>
+  <ellipse cx="29.74" cy="20.08" rx="2.58" ry="1.59" fill="#dedede" opacity="0.28"/>
+  <ellipse cx="29.74" cy="20.08" rx="1.99" ry="1.24" fill="#c2c2c2" opacity="0.60"/>
+  <ellipse cx="30.10" cy="20.30" rx="0.83" ry="0.52" fill="#686868" opacity="0.35"/>
+  <ellipse cx="26.21" cy="24.11" rx="2.01" ry="1.23" fill="#dedede" opacity="0.28"/>
+  <ellipse cx="26.21" cy="24.11" rx="1.55" ry="0.96" fill="#c2c2c2" opacity="0.60"/>
+  <ellipse cx="26.49" cy="24.28" rx="0.65" ry="0.41" fill="#686868" opacity="0.35"/>
+  <ellipse cx="21.35" cy="25.45" rx="1.44" ry="0.88" fill="#dedede" opacity="0.28"/>
+  <ellipse cx="21.35" cy="25.45" rx="1.10" ry="0.69" fill="#c2c2c2" opacity="0.60"/>
+  <ellipse cx="21.55" cy="25.58" rx="0.46" ry="0.29" fill="#686868" opacity="0.35"/>
+  <ellipse cx="24.00" cy="23.10" rx="22.08" ry="16.80" fill="none" stroke="#1c1c1c" stroke-width="1.4" opacity="0.45"/>
+</svg>

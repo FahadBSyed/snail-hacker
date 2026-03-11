@@ -1,5 +1,16 @@
 # SNAIL HACKER — Changelog
 
+## Session 10i — 2026-03-11
+
+### Prop Sprites: Greyscale Rocks + Mushrooms (Oblique Top-Down)
+
+- **`scripts/generate-prop-sprites.js`** (new) — Generates 5 greyscale prop SVGs in Pokemon Gen 2/3 oblique top-down style: only the top face (ellipse) and south-facing front face (trapezoid) are visible — no left/right sides. Three rock variants and two mushroom variants.
+- **Rock structure** (back-to-front draw order): ground drop-shadow → front face trapezoid with upper-light and lower-dark shading bands → brow-shadow dark crescent (creates visual depth at the top/front junction) → top face ellipse → broad highlight + specular spot.
+- **Mushroom structure**: ground shadow → stem front face (rounded rect with left-highlight / right-shadow) → stem top ellipse → cap undershade ellipse (dark rim below cap) → cap dome ellipse → broad highlight + specular → wart spots (halo + light centre + dark core triple-layer) → cap rim edge stroke.
+- **Pure greyscale** (#0c0c0c–#f2f2f2). Apply `gameObject.setTint(0xRRGGBB)` in Phaser to map any palette colour across the full luminance range at runtime — no shader needed.
+- **`assets/sprites/props/rock-{0,1,2}.svg`** — 40×34, 60×40, 48×58 (compact round, wide flat slab, tall boulder).
+- **`assets/sprites/props/mushroom-{0,1}.svg`** — 32×52, 48×70 (single stalk, large dome).
+
 ## Session 10h — 2026-03-11
 
 ### Background Rework: Ground Texture Only
