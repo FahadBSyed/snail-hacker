@@ -17,8 +17,6 @@ import HackMinigame from '../minigames/HackMinigame.js';
 import FroggerMinigame from '../minigames/FroggerMinigame.js';
 import MathMinigame from '../minigames/MathMinigame.js';
 import RhythmMinigame from '../minigames/RhythmMinigame.js';
-import SequenceMinigame from '../minigames/SequenceMinigame.js';
-import TypingMinigame from '../minigames/TypingMinigame.js';
 import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import FrogEscape from '../entities/FrogEscape.js'; // decorative escape frogs
@@ -316,20 +314,6 @@ export default class GameScene extends Phaser.Scene {
         // ── Service terminals ─────────────────────────────────────────────────
         // Minigame launchers — each wraps the minigame and tracks it for grab-cancel support.
         this.activeTerminalMinigame = null;
-        const sequenceLauncher = (_term, onSuccess, onFailure) => {
-            const mg = new SequenceMinigame(this, {
-                onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
-                onFailure: () => { this.activeTerminalMinigame = null; onFailure(); },
-            });
-            this.activeTerminalMinigame = mg;
-        };
-        const typingLauncher = (_term, onSuccess, onFailure) => {
-            const mg = new TypingMinigame(this, {
-                onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
-                onFailure: () => { this.activeTerminalMinigame = null; onFailure(); },
-            });
-            this.activeTerminalMinigame = mg;
-        };
         const rhythmLauncher = (_term, onSuccess, onFailure) => {
             const mg = new RhythmMinigame(this, {
                 onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
@@ -337,9 +321,7 @@ export default class GameScene extends Phaser.Scene {
             });
             this.activeTerminalMinigame = mg;
         };
-        // Store launchers so _spawnUpgradeTerminals can use them.
-        this._sequenceLauncher = sequenceLauncher;
-        this._typingLauncher   = typingLauncher;
+        // Store launcher so _spawnUpgradeTerminals can use it.
         this._rhythmLauncher   = rhythmLauncher;
 
         // RELOAD — orbits the hacking station at a fixed radius; relocates on each success.
