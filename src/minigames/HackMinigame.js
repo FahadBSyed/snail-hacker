@@ -157,7 +157,7 @@ export default class HackMinigame {
                 if (this.wordsCompleted >= this.wordsRequired) {
                     this._finish();
                 } else {
-                    this.scene.time.delayedCall(180, () => {
+                    this.scene.time.delayedCall(350, () => {
                         if (!this.cancelled) {
                             this._pickNewWord();
                             this._buildWordDisplay();

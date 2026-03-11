@@ -145,11 +145,11 @@ export default class MathMinigame {
             if (this.onWordComplete) this.onWordComplete(this.wordsCompleted);
 
             if (this.wordsCompleted >= this.wordsRequired) {
-                this.scene.time.delayedCall(180, () => {
+                this.scene.time.delayedCall(350, () => {
                     if (!this.cancelled) this._finish();
                 });
             } else {
-                this.scene.time.delayedCall(180, () => {
+                this.scene.time.delayedCall(350, () => {
                     if (!this.cancelled) {
                         this._pickNewProblem();
                         this._buildProblemDisplay();
