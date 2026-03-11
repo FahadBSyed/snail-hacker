@@ -43,7 +43,6 @@ export default class TypingMinigame {
         const n  = this.phrase.length;
         const panelW = Math.max(280, n * 26 + 48);
 
-        this._baseX = cx;
         this.container = this.scene.add.container(cx, cy).setDepth(200);
 
         // Panel
@@ -64,6 +63,10 @@ export default class TypingMinigame {
         this.container.add(this.timerFill);
         this._timerBarW = barW;
 
+        // Word group — only the characters and cursor wobble, not the whole panel
+        this._wordGroup = this.scene.add.container(0, 0);
+        this.container.add(this._wordGroup);
+
         // Character display
         this.charTexts = [];
         const charSpacing = 26;
@@ -73,12 +76,12 @@ export default class TypingMinigame {
                 fontSize: '22px', fontFamily: 'monospace', color: '#777788',
             }).setOrigin(0.5);
             this.charTexts.push(ch);
-            this.container.add(ch);
+            this._wordGroup.add(ch);
         }
 
         // Cursor underline under the next char to type
         this.cursor = this.scene.add.rectangle(startX, 12, 20, 2, 0xffffff, 0.9).setOrigin(0.5);
-        this.container.add(this.cursor);
+        this._wordGroup.add(this.cursor);
         this._startX = startX;
         this._charSpacing = charSpacing;
     }
@@ -124,18 +127,18 @@ export default class TypingMinigame {
 
     _wobble(violent) {
         if (this._wobbleTween) this._wobbleTween.stop();
-        this.container.x = this._baseX;
-        const amp = violent ? 12 : 4;
-        const dur  = violent ? 45 : 65;
-        const reps = violent ? 4  : 1;
+        this._wordGroup.y = 0;
+        const amp = violent ? 10 : 3;
+        const dur  = violent ? 40 : 60;
+        const reps = violent ? 5  : 1;
         this._wobbleTween = this.scene.tweens.add({
-            targets:  this.container,
-            x:        this._baseX + amp,
+            targets:  this._wordGroup,
+            y:        amp,
             duration: dur,
             yoyo:     true,
             repeat:   reps,
             ease:     'Sine.easeInOut',
-            onComplete: () => { if (this.container?.active) this.container.x = this._baseX; },
+            onComplete: () => { if (this._wordGroup?.active) this._wordGroup.y = 0; },
         });
     }
 

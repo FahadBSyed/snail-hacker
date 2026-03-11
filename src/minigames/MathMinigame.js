@@ -63,7 +63,6 @@ export default class MathMinigame {
 
     _createUI() {
         const cx = 640, cy = 610;
-        this._baseX = cx;
         this.container = this.scene.add.container(cx, cy).setDepth(200);
 
         const panelW = 420;
@@ -88,6 +87,10 @@ export default class MathMinigame {
         this.container.add(this.progressLabel);
         this._progressBarW = barW;
 
+        // Word group — only the equation texts wobble, not the whole panel
+        this._wordGroup = this.scene.add.container(0, 0);
+        this.container.add(this._wordGroup);
+
         this._buildProblemDisplay();
     }
 
@@ -100,13 +103,13 @@ export default class MathMinigame {
             `${this._a}  ${this._op}  ${this._b}  =`, {
                 fontSize: '24px', fontFamily: 'monospace', color: '#aaaacc',
             }).setOrigin(1, 0.5);
-        this.container.add(this._problemText);
+        this._wordGroup.add(this._problemText);
 
         // Right side: the player's typed answer + cursor
         this._inputText = this.scene.add.text(-8, -6, '_', {
             fontSize: '24px', fontFamily: 'monospace', color: '#00ffcc',
         }).setOrigin(0, 0.5);
-        this.container.add(this._inputText);
+        this._wordGroup.add(this._inputText);
     }
 
     // ── Input handling ────────────────────────────────────────────────────────
@@ -171,18 +174,18 @@ export default class MathMinigame {
 
     _wobble(violent) {
         if (this._wobbleTween) this._wobbleTween.stop();
-        this.container.x = this._baseX;
-        const amp = violent ? 12 : 4;
-        const dur  = violent ? 45 : 65;
-        const reps = violent ? 4  : 1;
+        this._wordGroup.y = 0;
+        const amp = violent ? 10 : 3;
+        const dur  = violent ? 40 : 60;
+        const reps = violent ? 5  : 1;
         this._wobbleTween = this.scene.tweens.add({
-            targets:  this.container,
-            x:        this._baseX + amp,
+            targets:  this._wordGroup,
+            y:        amp,
             duration: dur,
             yoyo:     true,
             repeat:   reps,
             ease:     'Sine.easeInOut',
-            onComplete: () => { if (this.container?.active) this.container.x = this._baseX; },
+            onComplete: () => { if (this._wordGroup?.active) this._wordGroup.y = 0; },
         });
     }
 
