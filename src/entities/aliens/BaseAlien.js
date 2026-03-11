@@ -21,6 +21,11 @@ export default class BaseAlien extends Phaser.GameObjects.Container {
 
     /** Initialise the sprite after subclass has set this.spriteKey */
     _initSprite() {
+        const shadow = this.scene.add.graphics();
+        shadow.fillStyle(0x000000, 0.35);
+        shadow.fillEllipse(2, 10, 44, 14);
+        this.add(shadow);
+
         this.sprite = this.scene.add.image(0, 0, `${this.spriteKey}-right`);
         this.add(this.sprite);
     }

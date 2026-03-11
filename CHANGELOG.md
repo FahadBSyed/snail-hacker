@@ -2,6 +2,13 @@
 
 ## Session 10k — 2026-03-11
 
+### Blob Drop Shadows on Gerald and Aliens
+
+- **Approach**: a `Graphics` ellipse added as the first child of each entity Container (rendered before the sprite, therefore always behind it). Costs one `fillEllipse` per entity per frame — negligible on `Phaser.CANVAS`.
+- **`src/entities/aliens/BaseAlien._initSprite()`** — shadow ellipse `(2, 10, 44×14 px)`, alpha 0.35 — applies automatically to BasicAlien, FastAlien, TankAlien, BomberAlien, ShieldAlien.
+- **`src/entities/aliens/BossAlien` constructor** — shadow ellipse `(3, 14, 62×20 px)`, alpha 0.35 — proportionally larger for the 96×96 boss sprite.
+- **`src/entities/Snail` constructor** — shadow ellipse `(2, 12, 46×16 px)`, alpha 0.30 — slightly softer than alien shadows.
+
 ### Victory Fanfare Sound Effect
 
 - **`src/systems/SoundSynth.js` — `_victory()`** — New procedural sound played on the Victory screen. Three-part structure:

@@ -68,6 +68,11 @@ export default class Snail extends Phaser.GameObjects.Container {
         this.shielded   = false;
 
         // --- Sprite (animated) ---
+        const _shadow = scene.add.graphics();
+        _shadow.fillStyle(0x000000, 0.30);
+        _shadow.fillEllipse(2, 12, 46, 16);
+        this.add(_shadow);
+
         this.sprite = scene.add.sprite(0, 0, 'snail-idle-right-f00');
         this.add(this.sprite);
         this._currentAnimKey = null;   // tracks playing anim to avoid redundant play() calls
