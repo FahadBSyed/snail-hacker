@@ -146,7 +146,8 @@ export default class HackMinigame {
             this._wobble(false);
 
             if (this.pointer >= this.phrase.length) {
-                // Word complete
+                // Word complete — flash all chars bright white-green
+                this.charTexts.forEach(t => { if (t.active) t.setColor('#ccffcc'); });
                 this.wordsCompleted++;
                 this._updateProgressUI();
                 this.scene.soundSynth?.play('wordSuccess');
@@ -156,7 +157,6 @@ export default class HackMinigame {
                 if (this.wordsCompleted >= this.wordsRequired) {
                     this._finish();
                 } else {
-                    // Brief green flash before next word
                     this.scene.time.delayedCall(180, () => {
                         if (!this.cancelled) {
                             this._pickNewWord();
@@ -180,9 +180,9 @@ export default class HackMinigame {
     _wobble(violent) {
         if (this._wobbleTween) this._wobbleTween.stop();
         this._wordGroup.y = 0;
-        const amp = violent ? 10 : 3;
-        const dur  = violent ? 40 : 60;
-        const reps = violent ? 5  : 1;
+        const amp = violent ? 10 : 2;
+        const dur  = violent ? 40 : 55;
+        const reps = violent ? 5  : 0;
         this._wobbleTween = this.scene.tweens.add({
             targets:  this._wordGroup,
             y:        amp,

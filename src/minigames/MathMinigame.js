@@ -135,8 +135,9 @@ export default class MathMinigame {
 
     _checkAnswer() {
         if (parseInt(this._typed, 10) === this._answer) {
-            // Correct
-            this._inputText.setColor('#44ff44');
+            // Correct — flash the whole equation bright white-green
+            this._problemText.setColor('#ccffcc');
+            this._inputText.setColor('#ccffcc');
             this.wordsCompleted++;
             this._updateProgressUI();
             this.scene.soundSynth?.play('wordSuccess');
@@ -175,9 +176,9 @@ export default class MathMinigame {
     _wobble(violent) {
         if (this._wobbleTween) this._wobbleTween.stop();
         this._wordGroup.y = 0;
-        const amp = violent ? 10 : 3;
-        const dur  = violent ? 40 : 60;
-        const reps = violent ? 5  : 1;
+        const amp = violent ? 10 : 2;
+        const dur  = violent ? 40 : 55;
+        const reps = violent ? 5  : 0;
         this._wobbleTween = this.scene.tweens.add({
             targets:  this._wordGroup,
             y:        amp,
