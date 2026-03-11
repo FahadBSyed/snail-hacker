@@ -26,6 +26,12 @@ All world-space objects (rocks, mushrooms, terminals, hacking station, snail) no
 
 
 
+### Fix Escape Frogs Never Spawning
+
+`spawnFrogEscape()` guarded with `if (!this.active) return` — but `Phaser.Scene` has no `.active` property (only `Phaser.GameObjects.GameObject` does), so the value was always `undefined` (falsy), making the guard always fire and exit before any frog was created. Fixed by replacing the check with `if (!this.sys.isActive()) return`, which is the correct Phaser API for querying a scene's running state.
+
+- **`src/scenes/GameScene.js`** — `spawnFrogEscape`: `!this.active` → `!this.sys.isActive()`.
+
 ### Escape Frogs — Decorative Post-Kill Frog Spawning
 
 After every alien explosion fully fades (~680 ms after death), a small frog appears at the kill site and hops off-screen. Frogs cannot be shot, do not interact with anything, and are silently ignored by all game systems.
