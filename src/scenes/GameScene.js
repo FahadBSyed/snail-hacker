@@ -579,8 +579,8 @@ export default class GameScene extends Phaser.Scene {
             }
         };
 
-        const rockCount     = 10 + Math.floor(rng() * 6); // 10–15
-        const mushroomCount =  5 + Math.floor(rng() * 4); //  5–8
+        const rockCount     = 1 + Math.floor(rng() * 2); // 3-4
+        const mushroomCount =  1 + Math.floor(rng() * 2); //  3-4
 
         for (let i = 0; i < rockCount;     i++) tryPlace(rockKeys[Math.floor(rng() * rockKeys.length)]);
         for (let i = 0; i < mushroomCount; i++) tryPlace(mushroomKeys[Math.floor(rng() * mushroomKeys.length)]);
