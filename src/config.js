@@ -99,8 +99,8 @@ export const DEFAULTS = {
 
     EMP: {
         MINE_DAMAGE:       30,   // damage dealt to all aliens in blast — ignores shields
-        MINE_TRIGGER_DIST: 16,   // px added to alien.radius — how close alien must be
-        BLAST_RADIUS:      90,   // px — explosion AoE
+        MINE_TRIGGER_DIST: 32,   // px added to alien.radius — how close alien must be
+        BLAST_RADIUS:      180,  // px — explosion AoE
         MINE_PICKUP_DIST:  45,   // px — cursor proximity to grab a mine
     },
 
