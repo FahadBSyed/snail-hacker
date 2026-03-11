@@ -572,7 +572,7 @@ export default class GameScene extends Phaser.Scene {
                 });
                 if (tooClose) continue;
                 placed.push({ x, y });
-                this._propImages.push(this.add.image(x, y, key).setDepth(-0.5));
+                this._propImages.push(this.add.image(x, y, key).setDepth(y / 100));
                 return;
             }
         };
@@ -1721,6 +1721,14 @@ export default class GameScene extends Phaser.Scene {
         // Terminal proximity checks
         for (const terminal of this.terminals) {
             terminal.updateProximity(this.snail);
+        }
+
+        // Y-sort: snail, station, and terminals share the same depth layer.
+        // Depth = y / 100 so objects lower on screen render in front.
+        this.snail.setDepth(this.snail.y / 100);
+        this.station.setDepth(this.station.y / 100);
+        for (const terminal of this.terminals) {
+            terminal.setDepth(terminal.y / 100);
         }
 
         // Projectiles + trail particles

@@ -2,6 +2,16 @@
 
 ## Session 10k — 2026-03-11
 
+### Y-Sort Depth Layer for Props, Terminals, Station, and Snail
+
+All world-space objects (rocks, mushrooms, terminals, hacking station, snail) now share the same Y-sorted depth layer. Objects lower on screen (higher Y) render in front of objects higher on screen, giving correct overlap when the snail walks behind or in front of props.
+
+- **`src/scenes/GameScene.js`**:
+  - Props (rocks/mushrooms) created with `setDepth(y / 100)` instead of a fixed `-0.5`. Since props are static, depth is set once at spawn.
+  - In `update()`, after terminal proximity checks: snail, station, and all terminals call `setDepth(entity.y / 100)` each frame. The `/ 100` normalization keeps all Y-sorted objects in roughly the `0–7.2` depth range, safely below existing effect layers (projectile trails at 29–31, hit flashes at 58, slow field at 50–71, drone at 60, teleport at 80–90, HUD at 100+).
+
+
+
 ### Escape Frogs — Decorative Post-Kill Frog Spawning
 
 After every alien explosion fully fades (~680 ms after death), a small frog appears at the kill site and hops off-screen. Frogs cannot be shot, do not interact with anything, and are silently ignored by all game systems.
