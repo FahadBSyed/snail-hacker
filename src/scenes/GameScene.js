@@ -766,7 +766,7 @@ export default class GameScene extends Phaser.Scene {
             this.tweens.add({ targets: alien, x: bx + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
 
             const isBomber = alien.alienType === 'bomber';
-            const died = alien.takeDamage(CONFIG.EMP.MINE_DAMAGE);
+            const died = alien.takeDamageRaw(CONFIG.EMP.MINE_DAMAGE); // bypasses shield override
             if (died) {
                 this.score++;
                 this.hud.updateScore(this.score);

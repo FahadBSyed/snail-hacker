@@ -30,6 +30,12 @@ export default class BaseAlien extends Phaser.GameObjects.Container {
         return this.health <= 0;
     }
 
+    /** Apply damage unconditionally, bypassing any subclass shield override. */
+    takeDamageRaw(amount) {
+        this.health -= amount;
+        return this.health <= 0;
+    }
+
     /** Straight-line movement toward the decoy (if active) or snail. */
     update(time, delta) {
         const dt        = delta / 1000;
