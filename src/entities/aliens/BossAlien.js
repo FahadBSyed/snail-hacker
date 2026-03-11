@@ -94,6 +94,23 @@ export default class BossAlien extends Phaser.GameObjects.Container {
         return this.health <= 0;
     }
 
+    /** EMP bypass — ignores the shield but applies only 70% damage.
+     *  Also updates _damageAccum so phase shifts can still trigger. */
+    takeDamageRaw(amount) {
+        if (this._dying) return false;
+
+        const reduced = amount * 0.7;
+        this.health       -= reduced;
+        this._damageAccum += reduced;
+
+        if (this._damageAccum >= CONFIG.BOSS.PHASE_SHIFT_HP && this.health > 0) {
+            this._damageAccum = 0;
+            this._phaseShift();
+        }
+
+        return this.health <= 0;
+    }
+
     // ── Shield ──────────────────────────────────────────────────────────────────
 
     flashShield() {
