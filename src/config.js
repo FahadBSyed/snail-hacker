@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 8;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 9;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -36,10 +36,6 @@ export const DEFAULTS = {
         LIFETIME: 8000,   // ms before auto-despawn
     },
 
-    STATIONS: {
-        RELOAD_COOLDOWN:     8000,  // ms — cooldown after reload use
-        RELOAD_ORBIT_RADIUS: 260,   // px — terminal orbits the station at this radius
-    },
 
     GRAB: {
         MAX_PICKUP_DISTANCE: 60,   // px — cursor must be within this radius of the snail to grab
@@ -85,7 +81,8 @@ export const DEFAULTS = {
             COOLDOWN: 20000,  // ms — post-effect rest (total lockout = DURATION + this)
         },
         RELOAD: {
-            COOLDOWN: 8000,   // ms — cooldown after reload use
+            COOLDOWN:     8000,  // ms — cooldown after reload use
+            ORBIT_RADIUS: 260,   // px — terminal orbits the station at this radius
         },
         REPAIR: {
             COOLDOWN: 12000,  // ms — terminal cooldown after repair

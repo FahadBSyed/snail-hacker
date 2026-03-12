@@ -328,7 +328,7 @@ export default class GameScene extends Phaser.Scene {
         // RELOAD — orbits the hacking station at a fixed radius; relocates on each success.
         // Picks an angle that won't overlap existing upgrade terminals.
         const _placeReloadTerm = () => {
-            const r = CONFIG.STATIONS.RELOAD_ORBIT_RADIUS;
+            const r = CONFIG.TERMINALS.RELOAD.ORBIT_RADIUS;
             let angle, attempts = 0;
             do {
                 angle = Math.random() * Math.PI * 2;
@@ -353,7 +353,7 @@ export default class GameScene extends Phaser.Scene {
 
         const reloadTerm = new Terminal(this, 0, 0, {
             label:    'RELOAD',
-            cooldown: CONFIG.STATIONS.RELOAD_COOLDOWN,
+            cooldown: CONFIG.TERMINALS.RELOAD.COOLDOWN,
             color:    0x44ddff,
             launchMinigame: rhythmLauncher,
             onSuccess: () => {
