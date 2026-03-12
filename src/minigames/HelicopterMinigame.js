@@ -27,10 +27,10 @@ const PLAY_OX = -PLAY_W / 2;
 const PLAY_OY = -(PANEL_H / 2) + HEADER_H + PADDING;
 
 // ── Physics ───────────────────────────────────────────────────────────────────
-const GRAVITY      = 420;   // px/s² downward
-const THRUST       = -380;  // velocity/s applied while SPACE is held (sets directly)
-const MAX_VEL_DOWN = 260;   // terminal velocity
-const MAX_VEL_UP   = 220;
+const GRAVITY      = 140;   // px/s² downward
+const THRUST       = -130;  // acceleration while SPACE is held
+const MAX_VEL_DOWN = 90;    // terminal velocity
+const MAX_VEL_UP   = 75;
 
 // ── Walls ─────────────────────────────────────────────────────────────────────
 const WALL_SPEED      = 90;    // px/s scroll speed
