@@ -631,7 +631,7 @@ export default class GameScene extends Phaser.Scene {
                     });
                     term = new Terminal(this, x, y + 25, {
                         label:          'TURRET',
-                        cooldown:       CONFIG.CANNON.ACTIVE_DURATION + CONFIG.TERMINALS.CANNON_COOLDOWN,
+                        cooldown:       CONFIG.CANNON.ACTIVE_DURATION + CONFIG.TERMINALS.CANNON.COOLDOWN,
                         color:          0xff8844,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => cannon.activate(),
@@ -641,16 +641,16 @@ export default class GameScene extends Phaser.Scene {
                 case 'SHIELD':
                     term = new Terminal(this, x, y, {
                         label:          'SHIELD',
-                        cooldown:       CONFIG.TERMINALS.SHIELD_DURATION + CONFIG.TERMINALS.SHIELD_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.SHIELD.DURATION + CONFIG.TERMINALS.SHIELD.COOLDOWN,
                         color:          0x4488ff,
                         launchMinigame: this._rhythmLauncher,
-                        onSuccess:      () => { this.soundSynth.play('shieldActivate'); this.snail.shield(CONFIG.TERMINALS.SHIELD_DURATION); },
+                        onSuccess:      () => { this.soundSynth.play('shieldActivate'); this.snail.shield(CONFIG.TERMINALS.SHIELD.DURATION); },
                     });
                     break;
                 case 'SLOWFIELD':
                     term = new Terminal(this, x, y, {
                         label:          'SLOW',
-                        cooldown:       CONFIG.TERMINALS.SLOW_DURATION + CONFIG.TERMINALS.SLOW_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.SLOW.DURATION + CONFIG.TERMINALS.SLOW.COOLDOWN,
                         color:          0xaa44ff,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateSlowField(),
@@ -659,13 +659,13 @@ export default class GameScene extends Phaser.Scene {
                 case 'REPAIR':
                     term = new Terminal(this, x, y, {
                         label:          'REPAIR',
-                        cooldown:       CONFIG.TERMINALS.REPAIR_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.REPAIR.COOLDOWN,
                         color:          0x44ff88,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => {
                             this.snail.health = Math.min(
                                 this.snail.maxHealth,
-                                this.snail.health + CONFIG.TERMINALS.REPAIR_HEAL,
+                                this.snail.health + CONFIG.TERMINALS.REPAIR.HEAL,
                             );
                             this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
                         },
@@ -677,7 +677,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'DECOY':
                     term = new Terminal(this, x, y, {
                         label:          'DECOY',
-                        cooldown:       CONFIG.TERMINALS.DECOY_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.DECOY.COOLDOWN,
                         color:          0xff44cc,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateDecoy(),
@@ -686,7 +686,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'EMP_MINES':
                     term = new Terminal(this, x, y, {
                         label:          'EMP',
-                        cooldown:       CONFIG.TERMINALS.EMP_ACTIVE_DURATION + CONFIG.TERMINALS.EMP_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.EMP.ACTIVE_DURATION + CONFIG.TERMINALS.EMP.COOLDOWN,
                         color:          0x00ff88,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateEmpMines(),
@@ -714,11 +714,11 @@ export default class GameScene extends Phaser.Scene {
         this._droneContainer = this.add.container(startX, startY, [this._droneGfx]).setDepth(60);
 
         // First activation: random time within DRONE_FIRST_SHOT_MAX, then fixed cooldown loop.
-        const firstDelay = Math.random() * CONFIG.TERMINALS.DRONE_FIRST_SHOT_MAX;
+        const firstDelay = Math.random() * CONFIG.TERMINALS.DRONE.FIRST_SHOT_MAX;
         this._droneTimer = this.time.delayedCall(firstDelay, () => {
             this._droneFire();
             this._droneTimer = this.time.addEvent({
-                delay:    CONFIG.TERMINALS.DRONE_COOLDOWN,
+                delay:    CONFIG.TERMINALS.DRONE.COOLDOWN,
                 loop:     true,
                 callback: () => this._droneFire(),
             });
@@ -815,7 +815,7 @@ export default class GameScene extends Phaser.Scene {
             callback: () => { if (this.slowFieldActive) this.soundSynth.play('slowTick'); },
         });
 
-        this.time.delayedCall(CONFIG.TERMINALS.SLOW_DURATION, () => {
+        this.time.delayedCall(CONFIG.TERMINALS.SLOW.DURATION, () => {
             this.slowFieldActive = false;
 
             // Stop tick, fade out overlay
@@ -868,9 +868,9 @@ export default class GameScene extends Phaser.Scene {
         spawnMine(); // first mine immediately
 
         let spawned = 1;
-        const maxMines = Math.floor(CONFIG.TERMINALS.EMP_ACTIVE_DURATION / CONFIG.TERMINALS.EMP_SPAWN_INTERVAL);
+        const maxMines = Math.floor(CONFIG.TERMINALS.EMP.ACTIVE_DURATION / CONFIG.TERMINALS.EMP.SPAWN_INTERVAL);
         this._empSpawnTimer = this.time.addEvent({
-            delay:    CONFIG.TERMINALS.EMP_SPAWN_INTERVAL,
+            delay:    CONFIG.TERMINALS.EMP.SPAWN_INTERVAL,
             loop:     true,
             callback: () => {
                 spawnMine();

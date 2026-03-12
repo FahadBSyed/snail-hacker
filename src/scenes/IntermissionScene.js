@@ -24,20 +24,20 @@ const UPGRADE_POOL = [...ACTIVE_POOL, ...PASSIVE_POOL];
 
 function getUpgradeDefs() {
     const cannonSecs = Math.round(CONFIG.CANNON.ACTIVE_DURATION / 1000);
-    const shieldSecs = Math.round(CONFIG.TERMINALS.SHIELD_DURATION / 1000);
-    const slowSecs   = Math.round(CONFIG.TERMINALS.SLOW_DURATION / 1000);
+    const shieldSecs = Math.round(CONFIG.TERMINALS.SHIELD.DURATION / 1000);
+    const slowSecs   = Math.round(CONFIG.TERMINALS.SLOW.DURATION / 1000);
     const slowPct    = Math.round(CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER * 100);
-    const repairHp   = CONFIG.TERMINALS.REPAIR_HEAL;
-    const droneFirstSecs = Math.round(CONFIG.TERMINALS.DRONE_FIRST_SHOT_MAX / 1000);
-    const droneCoolSecs  = Math.round(CONFIG.TERMINALS.DRONE_COOLDOWN / 1000);
+    const repairHp   = CONFIG.TERMINALS.REPAIR.HEAL;
+    const droneFirstSecs = Math.round(CONFIG.TERMINALS.DRONE.FIRST_SHOT_MAX / 1000);
+    const droneCoolSecs  = Math.round(CONFIG.TERMINALS.DRONE.COOLDOWN / 1000);
     return {
         CANNON:       { label: 'AUTO TURRET',    color: 0xff8844, desc: `Hack to unleash an\nauto-targeting cannon\nfor ${cannonSecs}s.` },
         SHIELD:       { label: 'FORCE SHIELD',   color: 0x4488ff, desc: `Hack to project a shield\nthat blocks alien damage\nfor ${shieldSecs}s.` },
         SLOWFIELD:    { label: 'SLOW FIELD',     color: 0xaa44ff, desc: `Hack to slow all aliens\nto ${slowPct}% speed\nfor ${slowSecs}s.` },
         REPAIR:       { label: 'REPAIR KIT',     color: 0x44ff88, desc: `Hack to restore\n+${repairHp} HP to Gerald's shell.` },
         DRONE:        { label: 'AUTO DRONE',     color: 0xffdd44, desc: `Drone fires within ${droneFirstSecs}s\nof each round, then every\n${droneCoolSecs}s after.` },
-        DECOY:        { label: 'DECOY LURE',     color: 0xff44cc, desc: `Hack to deploy a lure\nthat draws all aliens\naway for ${Math.round(CONFIG.TERMINALS.DECOY_DURATION / 1000)}s.` },
-        EMP_MINES:    { label: 'EMP MINES',      color: 0x00ff88, desc: `Hack to deploy proximity\nmines every ${Math.round(CONFIG.TERMINALS.EMP_SPAWN_INTERVAL / 1000)}s. Explode on\ncontact, bypass shields.` },
+        DECOY:        { label: 'DECOY LURE',     color: 0xff44cc, desc: `Hack to deploy a lure\nthat draws all aliens\naway for ${Math.round(CONFIG.TERMINALS.DECOY.DURATION / 1000)}s.` },
+        EMP_MINES:    { label: 'EMP MINES',      color: 0x00ff88, desc: `Hack to deploy proximity\nmines every ${Math.round(CONFIG.TERMINALS.EMP.SPAWN_INTERVAL / 1000)}s. Explode on\ncontact, bypass shields.` },
         RICOCHET:     { label: 'RICOCHET',        color: 0x44ffff, desc: `80% chance shots bounce\nto the nearest enemy.\nChance halves each hop.` },
         QUICK_GRAB:   { label: 'QUICK GRAB',      color: 0xcc88ff, desc: `Halves the grab hand\ncooldown (${CONFIG.GRAB.COOLDOWN}s → ${CONFIG.GRAB.COOLDOWN / 2}s)\nbetween grabs.` },
         HEALTH_BOOST: { label: 'HEALTH BOOST',   color: 0xff6666, desc: `Gerald's max health\nincreases by 50%.` },

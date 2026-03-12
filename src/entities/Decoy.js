@@ -11,7 +11,7 @@ export default class Decoy extends Phaser.GameObjects.Container {
         scene.add.existing(this);
         this.setDepth(40);
 
-        this.maxHealth = CONFIG.TERMINALS.DECOY_HEALTH;
+        this.maxHealth = CONFIG.TERMINALS.DECOY.HEALTH;
         this.health    = this.maxHealth;
         this.radius    = 18;
 
@@ -27,7 +27,7 @@ export default class Decoy extends Phaser.GameObjects.Container {
 
         // Duration limit
         this._expireTimer = scene.time.delayedCall(
-            CONFIG.TERMINALS.DECOY_DURATION,
+            CONFIG.TERMINALS.DECOY.DURATION,
             () => this._expire(),
         );
 
