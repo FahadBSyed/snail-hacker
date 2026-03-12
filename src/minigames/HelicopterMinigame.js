@@ -74,6 +74,7 @@ export default class HelicopterMinigame {
         this._nextWallX    = PLAY_W; // x of next wall to spawn (play-local)
 
         this._thrustHeld = false;
+        this._flameTime  = 0;
 
         this._createUI();
         this._bindKeys();
@@ -98,7 +99,7 @@ export default class HelicopterMinigame {
 
         // Title (left-aligned in header row)
         this.container.add(
-            this.scene.add.text(-PANEL_W / 2 + 8, -(PANEL_H / 2) + 8, '[ HELICOPTER HACK ]', {
+            this.scene.add.text(-PANEL_W / 2 + 8, -(PANEL_H / 2) + 8, '[ BYPASS FIREWALLS ]', {
                 fontSize: '11px', fontFamily: 'monospace', color: '#00ffcc',
             }).setOrigin(0, 0),
         );
@@ -168,6 +169,7 @@ export default class HelicopterMinigame {
         if (this.cancelled || this._dead) return;
 
         const dt = 16 / 1000; // fixed ~16 ms step
+        this._flameTime += dt;
 
         // ── Thrust / gravity ──────────────────────────────────────────────────
         const thrusting = this._spaceKey?.isDown;
@@ -254,31 +256,53 @@ export default class HelicopterMinigame {
         for (const wall of this._walls) {
             const wx = PLAY_OX + wall.x;
             const wy = PLAY_OY;
+            const gapTop = wall.gapY;
+            const gapBot = wall.gapY + GAP_HEIGHT;
 
-            // Colour shifts green as more walls are cleared in this word
-            const progress = (this._wallsPassed % WALLS_PER_WORD) / WALLS_PER_WORD;
-            const wallColor = Phaser.Display.Color.Interpolate.ColorWithColor(
-                { r: 0x33, g: 0x55, b: 0x88 },
-                { r: 0x11, g: 0xaa, b: 0x66 },
-                100,
-                Math.floor(progress * 100),
-            );
-            const color = Phaser.Display.Color.GetColor(wallColor.r, wallColor.g, wallColor.b);
+            // Solid dark-red body
+            wg.fillStyle(0x881100, 1);
+            wg.fillRect(wx, wy, WALL_WIDTH, gapTop);
+            wg.fillRect(wx, wy + gapBot, WALL_WIDTH, PLAY_H - gapBot);
 
-            wg.fillStyle(color, 1);
-            // Top segment (from top of play area down to gap top)
-            wg.fillRect(wx, wy, WALL_WIDTH, wall.gapY);
-            // Bottom segment (from gap bottom to play area bottom)
-            wg.fillRect(wx, wy + wall.gapY + GAP_HEIGHT, WALL_WIDTH, PLAY_H - wall.gapY - GAP_HEIGHT);
+            // Flame fringe layers — sine wave polygon hanging from each inner edge
+            // Each layer: { color, amplitude, spatialFreq, timeSpeed, timePhase }
+            const layers = [
+                { color: 0xff3300, amp: 11, freq: 0.30, speed: 3.5, phase: 0.0 },
+                { color: 0xff7700, amp:  8, freq: 0.45, speed: 5.0, phase: 1.1 },
+                { color: 0xffcc00, amp:  5, freq: 0.60, speed: 7.0, phase: 2.3 },
+            ];
+            const STEPS = 18;
+            const t = this._flameTime;
 
-            // Gap edge highlight lines
-            wg.lineStyle(1, 0x00ffcc, 0.4);
-            wg.beginPath();
-            wg.moveTo(wx, wy + wall.gapY);
-            wg.lineTo(wx + WALL_WIDTH, wy + wall.gapY);
-            wg.moveTo(wx, wy + wall.gapY + GAP_HEIGHT);
-            wg.lineTo(wx + WALL_WIDTH, wy + wall.gapY + GAP_HEIGHT);
-            wg.strokePath();
+            for (const L of layers) {
+                // ── Top wall fringe (hangs downward from y = wy+gapTop) ──────
+                if (gapTop > 0) {
+                    const pts = [];
+                    pts.push({ x: wx,             y: wy + gapTop });
+                    pts.push({ x: wx + WALL_WIDTH, y: wy + gapTop });
+                    for (let s = STEPS; s >= 0; s--) {
+                        const x   = wx + WALL_WIDTH * (s / STEPS);
+                        const ext = L.amp * (0.5 + 0.5 * Math.sin(x * L.freq + t * L.speed + L.phase));
+                        pts.push({ x, y: wy + gapTop + ext });
+                    }
+                    wg.fillStyle(L.color, 0.9);
+                    wg.fillPoints(pts, true);
+                }
+
+                // ── Bottom wall fringe (rises upward from y = wy+gapBot) ────
+                if (gapBot < PLAY_H) {
+                    const pts = [];
+                    pts.push({ x: wx,             y: wy + gapBot });
+                    pts.push({ x: wx + WALL_WIDTH, y: wy + gapBot });
+                    for (let s = STEPS; s >= 0; s--) {
+                        const x   = wx + WALL_WIDTH * (s / STEPS);
+                        const ext = L.amp * (0.5 + 0.5 * Math.sin(x * L.freq + t * L.speed + L.phase + Math.PI));
+                        pts.push({ x, y: wy + gapBot - ext });
+                    }
+                    wg.fillStyle(L.color, 0.9);
+                    wg.fillPoints(pts, true);
+                }
+            }
         }
 
         // Ship — a small arrow/chevron pointing right
