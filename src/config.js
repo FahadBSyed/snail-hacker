@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 3;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 4;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -25,8 +25,8 @@ export const DEFAULTS = {
     },
 
     HACK: {
-        BASE_WORDS:   20,  // words required to complete wave 1
-        WORDS_GROWTH: 20,  // additional words required per wave above wave 1
+        BASE_WORDS:   10,  // words required to complete wave 1
+        WORDS_GROWTH:  3,  // additional words required per wave above wave 1
     },
 
     HEALTH_DROP: {
@@ -44,7 +44,7 @@ export const DEFAULTS = {
     GRAB: {
         MAX_PICKUP_DISTANCE: 60,   // px — cursor must be within this radius of the snail to grab
         MAX_SPEED:           400,  // px/s — max speed while carrying snail or battery
-        COOLDOWN:            10,   // s — cooldown after releasing (shared between snail and battery grabs)
+        COOLDOWN:             7,   // s — cooldown after releasing (shared between snail and battery grabs)
     },
 
     BATTERY: {
@@ -53,7 +53,7 @@ export const DEFAULTS = {
         DELIVERY_DIST:     55,    // px — snail must be within station.radius + this to deliver
         MOUSE_PICKUP_DIST: 50,    // px — mouse can grab battery within this range
         MOUSE_MAX_DRAG:    220,   // px — max total distance mouse can move battery per grab
-        POWER_LOSS_WORDS:  15,    // words typed before station loses power again
+        POWER_LOSS_WORDS:  10,    // words typed before station loses power again
     },
 
     ALIENS: {
@@ -169,9 +169,9 @@ export const DEFAULTS = {
     BOSS: {
         HP:                  200,   // total hit points
         PHASE_SHIFT_HP:      100,   // damage taken before each phase shift
-        ORBIT_RADIUS_X:      400,   // horizontal semi-axis (px)
+        ORBIT_RADIUS_X:      500,   // horizontal semi-axis (px)
         ORBIT_RADIUS_Y:      130,   // vertical semi-axis (px)
-        MIN_ORBIT_DIST:      260,   // px — boss is never closer than this to the station center
+        MIN_ORBIT_DIST:      400,   // px — boss is never closer than this to the station center
         MAX_ORBIT_Y:         490,   // px — y ceiling; keeps boss above the FroggerMinigame panel
         ALIEN_BURST_SPREAD:   40,   // px between side-by-side burst aliens (perpendicular to attack vector)
         ORBIT_SPEED:         0.4,   // rad/s base oscillation speed
