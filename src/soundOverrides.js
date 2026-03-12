@@ -25,6 +25,15 @@
  *   slithering  ← looped via playLooped(); procedural fallback built-in
  */
 export const SOUND_OVERRIDES = {
+    alienSpawn: [
+        { url: 'assets/sounds/frog-croak-a.mp3', volume: 0.3 },
+        { url: 'assets/sounds/frog-croak-b.mp3', volume: 0.3 },
+        { url: 'assets/sounds/frog-croak-c.mp3', volume: 0.3 },
+    ],
+    alienRibbet: [
+        { url: 'assets/sounds/frog-croak-d.mp3', volume: 0.3 },
+        { url: 'assets/sounds/frog-croak-e.mp3', volume: 0.3 },
+    ],
     error: [
          { url: 'assets/sounds/error-a.mp3', volume: 0.15 },
          { url: 'assets/sounds/error-b.mp3', volume: 0.15 },
