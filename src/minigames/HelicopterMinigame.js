@@ -38,7 +38,7 @@ const WALL_SPACING    = 120;   // horizontal gap between wall pairs
 const WALL_WIDTH      = 14;    // thickness of each wall segment
 const GAP_HEIGHT      = 52;    // vertical opening size the ship must pass through
 const GAP_MIN_Y       = 10;    // min gap top edge from play area top
-const WALLS_PER_WORD  = 2;     // wall pairs the player must pass to earn one "word"
+const WALLS_PER_WORD  = 1;     // wall pairs the player must pass to earn one "word"
 
 // ── Ship ──────────────────────────────────────────────────────────────────────
 const SHIP_X    = 40;   // fixed horizontal position (relative to play area left)
