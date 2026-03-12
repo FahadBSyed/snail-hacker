@@ -1847,7 +1847,7 @@ export default class GameScene extends Phaser.Scene {
         formation.members.forEach((member, i) => {
             const delay = i * formation.stagger;
             this.time.delayedCall(delay, () => {
-                if (!this.active || !this.waveManager?.active) return;
+                if (!this.waveManager?.active) return;
                 const wx = anchor.x + member.perp * right.x + member.depth * forward.x;
                 const wy = anchor.y + member.perp * right.y + member.depth * forward.y;
                 this.spawnAlien(member.type, wx, wy);
