@@ -682,6 +682,171 @@ export default class SoundSynth {
         };
     }
 
+    // ── Boss sounds ────────────────────────────────────────────────────────────
+
+    /**
+     * Boss spawns — ominous low rumble building into a descending sawtooth horn sting.
+     * Deep noise sweeps from sub-bass up to mid while a heavy sawtooth siren descends.
+     */
+    _bossSpawn() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Rumble: noise → lowpass cutoff sweeps 80→600 Hz over 1 s
+        const ng  = this._gain(ctx, 0.55, t, 1.40);
+        const lpf = ctx.createBiquadFilter();
+        lpf.type = 'lowpass';
+        lpf.frequency.setValueAtTime(80, t);
+        lpf.frequency.exponentialRampToValueAtTime(600, t + 1.0);
+        lpf.connect(ng);
+        this._noise(ctx, 1.35, lpf);
+        // Sub-bass drone
+        const bg = this._gain(ctx, 0.50, t, 1.20);
+        this._osc(ctx, 'sawtooth', 55, 110, t, 1.15, bg);
+        // Descending horn sting at 0.5 s
+        const sg = this._gain(ctx, 0.48, t + 0.5, 0.80);
+        this._osc(ctx, 'sawtooth', 660, 180, t + 0.5, 0.75, sg);
+        // Octave shimmer on top of horn
+        const hg = this._gain(ctx, 0.18, t + 0.5, 0.60);
+        this._osc(ctx, 'sine', 1320, 360, t + 0.5, 0.55, hg);
+    }
+
+    /**
+     * Boss fires black hole — dark gravitational pull: ultra-low descending sine + sub-bass
+     * sawtooth + low-frequency noise whoosh. Feels heavy and menacing.
+     */
+    _bossBlackHole() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Primary descending gravitational tone
+        const g = this._gain(ctx, 0.60, t, 0.90);
+        this._osc(ctx, 'sine', 160, 22, t, 0.85, g);
+        // Sub-bass sawtooth for extra weight
+        const sg = this._gain(ctx, 0.35, t, 0.70);
+        this._osc(ctx, 'sawtooth', 80, 28, t, 0.65, sg);
+        // Low rumble noise
+        const ng  = this._gain(ctx, 0.30, t, 0.60);
+        const lpf = this._filter(ctx, 'lowpass', 220, ng);
+        this._noise(ctx, 0.55, lpf);
+        // Mid-freq whoosh trail
+        const wg  = this._gain(ctx, 0.15, t + 0.08, 0.40);
+        const bpf = this._filter(ctx, 'bandpass', 320, wg);
+        this._noise(ctx, 0.35, bpf);
+    }
+
+    /**
+     * Boss fires EMP — sharp electric crack followed by a buzzing discharge.
+     * Broadband noise hit, rising square-wave buzz, sparkling high-freq residue.
+     */
+    _bossEMP() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Initial crack
+        const cg  = this._gain(ctx, 0.70, t, 0.12);
+        const hpf = this._filter(ctx, 'highpass', 1500, cg);
+        this._noise(ctx, 0.12, hpf);
+        // Electric buzz rising in pitch
+        const bg = this._gain(ctx, 0.45, t, 0.55);
+        this._osc(ctx, 'square', 100, 380, t, 0.50, bg);
+        // Sparkling high-freq residue
+        const sng = this._gain(ctx, 0.22, t + 0.05, 0.45);
+        const bpf = this._filter(ctx, 'bandpass', 3500, sng);
+        this._noise(ctx, 0.40, bpf);
+        // Rising ping for the launch moment
+        const pg = this._gain(ctx, 0.28, t + 0.12, 0.30);
+        this._osc(ctx, 'sine', 440, 880, t + 0.12, 0.28, pg);
+    }
+
+    /**
+     * Boss fires terminal-lock EMP — alarm siren feel to signal a specific threat:
+     * descending sawtooth siren + secondary square alarm + sharp noise pop.
+     */
+    _bossTerminalLock() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Primary descending siren
+        const g = this._gain(ctx, 0.48, t, 0.80);
+        this._osc(ctx, 'sawtooth', 800, 220, t, 0.75, g);
+        // Secondary lower alarm
+        const g2 = this._gain(ctx, 0.28, t + 0.10, 0.65);
+        this._osc(ctx, 'square', 400, 110, t + 0.10, 0.60, g2);
+        // Sharp noise pop on launch
+        const ng  = this._gain(ctx, 0.40, t, 0.10);
+        const hpf = this._filter(ctx, 'highpass', 2000, ng);
+        this._noise(ctx, 0.08, hpf);
+    }
+
+    /**
+     * Boss deploys alien burst — mechanical thump + three staggered pings for
+     * each ejected fast alien. Feels like a launch bay opening.
+     */
+    _bossAlienBurst() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Launch thump
+        const bg = this._gain(ctx, 0.55, t, 0.18);
+        this._osc(ctx, 'sine', 200, 40, t, 0.16, bg);
+        const ng  = this._gain(ctx, 0.30, t, 0.12);
+        const lpf = this._filter(ctx, 'lowpass', 800, ng);
+        this._noise(ctx, 0.10, lpf);
+        // Three quick pings — one per ejected alien
+        [0.10, 0.18, 0.26].forEach((delay, i) => {
+            const pg = this._gain(ctx, 0.22, t + delay, 0.14);
+            this._osc(ctx, 'sine', 900 + i * 120, 500, t + delay, 0.12, pg);
+        });
+    }
+
+    /**
+     * Boss dies — massive multi-stage explosion: instant broadband impact, twin deep
+     * sine booms, long decaying rumble, secondary blast, and a metallic ring.
+     */
+    _bossDeath() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const dur = 2.2;
+        // Instant broadband impact burst
+        const ig  = this._gain(ctx, 0.90, t, 0.22);
+        const hpf = this._filter(ctx, 'highpass', 200, ig);
+        this._noise(ctx, 0.22, hpf);
+        // Deep boom #1
+        const b1 = this._gain(ctx, 0.80, t, 0.90);
+        this._osc(ctx, 'sine', 120, 18, t, 0.85, b1);
+        // Deep boom #2 — slightly offset pitch and timing for thickness
+        const b2 = this._gain(ctx, 0.55, t + 0.04, 0.80);
+        this._osc(ctx, 'sine', 90, 14, t + 0.04, 0.75, b2);
+        // Long rumble: noise → lowpass sweeping down
+        const ng  = this._gain(ctx, 0.70, t, dur);
+        const lpf = ctx.createBiquadFilter();
+        lpf.type = 'lowpass';
+        lpf.frequency.setValueAtTime(1800, t);
+        lpf.frequency.exponentialRampToValueAtTime(60, t + dur * 0.85);
+        lpf.connect(ng);
+        this._noise(ctx, dur, lpf);
+        // Secondary blast at 0.3 s
+        const sg = this._gain(ctx, 0.45, t + 0.30, 0.70);
+        this._osc(ctx, 'sawtooth', 180, 25, t + 0.30, 0.65, sg);
+        // Metallic ring overtone
+        const rg = this._gain(ctx, 0.22, t, 0.55);
+        this._osc(ctx, 'sine', 660, 440, t, 0.50, rg);
+    }
+
+    /**
+     * Boss intro alert — ship klaxon that plays at the start of the boss spawn
+     * cutscene. Five alternating square-wave alarm tones (880/660 Hz) with a
+     * low sawtooth rumble underneath and a rising noise swell at the end.
+     */
+    _bossAlert() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Five alternating klaxon tones spaced 200 ms apart
+        const tones = [880, 660, 880, 660, 880];
+        tones.forEach((freq, i) => {
+            const gt = this._gain(ctx, 0.28, t + i * 0.20, 0.18);
+            this._osc(ctx, 'square', freq, freq, t + i * 0.20, 0.17, gt);
+        });
+        // Low sawtooth rumble beneath the tones
+        const gr = this._gain(ctx, 0.18, t, 1.20);
+        this._osc(ctx, 'sawtooth', 60, 60, t, 1.10, gr);
+        // Rising noise swell at the end — anticipation sting
+        const fn = this._filter(ctx, 'bandpass', 400, ctx.destination);
+        fn.Q.value = 2;
+        const gn = this._gain(ctx, 0.15, t + 0.80, 0.55);
+        gn.disconnect(); gn.connect(fn);
+        this._noise(ctx, 0.55, gn);
+    }
+
     /** New wave beginning — two sharp alert beeps. */
     _waveStart() {
         const ctx = this._ctx_get(), t = ctx.currentTime;

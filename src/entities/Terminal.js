@@ -8,6 +8,7 @@ const LABEL_TO_SPRITE = {
     SHIELD: 'terminal-shield',
     SLOW:   'terminal-slow',
     REPAIR: 'terminal-repair',
+    EMP:    'terminal-emp',
 };
 
 // Sprite is 64×64; the CRT screen sits roughly at y -8 relative to centre

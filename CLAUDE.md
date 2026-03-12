@@ -33,25 +33,39 @@ snail-hacker/
 ├── assets/
 │   ├── backgrounds/              ← bg-00.svg … bg-19.svg (procedural planet backdrops,
 │   │                                loaded per-wave in GameScene.preload())
-│   ├── alien-{frog,fast,tank,bomber,shield}-{dir}.svg  ← 8-directional saucer sprites per type
-│   │                                               (40 SVGs; dir = right/left/up/down/
-│   │                                               diag-right-up/diag-right-down/etc.)
-│   ├── sprites/
-│   │   └── PALETTE_SWAPS.md          ← Documents colour palettes for all alien sprite types
-│   ├── snail-{right,left,up,down}.svg    ← Base directional walk sprites
-│   └── snail-hit-{dir}-f{00..15}.svg    ← 64-frame Gerald damage animation
-│                                            (f00–f07 shell-withdraw, f08–f15 shell-pulse;
-│                                             feColorMatrix white-tint baked per frame)
+│   ├── sounds/                   ← Optional audio file overrides (see soundOverrides.js)
+│   └── sprites/
+│       ├── PALETTE_SWAPS.md      ← Documents colour palettes for all alien sprite types
+│       ├── alien/                ← alien-{frog,fast,tank,bomber,shield,boss}-{dir}.svg
+│       │                            8-directional saucer sprites per type (48 SVGs)
+│       ├── frog/                 ← frog-{dir}.svg + frog-hop-{dir}-f{00..03}.svg
+│       │                            on-foot alien frog (20 SVGs: 4 idle + 16 hop frames)
+│       ├── props/                ← rock-{0,1,2}.svg + mushroom-{0,1}.svg
+│       │                            greyscale props, colorised at runtime per biome
+│       ├── snail/                ← snail-{dir}.svg (4 base sprites)
+│       │                            snail-walk-{dir}-f{00..05}.svg (24 walk frames)
+│       │                            snail-idle-{dir}-f{00..11}.svg (48 idle frames)
+│       │                            snail-hit-{dir}-f{00..15}.svg (64 hit frames)
+│       ├── station/              ← station-mainframe.svg, station-gun.svg
+│       └── terminal/             ← terminal-{reload,turret,shield,slow,repair}.svg
 ├── scripts/
-│   ├── generate-snail-sprites.js          ← Base snail SVG generator
-│   ├── generate-alien-enemy-sprites.js    ← All 4 alien saucer types (32 SVGs)
-│   ├── generate-alien-saucer-sprites.js   ← Base saucer geometry shared by alien generator
-│   ├── generate-damage-sprites.js         ← Gerald hit animation frames (64 SVGs)
-│   └── generate-planet-backgrounds.js    ← Procedural planet/nebula backgrounds (20 SVGs)
+│   ├── generate-snail-sprites.js       ← Base directional snail SVGs
+│   ├── generate-walk-idle-sprites.js   ← Walk (6 frames) + idle (12 frames) per direction
+│   ├── generate-damage-sprites.js      ← Hit animation frames (64 SVGs)
+│   ├── generate-alien-enemy-sprites.js ← All alien saucer types (40 SVGs)
+│   ├── generate-alien-saucer-sprites.js← Base saucer geometry shared by alien generator
+│   ├── generate-boss-sprite.js         ← Boss saucer (8 directional SVGs, 96×96)
+│   ├── generate-frog-sprites.js        ← On-foot frog idle + hop frames (20 SVGs)
+│   ├── generate-planet-backgrounds.js  ← Procedural planet/nebula backgrounds (20 SVGs)
+│   ├── generate-prop-sprites.js        ← Greyscale rock + mushroom props (5 SVGs)
+│   └── generate-station-sprites.js     ← Mainframe + gun + 5 terminal sprites (7 SVGs)
 └── src/
     ├── main.js                   ← Phaser.Game config (1280×720, scene registration)
     ├── config.js                 ← All balance values: DEFAULTS, live CONFIG object,
     │                                localStorage persistence, saveConfig/resetConfig
+    ├── soundOverrides.js         ← Maps SoundSynth names to audio file paths/volumes
+    ├── data/
+    │   └── propPalettes.js       ← 20 biome palettes (rock + flora colours per wave)
     ├── scenes/
     │   ├── MenuScene.js          ← Title screen + controls summary; DEV_MODE shows
     │   │                            an in-browser balance config editor overlay
@@ -80,15 +94,22 @@ snail-hacker/
     │   ├── EscapeShip.js         ← End-of-wave rescue saucer; hover-bob, boarding prompt
     │   ├── Battery.js            ← Droppable power cell; P2 grab-hand pickup
     │   ├── HealthDrop.js         ← Droppable health pickup for Gerald
-    │   └── aliens/
+    │   ├── BossProjectile.js     ← Slow-homing boss attacks (blackhole / emp / terminallock);
+    │   │                            each type has unique visuals + on-hit flash/wobble
+    │   ├── Decoy.js              ← Deployable fake snail that draws alien fire
+    │   ├── EmpMine.js            ← Placeable AoE electric mine; detonates on alien proximity
+    │   ├── FrogEscape.js         ← Decorative post-kill frog that hops off-screen
+    │   ├── aliens/
     │   │   ├── alienUtils.js     ← DIRS array + angleToDir(rad) shared by all alien types
     │   │   ├── BaseAlien.js      ← Shared constructor, takeDamage, straight-line update
     │   │   ├── BasicAlien.js     ← Extends BaseAlien; 60 px/s straight movement
     │   │   ├── FastAlien.js      ← Extends BaseAlien; 150 px/s + sinusoidal zigzag override
     │   │   ├── TankAlien.js      ← Extends BaseAlien; 38 px/s, 30 HP
     │   │   ├── BomberAlien.js    ← Extends BaseAlien; AoE blast on death or snail contact
-    │   │   └── ShieldAlien.js    ← Extends BaseAlien; rotating energy ring blocks projectiles
-    │   │                            until within SHIELD_DROP_DIST of the snail
+    │   │   ├── ShieldAlien.js    ← Extends BaseAlien; rotating energy ring blocks projectiles
+    │   │   │                        until within SHIELD_DROP_DIST of the snail
+    │   │   └── BossAlien.js      ← Wave-10 boss; elliptical orbit, phase-shift, 4 attacks,
+    │   │                            shield mechanic, enrage at 50% HP
     │   └── shared/
     │       └── CooldownTimer.js  ← Reusable cooldown arc-fill + countdown text widget
     ├── systems/
@@ -96,14 +117,18 @@ snail-hacker/
     │   │                            checkBomberBlast(scene, bx, by), spawnDeathBurst(scene, …)
     │   ├── WaveManager.js        ← 10-wave spawn config; intermission after every wave
     │   ├── ReloadBuffer.js       ← Passive "RELOAD" detection from global keydown stream
-    │   ├── SoundSynth.js         ← Procedural Web Audio sound effects; play(name) dispatch
+    │   ├── SoundSynth.js         ← Procedural Web Audio sound effects; play(name) dispatch;
+    │   │                            playLooped(name) for continuous sounds; file overrides
     │   ├── TeleportSystem.js     ← Right-drag targeting line; teleports snail on release
-    │   └── GrabHandSystem.js     ← P2 right-click grab mechanic for batteries and items
+    │   ├── GrabHandSystem.js     ← P2 right-click grab mechanic for batteries and items
+    │   └── SlimeTrail.js         ← Spawns fading mucus decals behind Gerald while moving
     └── minigames/
         ├── HackMinigame.js       ← Central station word-typing hack; fills wave progress bar
-        ├── SequenceMinigame.js   ← Type 4–6 random (non-WASD) keys in order within timer
+        ├── MathMinigame.js       ← Single-digit arithmetic hack (alternates with typing)
+        ├── FroggerMinigame.js    ← Boss fight shield-break; navigate traffic lanes with WASD
+        ├── HelicopterMinigame.js ← SPACE-thrust helicopter through wall gaps
         ├── RhythmMinigame.js     ← Hit a bouncing indicator inside a target zone, N beats
-        └── TypingMinigame.js     ← Type a sci-fi word against a per-character timer
+        └── SequenceMinigame.js   ← Type 4–6 random (non-WASD) keys in order within timer
 ```
 
 ---
@@ -185,6 +210,8 @@ constructor(scene, x, y) {
 ```
 
 The `CONFIG` object is loaded from `localStorage` on page load, so changes persist. The in-browser editor (MenuScene, DEV_MODE only) writes back with `saveConfig()`.
+
+> **Important:** Whenever you add, remove, or rename a key in `DEFAULTS`, you **must** increment `CONFIG_VERSION` at the top of `config.js`. The loader compares the stored version against the current one; if they differ it discards the stale localStorage value and falls back to `DEFAULTS`. Forgetting this means players who have an old config cached will silently miss the new key and see `undefined` at runtime.
 
 ### Scene transitions with data
 
@@ -279,3 +306,12 @@ this.activeMinigame.cancel();
 ### Overlay scenes (pause)
 
 `PauseScene` is launched on top of `GameScene` without stopping it first (`this.scene.launch('PauseScene')`), then `this.scene.pause()` halts GameScene updates. Resume by calling `this.scene.resume('GameScene')` from PauseScene.
+
+### `setTint` / `setTintFill` are no-ops in Canvas mode
+
+This project uses `Phaser.CANVAS` (set in `src/main.js`). In Canvas mode, Phaser's `setTint()` and `setTintFill()` methods on Sprites and Images **do nothing** — they are WebGL-only features. Do **not** use tinting to colour-shift sprites or flash objects on hit.
+
+Instead, use one of:
+- **Procedural graphics redraws** — clear and redraw a `Graphics` child each frame with the desired colour (the standard approach everywhere in this codebase).
+- **Alpha flash overlay** — keep a pre-drawn coloured `Graphics` child at alpha 0, then tween its alpha to 1 and back (see `BossProjectile.onHit()` for a worked example).
+- **SVG `feColorMatrix` filter** — bake the tinted colour directly into the SVG asset (used for Gerald's hit-animation frames in `assets/sprites/snail/`).

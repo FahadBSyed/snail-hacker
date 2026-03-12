@@ -2,6 +2,73 @@
 
 ## Session — 2026-03-12
 
+### EMP Terminal Sprite + Unified Electric-Yellow Color
+
+Added a dedicated terminal sprite for the EMP MINES upgrade, replacing the old placeholder green.
+
+- **Color**: `#ffee22` / `0xffee22` (electric yellow) — unused by all other terminal sprites and upgrade cards.
+- **`scripts/generate-station-sprites.js`**: added `accentEmp()` function (lightning-bolt on screen, electric-arc sparks + concentric pulse rings on desk front) and `terminal-emp.svg` to the output list. Generator now produces 8 SVGs.
+- **`assets/sprites/terminal/terminal-emp.svg`**: new sprite generated.
+- **`src/entities/Terminal.js`**: added `EMP: 'terminal-emp'` to `LABEL_TO_SPRITE` so the EMP terminal uses the new sprite.
+- **`src/scenes/GameScene.js`**: added `'terminal-emp'` to the preload loop.
+- **`src/entities/EmpMine.js`**: recolored from `0x00ff88` (green, same as REPAIR) to `0xffee22`.
+- **`src/scenes/IntermissionScene.js`**: recolored `EMP_MINES` upgrade card from `0x00ff88` to `0xffee22`.
+
+### Station & Terminal Sprites — Corrected Oblique Perspective
+
+Regenerated all 7 station/terminal SVGs to fix the perspective. The old sprites showed three faces (TOP + SOUTH + EAST), which is a 2-point-perspective look. The new sprites use the correct oblique top-down style: only TOP and SOUTH faces are visible; the EAST face has been removed.
+
+**Changes in `scripts/generate-station-sprites.js`:**
+- `rightFacePoints()` helper removed entirely.
+- All depth vectors changed from `(DX, DY)` (up-right) to purely vertical `(0, DY)`, so the top face is a rectangle sitting directly above the front face with no rightward shift.
+- All `<polygon points="${rightFacePoints(...)}" .../>` elements removed from mainframe, gun, and all five terminal variants.
+- Front faces made slightly wider to use the freed horizontal canvas space (mainframe FW 60→70, terminal desk DW 44→48, monitor MW 36→44).
+- Accent detail positions updated to match the new wider front-face dimensions.
+
+Re-run `node scripts/generate-station-sprites.js` to regenerate after any further edits.
+
+### Boss Spawn Cutscene
+
+When wave 10 begins and the boss spawns, a short (~2.8 s) cutscene plays before players regain control:
+
+- **Player locked** — `snail.hackingActive` is set to prevent WASD movement and E-hacking during the cutscene.
+- **HUD hidden** — all regular HUD elements (health bar, wave label, score, ammo, etc.) fade out via new `HUD.hide()` / `HUD.show()` methods.
+- **Boss floats in** — spawns off-screen to the right (x=1480), invisible, then tweens to its orbit position over 1.6 s with a `Power2.easeOut` curve. Boss AI (`_phaseShifting = true`) is frozen until the cutscene ends.
+- **Anger particles** — red/orange/gold circles burst outward from the boss every 70 ms throughout the float-in, each travelling outward and fading with a scale-down tween.
+- **Warning text** — "!! WARNING !!" flashes in at y=300 with 4 alpha yoyo repeats.
+- **Alert sound** — new `bossAlert` SFX plays at cutscene start: five alternating klaxon tones (880/660 Hz square waves) over a low sawtooth rumble, ending in a rising bandpass noise swell.
+- **Title card** — on float-in complete the warning text is replaced with "THE OVERLORD" (larger, held for 900 ms), then fades out.
+- **Handoff** — `bossSpawn` rumble plays, HUD is restored, boss AI unfreezes, boss HP bar appears, players regain control.
+
+Files changed: `src/scenes/HUD.js`, `src/systems/SoundSynth.js`, `src/scenes/GameScene.js`.
+
+### Boss Always Spawns Escape Frog on Death
+
+`_bossDeath()` in `GameScene.js` now unconditionally spawns a `FrogEscape` after the final explosion, bypassing the 25% random gate in `spawnFrogEscape()`. The frog is created directly (same cap of 5 active frogs still applies), so players are guaranteed to see a frog flee after killing the boss.
+
+### Boss Sound Effects
+
+Six procedural boss sounds added to `SoundSynth.js` and wired into `GameScene.js`:
+
+| Name | Trigger | Design |
+|---|---|---|
+| `bossSpawn` | End of `_spawnBoss()` | Low rumble (noise → sweeping lowpass) + sub-bass sawtooth drone + descending horn sting at 0.5 s with octave shimmer. ~1.4 s total. |
+| `bossBlackHole` | `onBlackHole` callback | Ultra-low descending sine (160→22 Hz) + sub-bass sawtooth + low-freq noise rumble + mid-band whoosh trail. Gravitational pull feel. |
+| `bossEMP` | `onEMP` callback | Broadband noise crack → rising square-wave buzz (100→380 Hz) + sparkling bandpass residue + rising sine ping. Electric discharge feel. |
+| `bossTerminalLock` | `onTerminalLockEMP` callback | Descending sawtooth siren (800→220 Hz) + secondary square alarm + sharp highpass noise pop. Red-alert / lock feel, distinct from EMP. |
+| `bossAlienBurst` | `onAlienBurst` callback | Low sine thump + lowpass noise hit + three staggered sine pings (one per alien) at 0.10/0.18/0.26 s. Mechanical launch-bay feel. |
+| `bossDeath` | Start of `_bossDeath()` | Broadband impact burst + twin deep sine booms (120→18 Hz / 90→14 Hz) + long decaying lowpass rumble (1800→60 Hz over 2.2 s) + secondary sawtooth blast at 0.3 s + metallic ring overtone. |
+
+### Boss Projectile Hit Feedback
+
+When a P2 shot (or laser) damages a boss projectile without destroying it, the projectile now shows clear visual feedback:
+
+- **Scale punch** — the projectile container pops to 1.4× scale over 55 ms, then springs back (yoyo). Any in-progress punch is cancelled before a new one starts so rapid fire doesn't stack weirdly.
+- **White flash** — a per-type coloured halo + white core overlay snaps to full alpha on hit, then fades out over 220 ms (`Sine.easeIn`). Colours: purple halo for black hole, yellow for EMP, orange for terminal lock.
+- The old scene-level purple arc flash (created at both the normal and laser hit sites) has been removed; the projectile-local flash replaces it with cleaner tied-to-the-object feedback.
+
+Implementation: `_flashGfx` Graphics child added to `BossProjectile` constructor (drawn above `_gfx`); `_drawFlash()` pre-draws the overlay once; `onHit()` triggers the tween pair. `GameScene` calls `bp.onHit()` at both hit sites (normal projectile collision and laser sweep).
+
 ### Helicopter Minigame
 
 New `HelicopterMinigame` added to `src/minigames/HelicopterMinigame.js`. The player holds SPACE to thrust upward and releases to fall under gravity, guiding a small chevron ship through incoming wall pairs. Flying past **2 wall pairs** scores one "word" (calls `onWordComplete`); touching a wall or the tunnel ceiling/floor triggers failure (`onCancel`). The minigame is temporarily set as the **default** hack minigame for testing (replaces the `HackMinigame`/`MathMinigame` rotation in `GameScene.js`).
@@ -13,6 +80,13 @@ New `HelicopterMinigame` added to `src/minigames/HelicopterMinigame.js`. The pla
 
 - `HackMinigame`: underline rectangle gets a looping `alpha 0→1` Phaser tween (500 ms, `Stepped` ease). Tween stopped when cursor is rebuilt for a new word.
 - `MathMinigame`: 530 ms repeating time event toggles the `_` character while no digits are typed. Timer removed in `_cleanup`.
+
+### Documentation Update — File Trees, CONFIG_VERSION Note, Canvas Tint Warning
+
+- **`CLAUDE.md`** — Updated file tree to reflect the current actual project structure (reorganised `assets/sprites/` subdirectories, added `assets/sounds/`, `src/soundOverrides.js`, `src/data/propPalettes.js`, new entity files, new minigames, `SlimeTrail.js`). Added two Coding Convention notes:
+  - *CONFIG_VERSION* — Must be incremented whenever `DEFAULTS` in `config.js` change, so stale localStorage is discarded.
+  - *setTint / setTintFill no-ops in Canvas mode* — These methods are WebGL-only; use procedural graphics redraws, alpha flash overlays, or SVG `feColorMatrix` filters instead.
+- **`PLAN.md`** — Updated the Project Structure file tree to match the current codebase.
 
 ### Alien swarm sound disabled
 

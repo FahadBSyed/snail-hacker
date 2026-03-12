@@ -176,7 +176,7 @@ export default class GameScene extends Phaser.Scene {
         if (!this.textures.exists('station-gun')) {
             this.load.svg('station-gun', 'assets/sprites/station/station-gun.svg', { width: 48, height: 48 });
         }
-        for (const key of ['terminal-reload', 'terminal-turret', 'terminal-shield', 'terminal-slow', 'terminal-repair']) {
+        for (const key of ['terminal-reload', 'terminal-turret', 'terminal-shield', 'terminal-slow', 'terminal-repair', 'terminal-emp']) {
             if (!this.textures.exists(key)) {
                 this.load.svg(key, `assets/sprites/terminal/${key}.svg`, { width: 64, height: 64 });
             }
@@ -1157,14 +1157,13 @@ export default class GameScene extends Phaser.Scene {
             if (perp > bp.radius + HIT_RADIUS) return true;
 
             const dead = bp.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
-            const flash = this.add.arc(bp.x, bp.y, bp.radius, 0, 360, false, 0xaa44ff, 0.75).setDepth(58);
-            this.tweens.add({ targets: flash, alpha: 0, duration: 180, onComplete: () => flash.destroy() });
             this.soundSynth?.play('shieldReflect');
             if (dead) {
                 spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
                 bp.destroy();
                 return false;
             }
+            bp.onHit();
             return true;
         });
 
@@ -1329,14 +1328,20 @@ export default class GameScene extends Phaser.Scene {
     // ── Boss fight ────────────────────────────────────────────────────────────
 
     _spawnBoss() {
-        const angle = 0; // enter from the right
-        const bx = 640 + Math.cos(angle) * CONFIG.BOSS.ORBIT_RADIUS_X;
-        const by = 360 + Math.sin(angle) * CONFIG.BOSS.ORBIT_RADIUS_Y;
-        this.boss = new BossAlien(this, bx, by, {
+        // ── Target orbit position ──────────────────────────────────────────────
+        const orbitAngle = 0; // enter from the right
+        const targetX = 640 + Math.cos(orbitAngle) * CONFIG.BOSS.ORBIT_RADIUS_X;
+        const targetY = 360 + Math.sin(orbitAngle) * CONFIG.BOSS.ORBIT_RADIUS_Y;
+
+        // ── Lock player + hide HUD for cutscene ───────────────────────────────
+        this.snail.hackingActive = true;
+        this.hud.hide();
+
+        // ── Create boss off-screen right, frozen until cutscene ends ──────────
+        this.boss = new BossAlien(this, 1480, targetY, {
             onAlienBurst: (bx, by) => {
                 const count  = CONFIG.BOSS.ALIEN_BURST_COUNT;
                 const spread = CONFIG.BOSS.ALIEN_BURST_SPREAD;
-                // Spread aliens side-by-side perpendicular to the boss→station vector
                 const toStation = Phaser.Math.Angle.Between(bx, by, 640, 360);
                 const perp      = toStation + Math.PI / 2;
                 const halfOff   = (count - 1) / 2;
@@ -1344,16 +1349,19 @@ export default class GameScene extends Phaser.Scene {
                     const off = (i - halfOff) * spread;
                     this.spawnAlien('fast', bx + Math.cos(perp) * off, by + Math.sin(perp) * off);
                 }
+                this.soundSynth?.play('bossAlienBurst');
                 this.logDebug(`Boss fires alien burst! (${count} FastAliens)`);
             },
             onBlackHole: (bx, by) => {
                 this.bossProjectiles.push(new BossProjectile(this, bx, by, 'blackhole'));
+                this.soundSynth?.play('bossBlackHole');
                 this.logDebug('Boss fires black hole!');
             },
             onEMP: (bx, by) => {
                 this.bossProjectiles.push(new BossProjectile(this, bx, by, 'emp', {
                     targetX: this.station.x, targetY: this.station.y,
                 }));
+                this.soundSynth?.play('bossEMP');
                 this.logDebug('Boss fires EMP!');
             },
             onTerminalLockEMP: (bx, by) => {
@@ -1366,11 +1374,87 @@ export default class GameScene extends Phaser.Scene {
                 this.bossProjectiles.push(new BossProjectile(this, bx, by, 'terminallock', {
                     targetX: target.x, targetY: target.y, targetTerminal: target,
                 }));
+                this.soundSynth?.play('bossTerminalLock');
                 this.logDebug(`Boss fires terminal lock EMP at ${target.label}!`);
             },
         });
-        this.hud.showBossBar(this.boss.health, CONFIG.BOSS.HP);
-        this.logDebug('The Overlord has arrived!');
+        // Freeze AI and start invisible
+        this.boss._phaseShifting = true;
+        this.boss.setAlpha(0);
+
+        // ── Alert sound + flashing WARNING text ───────────────────────────────
+        this.soundSynth?.play('bossAlert');
+
+        const warnText = this.add.text(640, 300, '!! WARNING !!', {
+            fontSize: '34px', fontFamily: 'monospace', color: '#ff2200',
+            stroke: '#000000', strokeThickness: 7,
+        }).setOrigin(0.5).setDepth(200).setAlpha(0);
+
+        // Flash 4 times over ~1 second
+        this.tweens.add({
+            targets: warnText, alpha: 1, duration: 180,
+            ease: 'Sine.easeOut', yoyo: true, repeat: 3, hold: 150,
+        });
+
+        // ── Anger particles — spawn continuously during the float-in ──────────
+        const ANGER_COLORS = [0xff2200, 0xff5500, 0xffaa00, 0xff0044];
+        const particleTimer = this.time.addEvent({
+            delay: 70, loop: true,
+            callback: () => {
+                if (!this.boss?.active) return;
+                const angle = Math.random() * Math.PI * 2;
+                const dist  = Phaser.Math.Between(12, 55);
+                const speed = Phaser.Math.Between(70, 200);
+                const color = ANGER_COLORS[Math.floor(Math.random() * ANGER_COLORS.length)];
+                const sz    = Phaser.Math.Between(4, 11);
+                const px    = this.boss.x + Math.cos(angle) * dist;
+                const py    = this.boss.y + Math.sin(angle) * dist;
+                const p     = this.add.circle(px, py, sz, color, 0.9).setDepth(55);
+                this.tweens.add({
+                    targets:  p,
+                    x:        px + Math.cos(angle) * speed,
+                    y:        py + Math.sin(angle) * speed,
+                    alpha:    0,
+                    scaleX:   0.15,
+                    scaleY:   0.15,
+                    duration: Phaser.Math.Between(300, 600),
+                    ease:     'Power2.easeOut',
+                    onComplete: () => p.destroy(),
+                });
+            },
+        });
+
+        // ── Boss float-in — delayed slightly so alert plays first ─────────────
+        this.time.delayedCall(350, () => {
+            this.tweens.add({
+                targets:  this.boss,
+                x:        targetX,
+                alpha:    1,
+                duration: 1600,
+                ease:     'Power2.easeOut',
+                onComplete: () => {
+                    // Stop particles
+                    particleTimer.remove(false);
+
+                    // Swap WARNING for arrival title card
+                    warnText.setText('THE OVERLORD').setFontSize('44px').setColor('#ff2200').setAlpha(1);
+                    this.soundSynth?.play('bossSpawn');
+
+                    // Hold title, then fade out and hand control back to players
+                    this.time.delayedCall(900, () => {
+                        this.tweens.add({
+                            targets: warnText, alpha: 0, duration: 400,
+                            onComplete: () => warnText.destroy(),
+                        });
+                        this.boss._phaseShifting = false;
+                        this.snail.hackingActive = false;
+                        this.hud.show();
+                        this.hud.showBossBar(this.boss.health, CONFIG.BOSS.HP);
+                        this.logDebug('The Overlord has arrived!');
+                    });
+                },
+            });
+        });
     }
 
     _bossDeath() {
@@ -1383,6 +1467,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Heavy screen shake
         this.cameras.main.shake(600, 0.02);
+        this.soundSynth?.play('bossDeath');
 
         // Three staggered expanding rings
         for (let i = 0; i < 3; i++) {
@@ -1419,6 +1504,12 @@ export default class GameScene extends Phaser.Scene {
                 this.cameras.main.flash(500, 255, 100, 0);
                 this.boss.destroy();
                 this.boss = null;
+            }
+            // Always spawn an escape frog on boss death (100% chance, bypasses random gate)
+            if (this.sys.isActive() && this.frogEscapes.filter(f => f.active).length < 5) {
+                const frog = new FrogEscape(this, bx, by);
+                this.frogEscapes.push(frog);
+                this.soundSynth?.play('alienRibbet');
             }
             this.hud.hideBossBar();
             this.score += 50;
@@ -1952,15 +2043,13 @@ export default class GameScene extends Phaser.Scene {
                 if (dist < bp.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
                     proj.destroy();
                     const dead = bp.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
-                    // Purple hit flash
-                    const flash = this.add.arc(bp.x, bp.y, bp.radius, 0, 360, false, 0xaa44ff, 0.75).setDepth(58);
-                    this.tweens.add({ targets: flash, alpha: 0, duration: 180, onComplete: () => flash.destroy() });
                     this.soundSynth?.play('shieldReflect');
                     if (dead) {
                         spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
                         bp.destroy();
                         return false;
                     }
+                    bp.onHit();
                     break;
                 }
             }

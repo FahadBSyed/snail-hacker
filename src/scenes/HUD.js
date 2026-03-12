@@ -13,7 +13,7 @@ export default class HUD {
         this.ammoMax = ammoMax;
 
         // ── Snail health bar — top-left ───────────────────────────────────────
-        scene.add.text(10, 10, 'GERALD HP', {
+        this._hudLabel = scene.add.text(10, 10, 'GERALD HP', {
             fontSize: '12px', fontFamily: 'monospace', color: '#44ff88',
         }).setDepth(100);
         this.healthBarBg   = scene.add.rectangle(10, 28, 204, 14, 0x333333).setOrigin(0, 0).setDepth(100);
@@ -148,5 +148,25 @@ export default class HUD {
     updateGrab(statusText, statusColor) {
         this.grabLabel.setText(statusText);
         this.grabLabel.setColor(statusColor);
+    }
+
+    // ── Visibility ────────────────────────────────────────────────────────────
+
+    /** Hide all regular HUD elements (used during cutscenes). */
+    hide() {
+        for (const o of this._hudObjects()) o.setAlpha(0);
+    }
+
+    /** Restore all regular HUD elements. */
+    show() {
+        for (const o of this._hudObjects()) o.setAlpha(1);
+    }
+
+    _hudObjects() {
+        return [
+            this._hudLabel, this.healthBarBg, this.healthBarFill,
+            this.waveLabel, this.hackProgressLabel, this.scoreLabel,
+            this._bulletIcon, this.ammoCounter, this.lowAmmoLabel, this.grabLabel,
+        ].filter(Boolean);
     }
 }
