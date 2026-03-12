@@ -37,6 +37,13 @@ New `HelicopterMinigame` added to `src/minigames/HelicopterMinigame.js`. The pla
 - `HackMinigame`: underline rectangle gets a looping `alpha 0→1` Phaser tween (500 ms, `Stepped` ease). Tween stopped when cursor is rebuilt for a new word.
 - `MathMinigame`: 530 ms repeating time event toggles the `_` character while no digits are typed. Timer removed in `_cleanup`.
 
+### Documentation Update — File Trees, CONFIG_VERSION Note, Canvas Tint Warning
+
+- **`CLAUDE.md`** — Updated file tree to reflect the current actual project structure (reorganised `assets/sprites/` subdirectories, added `assets/sounds/`, `src/soundOverrides.js`, `src/data/propPalettes.js`, new entity files, new minigames, `SlimeTrail.js`). Added two Coding Convention notes:
+  - *CONFIG_VERSION* — Must be incremented whenever `DEFAULTS` in `config.js` change, so stale localStorage is discarded.
+  - *setTint / setTintFill no-ops in Canvas mode* — These methods are WebGL-only; use procedural graphics redraws, alpha flash overlays, or SVG `feColorMatrix` filters instead.
+- **`PLAN.md`** — Updated the Project Structure file tree to match the current codebase.
+
 ### Alien swarm sound disabled
 
 Removed the looping proximity-based `alienSwarm` hum from `GameScene`. The `_alienSwarm_looped()` definition remains in `SoundSynth.js` for future use.

@@ -5,21 +5,37 @@
 ```
 snail-hacker/
 ├── index.html                    ← Phaser CDN + <script type="module" src="src/main.js">
+├── PLAN.md                       ← This file
+├── CHANGELOG.md                  ← Per-session progress log
 ├── assets/
 │   ├── backgrounds/              ← bg-00.svg … bg-19.svg (procedural planet backdrops)
-│   ├── alien-{frog,fast,tank,bomber}-{dir}.svg  ← 8-dir alien saucer sprites (32 total)
-│   ├── snail-{right,left,up,down}.svg           ← Base directional walk sprites
-│   └── snail-hit-{dir}-f{00..15}.svg            ← 64-frame Gerald damage animation
+│   ├── sounds/                   ← Optional audio file overrides (see soundOverrides.js)
+│   └── sprites/
+│       ├── PALETTE_SWAPS.md      ← Documents colour palettes for all alien sprite types
+│       ├── alien/                ← alien-{frog,fast,tank,bomber,shield,boss}-{dir}.svg
+│       ├── frog/                 ← frog-{dir}.svg + frog-hop-{dir}-f{00..03}.svg
+│       ├── props/                ← rock-{0,1,2}.svg + mushroom-{0,1}.svg
+│       ├── snail/                ← snail-{dir}.svg, snail-walk/idle/hit frames
+│       ├── station/              ← station-mainframe.svg, station-gun.svg
+│       └── terminal/             ← terminal-{reload,turret,shield,slow,repair}.svg
 ├── scripts/
-│   ├── generate-snail-sprites.js          ← Base snail SVG generator
-│   ├── generate-alien-enemy-sprites.js    ← Alien saucer sprite generator (all 4 types)
-│   ├── generate-alien-saucer-sprites.js   ← Base saucer geometry helper
-│   ├── generate-damage-sprites.js         ← Gerald hit animation frame generator
-│   └── generate-planet-backgrounds.js    ← Procedural planet background generator
+│   ├── generate-snail-sprites.js
+│   ├── generate-walk-idle-sprites.js
+│   ├── generate-damage-sprites.js
+│   ├── generate-alien-enemy-sprites.js
+│   ├── generate-alien-saucer-sprites.js
+│   ├── generate-boss-sprite.js
+│   ├── generate-frog-sprites.js
+│   ├── generate-planet-backgrounds.js
+│   ├── generate-prop-sprites.js
+│   └── generate-station-sprites.js
 └── src/
     ├── main.js                   ← Phaser.Game config (1280×720, scene registration)
     ├── config.js                 ← All balance values: DEFAULTS, live CONFIG object,
     │                                localStorage persistence, saveConfig/resetConfig
+    ├── soundOverrides.js         ← Maps SoundSynth names to audio file paths/volumes
+    ├── data/
+    │   └── propPalettes.js       ← 20 biome palettes (rock + flora colours per wave)
     ├── scenes/
     │   ├── MenuScene.js
     │   ├── GameScene.js
@@ -37,13 +53,19 @@ snail-hacker/
     │   ├── EscapeShip.js
     │   ├── Battery.js
     │   ├── HealthDrop.js
+    │   ├── BossProjectile.js
+    │   ├── Decoy.js
+    │   ├── EmpMine.js
+    │   ├── FrogEscape.js
     │   ├── aliens/
     │   │   ├── alienUtils.js
     │   │   ├── BaseAlien.js
     │   │   ├── BasicAlien.js
     │   │   ├── FastAlien.js
     │   │   ├── TankAlien.js
-    │   │   └── BomberAlien.js
+    │   │   ├── BomberAlien.js
+    │   │   ├── ShieldAlien.js
+    │   │   └── BossAlien.js
     │   └── shared/
     │       └── CooldownTimer.js
     ├── systems/
@@ -52,12 +74,15 @@ snail-hacker/
     │   ├── ReloadBuffer.js
     │   ├── SoundSynth.js
     │   ├── TeleportSystem.js
-    │   └── GrabHandSystem.js
+    │   ├── GrabHandSystem.js
+    │   └── SlimeTrail.js
     └── minigames/
         ├── HackMinigame.js
-        ├── SequenceMinigame.js
+        ├── MathMinigame.js
+        ├── FroggerMinigame.js
+        ├── HelicopterMinigame.js
         ├── RhythmMinigame.js
-        └── TypingMinigame.js
+        └── SequenceMinigame.js
 ```
 
 ---
