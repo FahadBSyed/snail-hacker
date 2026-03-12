@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 4;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 5;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -98,10 +98,9 @@ export const DEFAULTS = {
     },
 
     EMP: {
-        MINE_DAMAGE:       30,   // damage dealt to all aliens in blast — ignores shields
-        MINE_TRIGGER_DIST: 32,   // px added to alien.radius — how close alien must be
-        BLAST_RADIUS:      180,  // px — explosion AoE
-        MINE_PICKUP_DIST:  45,   // px — cursor proximity to grab a mine
+        MINE_DAMAGE:      30,   // damage dealt to all aliens in blast — ignores shields
+        BLAST_RADIUS:     180,  // px — both trigger distance and explosion AoE
+        MINE_PICKUP_DIST: 45,   // px — cursor proximity to grab a mine
     },
 
     CANNON: {

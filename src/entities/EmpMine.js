@@ -17,7 +17,6 @@ export default class EmpMine extends Phaser.GameObjects.Container {
 
         /** @type {'ground'|'mouse'} */
         this.state           = 'ground';
-        this.triggerRadius   = 16;           // + alien.radius gives contact threshold
         this.mousePickupDist = CONFIG.EMP.MINE_PICKUP_DIST;
         this.grabLabel       = 'MINE';        // shown in grab-hand status HUD
 
@@ -74,6 +73,21 @@ export default class EmpMine extends Phaser.GameObjects.Container {
         g.fillCircle(0, 0, 3.5);
 
         this.add(g);
+
+        // Dotted blast-radius indicator ring
+        const br   = CONFIG.EMP.BLAST_RADIUS;
+        const dots = 48;
+        const blastRing = scene.add.graphics();
+        blastRing.lineStyle(1, col, 0.25);
+        for (let i = 0; i < dots; i++) {
+            if (i % 2 === 0) continue;   // skip every other segment → dashed look
+            const a0 = (i / dots) * Math.PI * 2;
+            const a1 = ((i + 1) / dots) * Math.PI * 2;
+            blastRing.beginPath();
+            blastRing.arc(0, 0, br, a0, a1, false);
+            blastRing.strokePath();
+        }
+        this.add(blastRing);
 
         // "EMP" label above
         this.add(scene.add.text(0, -(r + 11), 'EMP', {

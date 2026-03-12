@@ -1839,14 +1839,15 @@ export default class GameScene extends Phaser.Scene {
                 if (mine.state !== 'ground') { surviving.push(mine); continue; }
 
                 let triggered = false;
+                const triggerR = CONFIG.EMP.BLAST_RADIUS;
                 for (const alien of this.aliens) {
                     if (!alien.active || alien._dying) continue;
                     const d = Phaser.Math.Distance.Between(mine.x, mine.y, alien.x, alien.y);
-                    if (d < mine.triggerRadius + alien.radius) { triggered = true; break; }
+                    if (d < triggerR) { triggered = true; break; }
                 }
                 if (!triggered && this.boss && this.boss.active && !this.boss._dying) {
                     const d = Phaser.Math.Distance.Between(mine.x, mine.y, this.boss.x, this.boss.y);
-                    if (d < mine.triggerRadius + this.boss.radius) triggered = true;
+                    if (d < triggerR) triggered = true;
                 }
 
                 if (triggered) {
