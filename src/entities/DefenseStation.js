@@ -178,7 +178,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
         this.statusText.setText('FIRING').setColor('#ff4444');
         this.labelText.setColor('#ff4444');
 
-        let shotsRemaining = Math.floor(CONFIG.CANNON.ACTIVE_DURATION / CONFIG.CANNON.FIRE_INTERVAL);
+        let shotsRemaining = Math.floor(CONFIG.TERMINALS.CANNON.DURATION / CONFIG.CANNON.FIRE_INTERVAL);
         const fireTimer = this.scene.time.addEvent({
             delay: CONFIG.CANNON.FIRE_INTERVAL,
             repeat: shotsRemaining - 1,
@@ -188,7 +188,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
         });
 
         // After duration, stop and start cooldown
-        this.scene.time.delayedCall(CONFIG.CANNON.ACTIVE_DURATION, () => {
+        this.scene.time.delayedCall(CONFIG.TERMINALS.CANNON.DURATION, () => {
             this.isActive = false;
             this.startCooldown();
         });

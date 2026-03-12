@@ -23,7 +23,7 @@ const PASSIVE_POOL = ['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RIC
 const UPGRADE_POOL = [...ACTIVE_POOL, ...PASSIVE_POOL];
 
 function getUpgradeDefs() {
-    const cannonSecs = Math.round(CONFIG.CANNON.ACTIVE_DURATION / 1000);
+    const cannonSecs = Math.round(CONFIG.TERMINALS.CANNON.DURATION / 1000);
     const shieldSecs = Math.round(CONFIG.TERMINALS.SHIELD.DURATION / 1000);
     const slowSecs   = Math.round(CONFIG.TERMINALS.SLOW.DURATION / 1000);
     const slowPct    = Math.round(CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER * 100);

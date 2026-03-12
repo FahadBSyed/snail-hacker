@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 7;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 8;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -81,7 +81,8 @@ export const DEFAULTS = {
         FAILURE_COOLDOWN: 3000,  // ms — cooldown on minigame failure
 
         CANNON: {
-            COOLDOWN: 20000,  // ms — post-effect rest (total lockout = CANNON.ACTIVE_DURATION + this)
+            DURATION: 25000,  // ms — how long the turret fires
+            COOLDOWN: 20000,  // ms — post-effect rest (total lockout = DURATION + this)
         },
         RELOAD: {
             COOLDOWN: 8000,   // ms — cooldown after reload use
@@ -121,9 +122,8 @@ export const DEFAULTS = {
     },
 
     CANNON: {
-        FIRE_INTERVAL:   1000,   // ms between auto-shots while active
-        ACTIVE_DURATION: 25000,  // ms of continuous firing
-        COOLDOWN:        20000,  // ms — cannon's own recharge after activation
+        FIRE_INTERVAL: 1000,   // ms between auto-shots while active
+        COOLDOWN:      20000,  // ms — cannon's own recharge after activation
     },
 
     MINIGAMES: {

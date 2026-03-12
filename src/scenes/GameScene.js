@@ -631,7 +631,7 @@ export default class GameScene extends Phaser.Scene {
                     });
                     term = new Terminal(this, x, y + 25, {
                         label:          'TURRET',
-                        cooldown:       CONFIG.CANNON.ACTIVE_DURATION + CONFIG.TERMINALS.CANNON.COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.CANNON.DURATION + CONFIG.TERMINALS.CANNON.COOLDOWN,
                         color:          0xff8844,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => cannon.activate(),
