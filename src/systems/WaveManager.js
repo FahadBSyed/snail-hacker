@@ -25,9 +25,9 @@ const WAVE_CONFIGS = [
     { wave: 4,  spawnInterval: 1400, duration: 40000, types: ['basic', 'tank', 'bomber'] },
     { wave: 5,  spawnInterval: 1200, duration: 45000, types: ['basic', 'bomber', 'shield'] },
     { wave: 6,  spawnInterval: 1100, duration: 50000, types: ['basic', 'fast', 'tank', 'shield'] },
-    { wave: 7,  spawnInterval: 1000, duration: 50000, types: ['fast', 'tank', 'bomber', 'shield'] },
-    { wave: 8,  spawnInterval:  900, duration: 55000, types: ['fast', 'tank', 'bomber', 'shield'] },
-    { wave: 9,  spawnInterval:  800, duration: 55000, types: ['fast', 'tank', 'bomber', 'shield'] },
+    { wave: 7,  spawnInterval: 1000, duration: 50000, types: ['basic', 'fast', 'tank', 'bomber', 'shield'] },
+    { wave: 8,  spawnInterval:  900, duration: 55000, types: ['basic', 'fast', 'tank', 'bomber', 'shield'] },
+    { wave: 9,  spawnInterval:  800, duration: 55000, types: ['basic', 'fast', 'tank', 'bomber', 'shield'] },
     { wave: 10, spawnInterval:  700, duration: 65000, types: [] }, // boss wave — no normal spawns
 ];
 
