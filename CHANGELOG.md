@@ -2,6 +2,18 @@
 
 ## Session — 2026-03-12
 
+### EMP Terminal Sprite + Unified Electric-Yellow Color
+
+Added a dedicated terminal sprite for the EMP MINES upgrade, replacing the old placeholder green.
+
+- **Color**: `#ffee22` / `0xffee22` (electric yellow) — unused by all other terminal sprites and upgrade cards.
+- **`scripts/generate-station-sprites.js`**: added `accentEmp()` function (lightning-bolt on screen, electric-arc sparks + concentric pulse rings on desk front) and `terminal-emp.svg` to the output list. Generator now produces 8 SVGs.
+- **`assets/sprites/terminal/terminal-emp.svg`**: new sprite generated.
+- **`src/entities/Terminal.js`**: added `EMP: 'terminal-emp'` to `LABEL_TO_SPRITE` so the EMP terminal uses the new sprite.
+- **`src/scenes/GameScene.js`**: added `'terminal-emp'` to the preload loop.
+- **`src/entities/EmpMine.js`**: recolored from `0x00ff88` (green, same as REPAIR) to `0xffee22`.
+- **`src/scenes/IntermissionScene.js`**: recolored `EMP_MINES` upgrade card from `0x00ff88` to `0xffee22`.
+
 ### Station & Terminal Sprites — Corrected Oblique Perspective
 
 Regenerated all 7 station/terminal SVGs to fix the perspective. The old sprites showed three faces (TOP + SOUTH + EAST), which is a 2-point-perspective look. The new sprites use the correct oblique top-down style: only TOP and SOUTH faces are visible; the EAST face has been removed.

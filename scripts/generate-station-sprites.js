@@ -353,6 +353,31 @@ function accentRepair({ MX, MY, MW, MH, DX, DY, SC }) {
   <circle cx="${DX+33}" cy="${DY+11}" r="1.5" fill="none" stroke="${SC}" stroke-width="0.8"/>`;
 }
 
+function accentEmp({ MX, MY, MW, MH, DX, DY, SC }) {
+    // Lightning bolt on screen (classic EMP / electricity symbol)
+    const cx = MX + MW / 2;
+    const cy = MY + MH - 6;
+    return `
+  <!-- Lightning bolt on screen -->
+  <path d="M${cx-2},${cy-8} L${cx+5},${cy-2} L${cx+1},${cy-2} L${cx+5},${cy+4}"
+        fill="none" stroke="${SC}" stroke-width="1.5" stroke-linejoin="round"
+        stroke-linecap="round" opacity="0.9"/>
+  <!-- Glow duplicate -->
+  <path d="M${cx-2},${cy-8} L${cx+5},${cy-2} L${cx+1},${cy-2} L${cx+5},${cy+4}"
+        fill="none" stroke="${SC}" stroke-width="3.5" stroke-linejoin="round"
+        stroke-linecap="round" opacity="0.15"/>
+  <!-- Electric arc sparks on desk front-right -->
+  <path d="M${DX+34},${DY+5} l4,3 l-2,0 l4,5"
+        fill="none" stroke="${SC}" stroke-width="1.1" stroke-linecap="round"
+        stroke-linejoin="round" opacity="0.85"/>
+  <path d="M${DX+40},${DY+4} l3,4 l-2,0 l3,5"
+        fill="none" stroke="${SC}" stroke-width="1.1" stroke-linecap="round"
+        stroke-linejoin="round" opacity="0.65"/>
+  <!-- Concentric pulse rings on desk front (EMP ripple) -->
+  <circle cx="${DX+37}" cy="${DY+13}" r="3.5" fill="none" stroke="${SC}" stroke-width="0.7" opacity="0.6"/>
+  <circle cx="${DX+37}" cy="${DY+13}" r="6"   fill="none" stroke="${SC}" stroke-width="0.5" opacity="0.35"/>`;
+}
+
 // ── Write sprites ─────────────────────────────────────────────────────────────
 const sprites = {
     'station-mainframe.svg': stationMainframe(),
@@ -383,6 +408,11 @@ const sprites = {
         label:       'REPAIR',
         accentFn:    accentRepair,
     }),
+    'terminal-emp.svg': terminal({
+        screenColor: '#ffee22',
+        label:       'EMP',
+        accentFn:    accentEmp,
+    }),
 };
 
 for (const [filename, content] of Object.entries(sprites)) {
@@ -392,4 +422,4 @@ for (const [filename, content] of Object.entries(sprites)) {
     console.log(`✔  ${path}`);
 }
 
-console.log('\nDone — 7 SVGs generated.');
+console.log('\nDone — 8 SVGs generated.');

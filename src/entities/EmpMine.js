@@ -25,7 +25,7 @@ export default class EmpMine extends Phaser.GameObjects.Container {
 
     _buildVisual(scene) {
         const r   = 16;
-        const col = 0x00ff88;
+        const col = 0xffee22;
 
         // Outer pulsing aura (animated)
         this._aura = scene.add.graphics();
@@ -91,12 +91,12 @@ export default class EmpMine extends Phaser.GameObjects.Container {
 
         // "EMP" label above
         this.add(scene.add.text(0, -(r + 11), 'EMP', {
-            fontSize: '8px', fontFamily: 'monospace', color: '#00ff88',
+            fontSize: '8px', fontFamily: 'monospace', color: '#ffee22',
         }).setOrigin(0.5));
 
         // Grab prompt (shown when P2 cursor is nearby — toggled by GrabHandSystem)
         this._prompt = scene.add.text(0, r + 8, '[GRAB]', {
-            fontSize: '8px', fontFamily: 'monospace', color: '#00ff88',
+            fontSize: '8px', fontFamily: 'monospace', color: '#ffee22',
             backgroundColor: '#00000099', padding: { x: 2, y: 1 },
         }).setOrigin(0.5).setVisible(false);
         this.add(this._prompt);

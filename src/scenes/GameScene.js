@@ -176,7 +176,7 @@ export default class GameScene extends Phaser.Scene {
         if (!this.textures.exists('station-gun')) {
             this.load.svg('station-gun', 'assets/sprites/station/station-gun.svg', { width: 48, height: 48 });
         }
-        for (const key of ['terminal-reload', 'terminal-turret', 'terminal-shield', 'terminal-slow', 'terminal-repair']) {
+        for (const key of ['terminal-reload', 'terminal-turret', 'terminal-shield', 'terminal-slow', 'terminal-repair', 'terminal-emp']) {
             if (!this.textures.exists(key)) {
                 this.load.svg(key, `assets/sprites/terminal/${key}.svg`, { width: 64, height: 64 });
             }
