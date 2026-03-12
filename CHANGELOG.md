@@ -2,6 +2,16 @@
 
 ## Session — 2026-03-12
 
+### Boss Projectile Hit Feedback
+
+When a P2 shot (or laser) damages a boss projectile without destroying it, the projectile now shows clear visual feedback:
+
+- **Scale punch** — the projectile container pops to 1.4× scale over 55 ms, then springs back (yoyo). Any in-progress punch is cancelled before a new one starts so rapid fire doesn't stack weirdly.
+- **White flash** — a per-type coloured halo + white core overlay snaps to full alpha on hit, then fades out over 220 ms (`Sine.easeIn`). Colours: purple halo for black hole, yellow for EMP, orange for terminal lock.
+- The old scene-level purple arc flash (created at both the normal and laser hit sites) has been removed; the projectile-local flash replaces it with cleaner tied-to-the-object feedback.
+
+Implementation: `_flashGfx` Graphics child added to `BossProjectile` constructor (drawn above `_gfx`); `_drawFlash()` pre-draws the overlay once; `onHit()` triggers the tween pair. `GameScene` calls `bp.onHit()` at both hit sites (normal projectile collision and laser sweep).
+
 ### Helicopter Minigame
 
 New `HelicopterMinigame` added to `src/minigames/HelicopterMinigame.js`. The player holds SPACE to thrust upward and releases to fall under gravity, guiding a small chevron ship through incoming wall pairs. Flying past **2 wall pairs** scores one "word" (calls `onWordComplete`); touching a wall or the tunnel ceiling/floor triggers failure (`onCancel`). The minigame is temporarily set as the **default** hack minigame for testing (replaces the `HackMinigame`/`MathMinigame` rotation in `GameScene.js`).

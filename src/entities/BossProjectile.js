@@ -51,6 +51,14 @@ export default class BossProjectile extends Phaser.GameObjects.Container {
         this._gfx = scene.add.graphics();
         this.add(this._gfx);
 
+        // White flash overlay — drawn on top of _gfx, alpha driven by onHit()
+        this._flashGfx = scene.add.graphics();
+        this._flashGfx.setAlpha(0);
+        this.add(this._flashGfx);
+        this._drawFlash();
+
+        this._hitTween = null;
+
         this._drawFrame(0);
     }
 
@@ -123,12 +131,54 @@ export default class BossProjectile extends Phaser.GameObjects.Container {
         g.fillCircle(0, 0, 4);
     }
 
+    _drawFlash() {
+        const g = this._flashGfx;
+        const r = this.radius;
+        g.clear();
+        // Per-type tint: white core with a coloured halo
+        const haloColor = { blackhole: 0xcc88ff, emp: 0xffee88, terminallock: 0xff8844 }[this.projType] ?? 0xffffff;
+        g.fillStyle(haloColor, 0.6);
+        g.fillCircle(0, 0, r * 1.8);
+        g.fillStyle(0xffffff, 1);
+        g.fillCircle(0, 0, r);
+    }
+
     // ── Damage ────────────────────────────────────────────────────────────────
 
     /** Returns true when health reaches 0. */
     takeDamage(amount) {
         this.health -= amount;
         return this.health <= 0;
+    }
+
+    /** Call immediately after takeDamage() when the projectile survives. */
+    onHit() {
+        // Stop any in-progress hit tween so hits don't stack weirdly
+        if (this._hitTween) {
+            this._hitTween.stop();
+            this._hitTween = null;
+            this.setScale(1);
+        }
+
+        // Flash: snap to full alpha, then fade out
+        this._flashGfx.setAlpha(1);
+        this.scene.tweens.add({
+            targets:  this._flashGfx,
+            alpha:    0,
+            duration: 220,
+            ease:     'Sine.easeIn',
+        });
+
+        // Scale punch: pop up, spring back
+        this._hitTween = this.scene.tweens.add({
+            targets:  this,
+            scaleX:   1.4,
+            scaleY:   1.4,
+            duration: 55,
+            ease:     'Sine.easeOut',
+            yoyo:     true,
+            onComplete: () => { this._hitTween = null; },
+        });
     }
 
     // ── Update ────────────────────────────────────────────────────────────────
