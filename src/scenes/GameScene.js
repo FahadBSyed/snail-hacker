@@ -1343,16 +1343,19 @@ export default class GameScene extends Phaser.Scene {
                     const off = (i - halfOff) * spread;
                     this.spawnAlien('fast', bx + Math.cos(perp) * off, by + Math.sin(perp) * off);
                 }
+                this.soundSynth?.play('bossAlienBurst');
                 this.logDebug(`Boss fires alien burst! (${count} FastAliens)`);
             },
             onBlackHole: (bx, by) => {
                 this.bossProjectiles.push(new BossProjectile(this, bx, by, 'blackhole'));
+                this.soundSynth?.play('bossBlackHole');
                 this.logDebug('Boss fires black hole!');
             },
             onEMP: (bx, by) => {
                 this.bossProjectiles.push(new BossProjectile(this, bx, by, 'emp', {
                     targetX: this.station.x, targetY: this.station.y,
                 }));
+                this.soundSynth?.play('bossEMP');
                 this.logDebug('Boss fires EMP!');
             },
             onTerminalLockEMP: (bx, by) => {
@@ -1365,10 +1368,12 @@ export default class GameScene extends Phaser.Scene {
                 this.bossProjectiles.push(new BossProjectile(this, bx, by, 'terminallock', {
                     targetX: target.x, targetY: target.y, targetTerminal: target,
                 }));
+                this.soundSynth?.play('bossTerminalLock');
                 this.logDebug(`Boss fires terminal lock EMP at ${target.label}!`);
             },
         });
         this.hud.showBossBar(this.boss.health, CONFIG.BOSS.HP);
+        this.soundSynth?.play('bossSpawn');
         this.logDebug('The Overlord has arrived!');
     }
 
@@ -1382,6 +1387,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Heavy screen shake
         this.cameras.main.shake(600, 0.02);
+        this.soundSynth?.play('bossDeath');
 
         // Three staggered expanding rings
         for (let i = 0; i < 3; i++) {

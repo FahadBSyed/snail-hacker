@@ -2,6 +2,19 @@
 
 ## Session — 2026-03-12
 
+### Boss Sound Effects
+
+Six procedural boss sounds added to `SoundSynth.js` and wired into `GameScene.js`:
+
+| Name | Trigger | Design |
+|---|---|---|
+| `bossSpawn` | End of `_spawnBoss()` | Low rumble (noise → sweeping lowpass) + sub-bass sawtooth drone + descending horn sting at 0.5 s with octave shimmer. ~1.4 s total. |
+| `bossBlackHole` | `onBlackHole` callback | Ultra-low descending sine (160→22 Hz) + sub-bass sawtooth + low-freq noise rumble + mid-band whoosh trail. Gravitational pull feel. |
+| `bossEMP` | `onEMP` callback | Broadband noise crack → rising square-wave buzz (100→380 Hz) + sparkling bandpass residue + rising sine ping. Electric discharge feel. |
+| `bossTerminalLock` | `onTerminalLockEMP` callback | Descending sawtooth siren (800→220 Hz) + secondary square alarm + sharp highpass noise pop. Red-alert / lock feel, distinct from EMP. |
+| `bossAlienBurst` | `onAlienBurst` callback | Low sine thump + lowpass noise hit + three staggered sine pings (one per alien) at 0.10/0.18/0.26 s. Mechanical launch-bay feel. |
+| `bossDeath` | Start of `_bossDeath()` | Broadband impact burst + twin deep sine booms (120→18 Hz / 90→14 Hz) + long decaying lowpass rumble (1800→60 Hz over 2.2 s) + secondary sawtooth blast at 0.3 s + metallic ring overtone. |
+
 ### Boss Projectile Hit Feedback
 
 When a P2 shot (or laser) damages a boss projectile without destroying it, the projectile now shows clear visual feedback:
