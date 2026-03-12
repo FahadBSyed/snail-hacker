@@ -103,10 +103,14 @@ export default class HelicopterMinigame {
             }).setOrigin(0, 0),
         );
 
-        // Progress dots (right-aligned in the same header row)
-        this._dotGfx = this.scene.add.graphics();
-        this.container.add(this._dotGfx);
-        this._drawDots();
+        // Progress counter (right-aligned in the same header row)
+        this._progressText = this.scene.add.text(
+            PANEL_W / 2 - 8, -(PANEL_H / 2) + 14,
+            `0 / ${this.wordsRequired}`, {
+                fontSize: '11px', fontFamily: 'monospace', color: '#00ffcc',
+            },
+        ).setOrigin(1, 0.5);
+        this.container.add(this._progressText);
 
         // Play area background
         const playBg = this.scene.add.rectangle(
@@ -146,21 +150,8 @@ export default class HelicopterMinigame {
         this.container.add(this._hint);
     }
 
-    _drawDots() {
-        const g = this._dotGfx;
-        g.clear();
-        const total  = this.wordsRequired;
-        const radius = 4;
-        const step   = radius * 2 + 4;
-        const dotY   = -(PANEL_H / 2) + 14;  // vertically centred in header
-        // Right-aligned: last dot sits 8px from right edge
-        const rightEdge = PANEL_W / 2 - 8;
-        const startX = rightEdge - (total - 1) * step;
-        for (let i = 0; i < total; i++) {
-            const filled = i < this.wordsCompleted;
-            g.fillStyle(filled ? 0x00ffcc : 0x223344, 1);
-            g.fillCircle(startX + i * step, dotY, radius);
-        }
+    _updateProgress() {
+        this._progressText.setText(`${this.wordsCompleted} / ${this.wordsRequired}`);
     }
 
     // ── Input ─────────────────────────────────────────────────────────────────
@@ -222,7 +213,7 @@ export default class HelicopterMinigame {
 
                 if (this._wallsPassed % WALLS_PER_WORD === 0) {
                     this.wordsCompleted++;
-                    this._drawDots();
+                    this._updateProgress();
                     this.scene.soundSynth?.play('wordSuccess');
                     if (this.onWordComplete) this.onWordComplete(this.wordsCompleted);
                     if (this.wordsCompleted >= this.wordsRequired) {
