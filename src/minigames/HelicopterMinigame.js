@@ -210,6 +210,7 @@ export default class HelicopterMinigame {
             // Check if the ship's x just cleared the right edge of this wall
             if (!wall.scored && wall.x + WALL_WIDTH < SHIP_X) {
                 wall.scored = true;
+                wall.flashTime = 0.18; // seconds to flash white
                 this._wallsPassed++;
                 this.scene.soundSynth?.play('jump');
 
@@ -259,8 +260,10 @@ export default class HelicopterMinigame {
             const gapTop = wall.gapY;
             const gapBot = wall.gapY + GAP_HEIGHT;
 
-            // Solid dark-red body
-            wg.fillStyle(0x881100, 1);
+            // Solid body — flashes white briefly when cleared
+            if (wall.flashTime > 0) wall.flashTime -= 16 / 1000;
+            const bodyColor = wall.flashTime > 0 ? 0xffffff : 0x881100;
+            wg.fillStyle(bodyColor, 1);
             wg.fillRect(wx, wy, WALL_WIDTH, gapTop);
             wg.fillRect(wx, wy + gapBot, WALL_WIDTH, PLAY_H - gapBot);
 
