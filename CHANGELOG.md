@@ -2,6 +2,21 @@
 
 ## Session — 2026-03-12
 
+### Boss Spawn Cutscene
+
+When wave 10 begins and the boss spawns, a short (~2.8 s) cutscene plays before players regain control:
+
+- **Player locked** — `snail.hackingActive` is set to prevent WASD movement and E-hacking during the cutscene.
+- **HUD hidden** — all regular HUD elements (health bar, wave label, score, ammo, etc.) fade out via new `HUD.hide()` / `HUD.show()` methods.
+- **Boss floats in** — spawns off-screen to the right (x=1480), invisible, then tweens to its orbit position over 1.6 s with a `Power2.easeOut` curve. Boss AI (`_phaseShifting = true`) is frozen until the cutscene ends.
+- **Anger particles** — red/orange/gold circles burst outward from the boss every 70 ms throughout the float-in, each travelling outward and fading with a scale-down tween.
+- **Warning text** — "!! WARNING !!" flashes in at y=300 with 4 alpha yoyo repeats.
+- **Alert sound** — new `bossAlert` SFX plays at cutscene start: five alternating klaxon tones (880/660 Hz square waves) over a low sawtooth rumble, ending in a rising bandpass noise swell.
+- **Title card** — on float-in complete the warning text is replaced with "THE OVERLORD" (larger, held for 900 ms), then fades out.
+- **Handoff** — `bossSpawn` rumble plays, HUD is restored, boss AI unfreezes, boss HP bar appears, players regain control.
+
+Files changed: `src/scenes/HUD.js`, `src/systems/SoundSynth.js`, `src/scenes/GameScene.js`.
+
 ### Boss Always Spawns Escape Frog on Death
 
 `_bossDeath()` in `GameScene.js` now unconditionally spawns a `FrogEscape` after the final explosion, bypassing the 25% random gate in `spawnFrogEscape()`. The frog is created directly (same cap of 5 active frogs still applies), so players are guaranteed to see a frog flee after killing the boss.

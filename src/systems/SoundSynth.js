@@ -823,6 +823,30 @@ export default class SoundSynth {
         this._osc(ctx, 'sine', 660, 440, t, 0.50, rg);
     }
 
+    /**
+     * Boss intro alert — ship klaxon that plays at the start of the boss spawn
+     * cutscene. Five alternating square-wave alarm tones (880/660 Hz) with a
+     * low sawtooth rumble underneath and a rising noise swell at the end.
+     */
+    _bossAlert() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Five alternating klaxon tones spaced 200 ms apart
+        const tones = [880, 660, 880, 660, 880];
+        tones.forEach((freq, i) => {
+            const gt = this._gain(ctx, 0.28, t + i * 0.20, 0.18);
+            this._osc(ctx, 'square', freq, freq, t + i * 0.20, 0.17, gt);
+        });
+        // Low sawtooth rumble beneath the tones
+        const gr = this._gain(ctx, 0.18, t, 1.20);
+        this._osc(ctx, 'sawtooth', 60, 60, t, 1.10, gr);
+        // Rising noise swell at the end — anticipation sting
+        const fn = this._filter(ctx, 'bandpass', 400, ctx.destination);
+        fn.Q.value = 2;
+        const gn = this._gain(ctx, 0.15, t + 0.80, 0.55);
+        gn.disconnect(); gn.connect(fn);
+        this._noise(ctx, 0.55, gn);
+    }
+
     /** New wave beginning — two sharp alert beeps. */
     _waveStart() {
         const ctx = this._ctx_get(), t = ctx.currentTime;
