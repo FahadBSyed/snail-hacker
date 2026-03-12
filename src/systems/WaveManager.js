@@ -1,32 +1,31 @@
 /**
  * WaveManager — controls alien spawning across 10 waves with intermissions.
  *
- * Wave configs: spawnInterval (ms between spawns), duration (ms),
- * types (array of alienType strings to pick from randomly),
- * formationInterval (ms between formation attempts; null = no formations),
- * sequenceFormations (bool) — wave 9 flag: steps through every formation in
- *   order with a fixed gap; single-alien spawns are always suppressed.
+ * Single-alien spawns fire every spawnInterval ms (random type from wave's pool).
+ *
+ * Formation spawns fire on a separate timer whose interval shrinks each wave:
+ *   interval = max(FORMATION_MIN_INTERVAL,
+ *                  FORMATION_BASE_INTERVAL - (wave - 1) * FORMATION_INTERVAL_STEP)
+ * Only formations whose requiredTypes are all present in the wave's types list
+ * are eligible; one is chosen at random.
  *
  * Intermission after waves 3, 6, 9. Victory after wave 10.
  */
 
 import { CONFIG } from '../config.js';
-import { FORMATIONS, getEligibleFormations } from './FormationManager.js';
-
-// Gap (ms) between sequenced formations on wave 9
-const WAVE9_FORMATION_GAP = 5000;
+import { getEligibleFormations } from './FormationManager.js';
 
 const WAVE_CONFIGS = [
-    { wave: 1,  spawnInterval: 2000, duration: 30000, types: ['basic'],                                         formationInterval: null,  sequenceFormations: false },
-    { wave: 2,  spawnInterval: 1800, duration: 35000, types: ['basic', 'fast'],                                  formationInterval: 15000, sequenceFormations: false },
-    { wave: 3,  spawnInterval: 1500, duration: 40000, types: ['basic', 'fast', 'tank'],                          formationInterval: 13000, sequenceFormations: false },
-    { wave: 4,  spawnInterval: 1400, duration: 40000, types: ['basic', 'tank', 'bomber'],                        formationInterval: 12000, sequenceFormations: false },
-    { wave: 5,  spawnInterval: 1200, duration: 45000, types: ['basic', 'bomber', 'shield'],                      formationInterval: 11000, sequenceFormations: false },
-    { wave: 6,  spawnInterval: 1100, duration: 50000, types: ['basic', 'fast', 'tank', 'shield'],                formationInterval: 10000, sequenceFormations: false },
-    { wave: 7,  spawnInterval: 1000, duration: 50000, types: ['fast', 'tank', 'bomber', 'shield'],               formationInterval:  9000, sequenceFormations: false },
-    { wave: 8,  spawnInterval:  900, duration: 55000, types: ['fast', 'tank', 'bomber', 'shield'],               formationInterval:  8000, sequenceFormations: false },
-    { wave: 9,  spawnInterval:  800, duration: 55000, types: ['fast', 'tank', 'bomber', 'shield'],               formationInterval: null,  sequenceFormations: true  },
-    { wave: 10, spawnInterval:  700, duration: 65000, types: [],                                                 formationInterval: null,  sequenceFormations: false }, // boss wave
+    { wave: 1,  spawnInterval: 2000, duration: 30000, types: ['basic'] },
+    { wave: 2,  spawnInterval: 1800, duration: 35000, types: ['basic', 'fast'] },
+    { wave: 3,  spawnInterval: 1500, duration: 40000, types: ['basic', 'fast', 'tank'] },
+    { wave: 4,  spawnInterval: 1400, duration: 40000, types: ['basic', 'tank', 'bomber'] },
+    { wave: 5,  spawnInterval: 1200, duration: 45000, types: ['basic', 'bomber', 'shield'] },
+    { wave: 6,  spawnInterval: 1100, duration: 50000, types: ['basic', 'fast', 'tank', 'shield'] },
+    { wave: 7,  spawnInterval: 1000, duration: 50000, types: ['fast', 'tank', 'bomber', 'shield'] },
+    { wave: 8,  spawnInterval:  900, duration: 55000, types: ['fast', 'tank', 'bomber', 'shield'] },
+    { wave: 9,  spawnInterval:  800, duration: 55000, types: ['fast', 'tank', 'bomber', 'shield'] },
+    { wave: 10, spawnInterval:  700, duration: 65000, types: [] }, // boss wave — no normal spawns
 ];
 
 const INTERMISSION_AFTER = new Set([3, 6, 9]);
@@ -40,26 +39,33 @@ export default class WaveManager {
      * @param {function} opts.onSpawn       — (type: string) => void
      * @param {function} opts.onFormation   — (formation: object) => void
      * @param {function} opts.onWaveStart   — (wave, duration) => void
-     * @param {function} opts.onWaveEnd     — (wave) => void — GameScene handles intermission/victory
+     * @param {function} opts.onWaveEnd     — (wave) => void
      */
     constructor(scene, opts) {
-        this.scene        = scene;
-        this.onSpawn      = opts.onSpawn;
-        this.onFormation  = opts.onFormation;
-        this.onWaveStart  = opts.onWaveStart;
-        this.onWaveEnd    = opts.onWaveEnd;
+        this.scene       = scene;
+        this.onSpawn     = opts.onSpawn;
+        this.onFormation = opts.onFormation;
+        this.onWaveStart = opts.onWaveStart;
+        this.onWaveEnd   = opts.onWaveEnd;
 
-        this.wave                  = opts.startWave || 1;
-        this.active                = false;
-        this.elapsed               = 0;
-        this.spawnAccumulator      = 0;
-        this.formationAccumulator  = 0;
-        this._formationSequenceIdx = 0;
+        this.wave                 = opts.startWave || 1;
+        this.active               = false;
+        this.elapsed              = 0;
+        this.spawnAccumulator     = 0;
+        this.formationAccumulator = 0;
     }
 
     getConfig() {
         const idx = Math.min(this.wave - 1, WAVE_CONFIGS.length - 1);
         return WAVE_CONFIGS[idx];
+    }
+
+    /** Formation interval for the current wave, derived from config balance values. */
+    get formationInterval() {
+        return Math.max(
+            CONFIG.WAVES.FORMATION_MIN_INTERVAL,
+            CONFIG.WAVES.FORMATION_BASE_INTERVAL - (this.wave - 1) * CONFIG.WAVES.FORMATION_INTERVAL_STEP,
+        );
     }
 
     get timeRemaining() {
@@ -77,11 +83,10 @@ export default class WaveManager {
 
     startWave() {
         const cfg = this.getConfig();
-        this.elapsed               = 0;
-        this.graceElapsed          = 0;
-        this.spawnAccumulator      = 0;
-        this.formationAccumulator  = 0;
-        this._formationSequenceIdx = 0;
+        this.elapsed              = 0;
+        this.graceElapsed         = 0;
+        this.spawnAccumulator     = 0;
+        this.formationAccumulator = 0;
         this.active = true;
         if (this.onWaveStart) this.onWaveStart(this.wave, cfg.duration);
     }
@@ -100,19 +105,6 @@ export default class WaveManager {
         // Boss wave — normal alien spawning suppressed; boss handles its own attacks
         if (cfg.types.length === 0) return;
 
-        // ── Wave 9: deterministic formation sequence ─────────────────────────
-        // Cycles through every formation in order with a fixed gap; no singles.
-        if (cfg.sequenceFormations) {
-            this.formationAccumulator += delta;
-            if (this.formationAccumulator >= WAVE9_FORMATION_GAP) {
-                this.formationAccumulator -= WAVE9_FORMATION_GAP;
-                const formation = FORMATIONS[this._formationSequenceIdx % FORMATIONS.length];
-                this._formationSequenceIdx++;
-                if (this.onFormation) this.onFormation(formation);
-            }
-            return; // no single-alien spawns on wave 9
-        }
-
         // ── Single-alien spawn tick ──────────────────────────────────────────
         if (!CONFIG.WAVES.FORMATIONS_ONLY) {
             this.spawnAccumulator += delta;
@@ -123,15 +115,14 @@ export default class WaveManager {
             }
         }
 
-        // ── Formation spawn tick (random, eligible) ──────────────────────────
-        if (cfg.formationInterval && this.onFormation) {
+        // ── Formation spawn tick ─────────────────────────────────────────────
+        if (this.onFormation) {
             this.formationAccumulator += delta;
-            if (this.formationAccumulator >= cfg.formationInterval) {
-                this.formationAccumulator -= cfg.formationInterval;
+            if (this.formationAccumulator >= this.formationInterval) {
+                this.formationAccumulator -= this.formationInterval;
                 const eligible = getEligibleFormations(cfg.types);
                 if (eligible.length > 0) {
-                    const formation = Phaser.Utils.Array.GetRandom(eligible);
-                    this.onFormation(formation);
+                    this.onFormation(Phaser.Utils.Array.GetRandom(eligible));
                 }
             }
         }
@@ -141,7 +132,6 @@ export default class WaveManager {
 
     /**
      * End the current wave immediately (called by GameScene when hack succeeds).
-     * Stops spawning and fires onWaveEnd so GameScene can handle intermission/victory.
      */
     completeWave() {
         if (!this.active) return;
