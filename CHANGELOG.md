@@ -2,6 +2,19 @@
 
 ## Session — 2026-03-12
 
+### Station & Terminal Sprites — Corrected Oblique Perspective
+
+Regenerated all 7 station/terminal SVGs to fix the perspective. The old sprites showed three faces (TOP + SOUTH + EAST), which is a 2-point-perspective look. The new sprites use the correct oblique top-down style: only TOP and SOUTH faces are visible; the EAST face has been removed.
+
+**Changes in `scripts/generate-station-sprites.js`:**
+- `rightFacePoints()` helper removed entirely.
+- All depth vectors changed from `(DX, DY)` (up-right) to purely vertical `(0, DY)`, so the top face is a rectangle sitting directly above the front face with no rightward shift.
+- All `<polygon points="${rightFacePoints(...)}" .../>` elements removed from mainframe, gun, and all five terminal variants.
+- Front faces made slightly wider to use the freed horizontal canvas space (mainframe FW 60→70, terminal desk DW 44→48, monitor MW 36→44).
+- Accent detail positions updated to match the new wider front-face dimensions.
+
+Re-run `node scripts/generate-station-sprites.js` to regenerate after any further edits.
+
 ### Boss Spawn Cutscene
 
 When wave 10 begins and the boss spawns, a short (~2.8 s) cutscene plays before players regain control:

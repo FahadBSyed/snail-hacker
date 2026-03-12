@@ -1,71 +1,66 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
 
-  <!-- ── Desk unit oblique faces ── -->
-  <polygon points="10,40 54,40 66,33 22,33"
+  <!-- ── Desk unit top face (oblique strip directly above front) ── -->
+  <polygon points="8,42 56,42 56,35 8,35"
            fill="#ccc9c1" stroke="#555045" stroke-width="1"/>
-  <polygon points="54,40 54,58 66,51 66,33"
-           fill="#808070" stroke="#555045" stroke-width="1"/>
   <!-- Desk front face -->
-  <rect x="10" y="40" width="44" height="18" fill="#b8b5ad" stroke="#555045" stroke-width="1"/>
+  <rect x="8" y="42" width="48" height="18" fill="#b8b5ad" stroke="#555045" stroke-width="1"/>
   <!-- Drive bay slots on desk front -->
-  <rect x="14"  y="44"  width="16" height="3" rx="0.5" fill="#3a3730" stroke="#999488" stroke-width="0.5"/>
-  <rect x="14"  y="49"  width="16" height="3" rx="0.5" fill="#3a3730" stroke="#999488" stroke-width="0.5"/>
+  <rect x="12"  y="46"  width="16" height="3" rx="0.5" fill="#3a3730" stroke="#999488" stroke-width="0.5"/>
+  <rect x="12"  y="51"  width="16" height="3" rx="0.5" fill="#3a3730" stroke="#999488" stroke-width="0.5"/>
   <!-- Drive LED -->
-  <circle cx="34" cy="45.5" r="1.5" fill="#cc66ff" opacity="0.9"/>
-  <circle cx="34" cy="45.5" r="3"   fill="#cc66ff" opacity="0.2"/>
-  <!-- Vent grille on desk right -->
-  <line x1="42" y1="43"  x2="50" y2="43"  stroke="#999488" stroke-width="0.7"/>
-  <line x1="42" y1="46"  x2="50" y2="46"  stroke="#999488" stroke-width="0.7"/>
-  <line x1="42" y1="49"  x2="50" y2="49"  stroke="#999488" stroke-width="0.7"/>
-  <line x1="42" y1="52" x2="50" y2="52" stroke="#999488" stroke-width="0.7"/>
+  <circle cx="32" cy="47.5" r="1.5" fill="#cc66ff" opacity="0.9"/>
+  <circle cx="32" cy="47.5" r="3"   fill="#cc66ff" opacity="0.2"/>
+  <!-- Vent grille on desk front right -->
+  <line x1="42" y1="45"  x2="52" y2="45"  stroke="#999488" stroke-width="0.7"/>
+  <line x1="42" y1="48"  x2="52" y2="48"  stroke="#999488" stroke-width="0.7"/>
+  <line x1="42" y1="51"  x2="52" y2="51"  stroke="#999488" stroke-width="0.7"/>
+  <line x1="42" y1="54" x2="52" y2="54" stroke="#999488" stroke-width="0.7"/>
 
-  <!-- ── Monitor oblique faces ── -->
-  <polygon points="14,14 50,14 60,8 24,8"
+  <!-- ── Monitor top face (oblique strip directly above front) ── -->
+  <polygon points="10,14 54,14 54,8 10,8"
            fill="#d8d5cc" stroke="#555045" stroke-width="1"/>
-  <polygon points="50,14 50,40 60,34 60,8"
-           fill="#8a8880" stroke="#555045" stroke-width="1"/>
   <!-- Monitor front face (bezel) -->
-  <rect x="14" y="14" width="36" height="26" fill="#c0bdb5" stroke="#555045" stroke-width="1"/>
+  <rect x="10" y="14" width="44" height="26" fill="#c0bdb5" stroke="#555045" stroke-width="1"/>
   <!-- CRT bezel inset -->
-  <rect x="17" y="17" width="30" height="19" rx="2"
+  <rect x="13" y="17" width="38" height="19" rx="2"
         fill="#3a3730" stroke="#555045" stroke-width="0.8"/>
   <!-- CRT screen -->
-  <rect x="19" y="19" width="26" height="15" rx="1"
+  <rect x="15" y="19" width="34" height="15" rx="1"
         fill="#001a12" stroke="#cc66ff" stroke-width="0.8"/>
 
   <!-- Scan-line glow on screen -->
-  <rect x="20" y="21"  width="24" height="1.2" fill="#cc66ff" opacity="0.55"/>
-  <rect x="20" y="24" width="24" height="1.2" fill="#cc66ff" opacity="0.4"/>
-  <rect x="20" y="27" width="24" height="1.2" fill="#cc66ff" opacity="0.55"/>
-  <rect x="20" y="30" width="22" height="1.2" fill="#cc66ff" opacity="0.3"/>
+  <rect x="16" y="21"  width="32" height="1.2" fill="#cc66ff" opacity="0.55"/>
+  <rect x="16" y="24" width="32" height="1.2" fill="#cc66ff" opacity="0.4"/>
+  <rect x="16" y="27" width="32" height="1.2" fill="#cc66ff" opacity="0.55"/>
+  <rect x="16" y="30" width="30" height="1.2" fill="#cc66ff" opacity="0.3"/>
   <!-- Screen ambient glow -->
-  <rect x="19" y="19" width="26" height="15" rx="1"
+  <rect x="15" y="19" width="34" height="15" rx="1"
         fill="#cc66ff" opacity="0.05"/>
 
   <!-- Screen glare highlight (top-left) -->
-  <rect x="20" y="19" width="6" height="3" rx="1"
+  <rect x="16" y="19" width="7" height="3" rx="1"
         fill="white" opacity="0.12"/>
 
   <!-- Indicator LED on bezel (bottom-right) -->
-  <circle cx="44" cy="35" r="1.8" fill="#cc66ff"/>
-  <circle cx="44" cy="35" r="3.5" fill="#cc66ff" opacity="0.2"/>
+  <circle cx="48" cy="35" r="1.8" fill="#cc66ff"/>
+  <circle cx="48" cy="35" r="3.5" fill="#cc66ff" opacity="0.2"/>
 
   <!-- Monitor brand badge (embossed strip) -->
   <rect x="24" y="35" width="16" height="2.5" rx="0.5"
-        fill="#8a8880" opacity="0.6"/>
+        fill="#d8d5cc" opacity="0.6"/>
 
   <!-- Type-specific accent detail -->
   
-  <!-- Simple 6-point slow field star -->
   <line x1="27" y1="34" x2="37" y2="34"
         stroke="#cc66ff" stroke-width="1" opacity="0.8"/>
   <line x1="29.5" y1="29.7" x2="34.5" y2="38.3"
         stroke="#cc66ff" stroke-width="1" opacity="0.8"/>
   <line x1="34.5" y1="29.7" x2="29.5" y2="38.3"
         stroke="#cc66ff" stroke-width="1" opacity="0.8"/>
-  <!-- Clock face on desk -->
-  <circle cx="46" cy="47" r="4.5" fill="none" stroke="#cc66ff" stroke-width="0.9"/>
-  <line x1="46" y1="47" x2="46" y2="43.5" stroke="#cc66ff" stroke-width="1" stroke-linecap="round"/>
-  <line x1="46" y1="47" x2="49" y2="49"   stroke="#cc66ff" stroke-width="1" stroke-linecap="round"/>
+  <!-- Clock face on desk front -->
+  <circle cx="46" cy="50" r="4.5" fill="none" stroke="#cc66ff" stroke-width="0.9"/>
+  <line x1="46" y1="50" x2="46" y2="46.5" stroke="#cc66ff" stroke-width="1" stroke-linecap="round"/>
+  <line x1="46" y1="50" x2="49" y2="52"  stroke="#cc66ff" stroke-width="1" stroke-linecap="round"/>
 
 </svg>
