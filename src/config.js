@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 10;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 11;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -167,7 +167,8 @@ export const DEFAULTS = {
     },
 
     WAVES: {
-        SPAWN_GRACE_MS: 3000,  // ms of no-spawn buffer at the start of each wave
+        SPAWN_GRACE_MS:   3000,  // ms of no-spawn buffer at the start of each wave
+        FORMATIONS_ONLY:  true,  // debug: suppress single-alien spawns; show only formations
     },
 
     ESCAPE: {

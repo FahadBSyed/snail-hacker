@@ -420,6 +420,7 @@ export default class GameScene extends Phaser.Scene {
         this.waveManager = new WaveManager(this, {
             startWave: this.startWave,
             onSpawn: (type) => this.spawnAlien(type),
+            onFormation: (formation) => this._spawnFormation(formation),
             onWaveStart: (wave) => {
                 this.wave          = wave;
                 this._spawnProps(wave);
@@ -1779,6 +1780,57 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // ── Alien spawning ─────────────────────────────────────────────────────────
+
+    /**
+     * Spawn a formation of aliens from a random screen edge.
+     *
+     * Each member's world position is computed from:
+     *   worldPos = anchor + member.perp * right + member.depth * forward
+     *
+     * where `forward` points from the edge toward the station center and
+     * `right` is perpendicular (right-hand side as facing the station).
+     *
+     * Members are spawned with `formation.stagger` ms between each one,
+     * in array order (front-of-formation members first).
+     */
+    _spawnFormation(formation) {
+        // Pick a random edge: 0=top, 1=left, 2=right
+        const edge = Phaser.Math.Between(0, 2);
+
+        // Anchor point and edge basis vectors
+        // A 200 px margin keeps the widest formations (max perp ≈160 px) fully on screen.
+        let anchor, forward, right;
+        if (edge === 0) {
+            // Top edge
+            anchor  = { x: Phaser.Math.Between(200, 1080), y: -20 };
+            forward = { x: 0,  y:  1 };
+            right   = { x: 1,  y:  0 };
+        } else if (edge === 1) {
+            // Left edge
+            anchor  = { x: -20, y: Phaser.Math.Between(200, 520) };
+            forward = { x:  1,  y:  0 };
+            right   = { x:  0,  y:  1 };
+        } else {
+            // Right edge
+            anchor  = { x: 1300, y: Phaser.Math.Between(200, 520) };
+            forward = { x: -1,  y:  0 };
+            right   = { x:  0,  y: -1 };
+        }
+
+        // Play a single warning sound for the whole formation
+        this.soundSynth?.play('alienSpawn');
+
+        // Stagger each member spawn
+        formation.members.forEach((member, i) => {
+            const delay = i * formation.stagger;
+            this.time.delayedCall(delay, () => {
+                if (!this.active || !this.waveManager?.active) return;
+                const wx = anchor.x + member.perp * right.x + member.depth * forward.x;
+                const wy = anchor.y + member.perp * right.y + member.depth * forward.y;
+                this.spawnAlien(member.type, wx, wy);
+            });
+        });
+    }
 
     _randomEdgePosition() {
         // On wave 10 the FroggerMinigame occupies the bottom third (y > 480),
