@@ -105,7 +105,8 @@ export default class WaveManager {
         const bud = CONFIG.SPAWN_BUDGET;
 
         // ── Regenerate budget ────────────────────────────────────────────────
-        const regenRate = bud.BASE_REGEN + (this.wave - 1) * bud.WAVE_REGEN;
+        const regenRate = (bud.BASE_REGEN + (this.wave - 1) * bud.WAVE_REGEN)
+                        * (this.wave <= 5 ? 1.25 : 1);
         this.budget = Math.min(this.budget + regenRate * dt, bud.MAX_BUDGET);
 
         // ── Accumulate formation bias ────────────────────────────────────────
