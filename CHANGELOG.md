@@ -1,5 +1,23 @@
 # SNAIL HACKER — Changelog
 
+## Session — 2026-03-12
+
+### Helicopter Minigame
+
+New `HelicopterMinigame` added to `src/minigames/HelicopterMinigame.js`. The player holds SPACE to thrust upward and releases to fall under gravity, guiding a small chevron ship through incoming wall pairs. Flying past **2 wall pairs** scores one "word" (calls `onWordComplete`); touching a wall or the tunnel ceiling/floor triggers failure (`onCancel`). The minigame is temporarily set as the **default** hack minigame for testing (replaces the `HackMinigame`/`MathMinigame` rotation in `GameScene.js`).
+
+- **`src/minigames/HelicopterMinigame.js`** — new file. Panel footprint matches `FroggerMinigame` (anchored at 640, 600). Physics: gravity 420 px/s², thrust −380 px/s, terminal velocity ±260/220. Walls scroll at 90 px/s with a 52 px gap, gap position randomised each pair. Progress shown as filled dots (one per word). Interface identical to `HackMinigame`: `wordsRequired / onWordComplete / onSuccess / onCancel / cancel()`.
+- **`src/scenes/GameScene.js`** — imported `HelicopterMinigame`; replaced minigame selector line with `const MinigameCls = HelicopterMinigame` (TODO comment marks the temporary change).
+
+### Blinking cursors in HackMinigame and MathMinigame
+
+- `HackMinigame`: underline rectangle gets a looping `alpha 0→1` Phaser tween (500 ms, `Stepped` ease). Tween stopped when cursor is rebuilt for a new word.
+- `MathMinigame`: 530 ms repeating time event toggles the `_` character while no digits are typed. Timer removed in `_cleanup`.
+
+### Alien swarm sound disabled
+
+Removed the looping proximity-based `alienSwarm` hum from `GameScene`. The `_alienSwarm_looped()` definition remains in `SoundSynth.js` for future use.
+
 ## Session 10k — 2026-03-11
 
 ### Escape Ship Flythrough in Intermission Scene

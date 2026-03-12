@@ -17,6 +17,7 @@ import HackMinigame from '../minigames/HackMinigame.js';
 import FroggerMinigame from '../minigames/FroggerMinigame.js';
 import MathMinigame from '../minigames/MathMinigame.js';
 import RhythmMinigame from '../minigames/RhythmMinigame.js';
+import HelicopterMinigame from '../minigames/HelicopterMinigame.js';
 import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import FrogEscape from '../entities/FrogEscape.js'; // decorative escape frogs
@@ -1005,7 +1006,8 @@ export default class GameScene extends Phaser.Scene {
 
         // ── Waves 1–9: typing / math hack ─────────────────────────────────────
         const remaining   = this.hackThreshold - this.hackProgress;
-        const MinigameCls = this._hackMode === 'math' ? MathMinigame : HackMinigame;
+        // TODO: restore rotation after helicopter testing
+        const MinigameCls = HelicopterMinigame; // eslint-disable-line no-unused-vars
         this.activeHack = new MinigameCls(this, {
             wordsRequired: remaining,
             onWordComplete: (_count) => {
