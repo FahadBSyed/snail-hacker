@@ -36,7 +36,7 @@ const MAX_VEL_UP   = 75;
 const WALL_SPEED      = 90;    // px/s scroll speed
 const WALL_SPACING    = 120;   // horizontal gap between wall pairs
 const WALL_WIDTH      = 14;    // thickness of each wall segment
-const GAP_HEIGHT      = 52;    // vertical opening size the ship must pass through
+const GAP_HEIGHT      = 65;    // vertical opening size the ship must pass through
 const GAP_MIN_Y       = 10;    // min gap top edge from play area top
 const WALLS_PER_WORD  = 1;     // wall pairs the player must pass to earn one "word"
 
