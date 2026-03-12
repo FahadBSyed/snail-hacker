@@ -2,6 +2,10 @@
 
 ## Session — 2026-03-12
 
+### Boss Always Spawns Escape Frog on Death
+
+`_bossDeath()` in `GameScene.js` now unconditionally spawns a `FrogEscape` after the final explosion, bypassing the 25% random gate in `spawnFrogEscape()`. The frog is created directly (same cap of 5 active frogs still applies), so players are guaranteed to see a frog flee after killing the boss.
+
 ### Boss Sound Effects
 
 Six procedural boss sounds added to `SoundSynth.js` and wired into `GameScene.js`:

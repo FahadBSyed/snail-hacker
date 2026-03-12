@@ -1425,6 +1425,12 @@ export default class GameScene extends Phaser.Scene {
                 this.boss.destroy();
                 this.boss = null;
             }
+            // Always spawn an escape frog on boss death (100% chance, bypasses random gate)
+            if (this.sys.isActive() && this.frogEscapes.filter(f => f.active).length < 5) {
+                const frog = new FrogEscape(this, bx, by);
+                this.frogEscapes.push(frog);
+                this.soundSynth?.play('alienRibbet');
+            }
             this.hud.hideBossBar();
             this.score += 50;
             this.hud.updateScore(this.score);
