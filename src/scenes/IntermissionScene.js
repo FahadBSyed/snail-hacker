@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import EscapeShip from '../entities/EscapeShip.js';
 
 const FLAVOR_TEXT = {
     1: ['Not bad for a snail.', 'Gerald flexes his antenna.', 'They keep coming.'],
@@ -22,21 +23,21 @@ const PASSIVE_POOL = ['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RIC
 const UPGRADE_POOL = [...ACTIVE_POOL, ...PASSIVE_POOL];
 
 function getUpgradeDefs() {
-    const cannonSecs = Math.round(CONFIG.CANNON.ACTIVE_DURATION / 1000);
-    const shieldSecs = Math.round(CONFIG.TERMINALS.SHIELD_DURATION / 1000);
-    const slowSecs   = Math.round(CONFIG.TERMINALS.SLOW_DURATION / 1000);
+    const cannonSecs = Math.round(CONFIG.TERMINALS.CANNON.DURATION / 1000);
+    const shieldSecs = Math.round(CONFIG.TERMINALS.SHIELD.DURATION / 1000);
+    const slowSecs   = Math.round(CONFIG.TERMINALS.SLOW.DURATION / 1000);
     const slowPct    = Math.round(CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER * 100);
-    const repairHp   = CONFIG.TERMINALS.REPAIR_HEAL;
-    const droneFirstSecs = Math.round(CONFIG.TERMINALS.DRONE_FIRST_SHOT_MAX / 1000);
-    const droneCoolSecs  = Math.round(CONFIG.TERMINALS.DRONE_COOLDOWN / 1000);
+    const repairHp   = CONFIG.TERMINALS.REPAIR.HEAL;
+    const droneFirstSecs = Math.round(CONFIG.TERMINALS.DRONE.FIRST_SHOT_MAX / 1000);
+    const droneCoolSecs  = Math.round(CONFIG.TERMINALS.DRONE.COOLDOWN / 1000);
     return {
         CANNON:       { label: 'AUTO TURRET',    color: 0xff8844, desc: `Hack to unleash an\nauto-targeting cannon\nfor ${cannonSecs}s.` },
         SHIELD:       { label: 'FORCE SHIELD',   color: 0x4488ff, desc: `Hack to project a shield\nthat blocks alien damage\nfor ${shieldSecs}s.` },
         SLOWFIELD:    { label: 'SLOW FIELD',     color: 0xaa44ff, desc: `Hack to slow all aliens\nto ${slowPct}% speed\nfor ${slowSecs}s.` },
         REPAIR:       { label: 'REPAIR KIT',     color: 0x44ff88, desc: `Hack to restore\n+${repairHp} HP to Gerald's shell.` },
         DRONE:        { label: 'AUTO DRONE',     color: 0xffdd44, desc: `Drone fires within ${droneFirstSecs}s\nof each round, then every\n${droneCoolSecs}s after.` },
-        DECOY:        { label: 'DECOY LURE',     color: 0xff44cc, desc: `Hack to deploy a lure\nthat draws all aliens\naway for ${Math.round(CONFIG.TERMINALS.DECOY_DURATION / 1000)}s.` },
-        EMP_MINES:    { label: 'EMP MINES',      color: 0x00ff88, desc: `Hack to deploy proximity\nmines every ${Math.round(CONFIG.TERMINALS.EMP_SPAWN_INTERVAL / 1000)}s. Explode on\ncontact, bypass shields.` },
+        DECOY:        { label: 'DECOY LURE',     color: 0xff44cc, desc: `Hack to deploy a lure\nthat draws all aliens\naway for ${Math.round(CONFIG.TERMINALS.DECOY.DURATION / 1000)}s.` },
+        EMP_MINES:    { label: 'EMP MINES',      color: 0x00ff88, desc: `Hack to deploy proximity\nmines every ${Math.round(CONFIG.TERMINALS.EMP.SPAWN_INTERVAL / 1000)}s. Explode on\ncontact, bypass shields.` },
         RICOCHET:     { label: 'RICOCHET',        color: 0x44ffff, desc: `80% chance shots bounce\nto the nearest enemy.\nChance halves each hop.` },
         QUICK_GRAB:   { label: 'QUICK GRAB',      color: 0xcc88ff, desc: `Halves the grab hand\ncooldown (${CONFIG.GRAB.COOLDOWN}s → ${CONFIG.GRAB.COOLDOWN / 2}s)\nbetween grabs.` },
         HEALTH_BOOST: { label: 'HEALTH BOOST',   color: 0xff6666, desc: `Gerald's max health\nincreases by 50%.` },
@@ -96,6 +97,10 @@ export default class IntermissionScene extends Phaser.Scene {
             return;
         }
 
+        // Escape ship flies in from bottom-left, idles at bottom-center,
+        // then flies out bottom-right when the player makes a choice.
+        this._spawnEscapeShip();
+
         // Determine available upgrades and whether this is an upgrade selection wave.
         // Odd waves offer actives; even waves offer passives.
         const pool      = this.wave % 2 === 0 ? PASSIVE_POOL : ACTIVE_POOL;
@@ -144,6 +149,23 @@ export default class IntermissionScene extends Phaser.Scene {
         const offered = Phaser.Utils.Array.Shuffle(available.slice())
             .slice(0, CONFIG.UPGRADES.CARDS_OFFERED);
         this._showUpgradeCards(offered, cx, 390);
+    }
+
+    // ── Escape ship ───────────────────────────────────────────────────────────
+
+    _spawnEscapeShip() {
+        // Start off-screen bottom-left and fly to bottom-center.
+        this._escapeShip = new EscapeShip(this, -140, 840, { skipIntro: true });
+        this._escapeShip.setDepth(10); // behind UI text
+
+        this.tweens.add({
+            targets:  this._escapeShip,
+            x:        640,
+            y:        620,
+            duration: 900,
+            ease:     'Cubic.easeOut',
+            onComplete: () => this._escapeShip.startHoverBob(),
+        });
     }
 
     // ── Normal (non-upgrade) layout ───────────────────────────────────────────
@@ -264,51 +286,75 @@ export default class IntermissionScene extends Phaser.Scene {
 
         const UPGRADE_DEFS = getUpgradeDefs();
         types.forEach((type, i) => {
-            const def = UPGRADE_DEFS[type];
-            const x   = startX + i * (cardW + gap);
+            const def      = UPGRADE_DEFS[type];
+            const x        = startX + i * (cardW + gap);
             const colorHex = '#' + def.color.toString(16).padStart(6, '0');
 
-            // Draw card background + border
+            // Container groups all card children so they animate as one unit.
+            // Start above the screen, scaled down — entrance tween brings it into place.
+            const container = this.add.container(x, cardY - 460);
+            container.setScale(0.15);
+            container.setAlpha(0);
+
+            // Card background + border (coords are relative to container origin)
             const gfx = this.add.graphics();
             const drawCard = (hover = false) => {
                 gfx.clear();
                 gfx.fillStyle(0x0d150d, 1);
-                gfx.fillRoundedRect(x - cardW / 2, cardY - cardH / 2, cardW, cardH, 8);
+                gfx.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 8);
                 gfx.lineStyle(hover ? 3 : 2, def.color, hover ? 1.0 : 0.7);
-                gfx.strokeRoundedRect(x - cardW / 2, cardY - cardH / 2, cardW, cardH, 8);
+                gfx.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 8);
                 // Color accent stripe at top
                 gfx.fillStyle(def.color, 0.22);
-                gfx.fillRect(x - cardW / 2 + 1, cardY - cardH / 2 + 1, cardW - 2, 30);
+                gfx.fillRect(-cardW / 2 + 1, -cardH / 2 + 1, cardW - 2, 30);
             };
             drawCard();
+            container.add(gfx);
 
             // Label (inside accent stripe)
-            this.add.text(x, cardY - cardH / 2 + 16, def.label, {
+            const labelText = this.add.text(0, -cardH / 2 + 16, def.label, {
                 fontSize: '12px', fontFamily: 'monospace', color: colorHex, fontStyle: 'bold',
             }).setOrigin(0.5);
+            container.add(labelText);
 
-            // Passive badge (shown just below accent stripe for passive upgrades)
+            // Passive badge
             if (PASSIVE_UPGRADES.has(type)) {
-                this.add.text(x, cardY - cardH / 2 + 40, '— PASSIVE —', {
+                const badge = this.add.text(0, -cardH / 2 + 40, '— PASSIVE —', {
                     fontSize: '9px', fontFamily: 'monospace', color: '#557755',
                 }).setOrigin(0.5);
+                container.add(badge);
             }
 
             // Description
-            this.add.text(x, cardY + 12, def.desc, {
+            const descText = this.add.text(0, 12, def.desc, {
                 fontSize: '12px', fontFamily: 'monospace', color: '#aaaaaa', align: 'center',
                 wordWrap: { width: cardW - 24 },
             }).setOrigin(0.5);
+            container.add(descText);
 
             // Key-number hint at bottom
-            this.add.text(x, cardY + cardH / 2 - 18, `[ ${i + 1} ]`, {
+            const keyHint = this.add.text(0, cardH / 2 - 18, `[ ${i + 1} ]`, {
                 fontSize: '13px', fontFamily: 'monospace', color: '#ffdd44',
             }).setOrigin(0.5);
+            container.add(keyHint);
 
-            // Interactive hit zone
-            const zone = this.add.zone(x, cardY, cardW, cardH).setInteractive();
-            zone.on('pointerover', () => { if (!selected) drawCard(true); });
-            zone.on('pointerout',  () => { if (!selected) drawCard(false); });
+            // Interactive hit zone inside the container
+            container.setSize(cardW, cardH);
+            container.setInteractive();
+            container.on('pointerover', () => { if (!selected) drawCard(true); });
+            container.on('pointerout',  () => { if (!selected) drawCard(false); });
+
+            // ── Entrance animation (staggered left → right) ──────────────────
+            this.tweens.add({
+                targets:  container,
+                y:        cardY,
+                scaleX:   1,
+                scaleY:   1,
+                alpha:    1,
+                duration: 380,
+                delay:    i * 140,
+                ease:     'Back.easeOut',
+            });
 
             const select = () => {
                 if (selected) return;
@@ -316,20 +362,48 @@ export default class IntermissionScene extends Phaser.Scene {
                 this.input.keyboard.off('keydown', keyListener);
                 this.soundSynth.play('upgradeSelect');
 
-                // Flash selected card bright, dim others
-                drawCard(true);
-                cards.forEach(c => { if (c !== cards[i]) c.gfx.setAlpha(0.3); });
+                // Slide non-selected cards down off-screen
+                cards.forEach((c, j) => {
+                    if (j !== i) {
+                        this.tweens.add({
+                            targets:  c.container,
+                            y:        cardY + 520,
+                            alpha:    0,
+                            duration: 360,
+                            delay:    j * 70,
+                            ease:     'Cubic.easeIn',
+                        });
+                    }
+                });
 
-                // Find a safe angle and record the upgrade
+                // 3D flip: scaleX 1→0 (card turns edge-on), then 0→1 (card faces forward again).
+                // A subtle scaleY squeeze on the first half sells the perspective warp.
+                this.tweens.add({
+                    targets:  container,
+                    scaleX:   0,
+                    scaleY:   0.88,
+                    duration: 190,
+                    ease:     'Sine.easeIn',
+                    onComplete: () => {
+                        drawCard(true); // brighten border on the "back face" reveal
+                        this.tweens.add({
+                            targets:  container,
+                            scaleX:   1,
+                            scaleY:   1,
+                            duration: 220,
+                            ease:     'Sine.easeOut',
+                        });
+                    },
+                });
+
+                // Record the upgrade; ship exit in _advance() acts as the timing gate.
                 const angle = this._findSafeUpgradeAngle();
                 this.upgrades = [...this.upgrades, { type, angle }];
-
-                // Brief pause, then advance
-                this.time.delayedCall(550, () => this._advance());
+                this._advance();
             };
 
-            zone.on('pointerdown', select);
-            cards.push({ gfx, select });
+            container.on('pointerdown', select);
+            cards.push({ gfx, select, container });
         });
 
         // Prompt below the cards
@@ -369,6 +443,23 @@ export default class IntermissionScene extends Phaser.Scene {
         this._advanced = true;
         if (this.countdownTimer) this.countdownTimer.remove(false);
 
+        if (this._escapeShip) {
+            // Stop hover bob, then fly the ship out bottom-right before transitioning.
+            this.tweens.killTweensOf(this._escapeShip);
+            this.tweens.add({
+                targets:  this._escapeShip,
+                x:        1440,
+                y:        860,
+                duration: 580,
+                ease:     'Cubic.easeIn',
+                onComplete: () => this._doAdvance(),
+            });
+        } else {
+            this._doAdvance();
+        }
+    }
+
+    _doAdvance() {
         if (this._startupMode) {
             if (this.upgrades.length < this._targetWave - 1) {
                 // Need more upgrades — loop back

@@ -87,6 +87,10 @@ export default class MathMinigame {
         this.container.add(this.progressLabel);
         this._progressBarW = barW;
 
+        // Word group — only the equation texts wobble, not the whole panel
+        this._wordGroup = this.scene.add.container(0, 0);
+        this.container.add(this._wordGroup);
+
         this._buildProblemDisplay();
     }
 
@@ -99,13 +103,24 @@ export default class MathMinigame {
             `${this._a}  ${this._op}  ${this._b}  =`, {
                 fontSize: '24px', fontFamily: 'monospace', color: '#aaaacc',
             }).setOrigin(1, 0.5);
-        this.container.add(this._problemText);
+        this._wordGroup.add(this._problemText);
 
         // Right side: the player's typed answer + cursor
         this._inputText = this.scene.add.text(-8, -6, '_', {
             fontSize: '24px', fontFamily: 'monospace', color: '#00ffcc',
         }).setOrigin(0, 0.5);
-        this.container.add(this._inputText);
+        this._wordGroup.add(this._inputText);
+
+        // Blink the cursor when no digits have been typed yet
+        if (this._blinkTimer) this._blinkTimer.remove(false);
+        this._cursorVisible = true;
+        this._blinkTimer = this.scene.time.addEvent({
+            delay: 530, loop: true, callback: () => {
+                if (this.cancelled || this._typed.length > 0) return;
+                this._cursorVisible = !this._cursorVisible;
+                this._inputText.setText(this._cursorVisible ? '_' : ' ');
+            },
+        });
     }
 
     // ── Input handling ────────────────────────────────────────────────────────
@@ -131,19 +146,21 @@ export default class MathMinigame {
 
     _checkAnswer() {
         if (parseInt(this._typed, 10) === this._answer) {
-            // Correct
-            this._inputText.setColor('#44ff44');
+            // Correct — white flash + scale pop
+            this._problemText.setColor('#ffffff');
+            this._inputText.setColor('#ffffff');
             this.wordsCompleted++;
             this._updateProgressUI();
             this.scene.soundSynth?.play('wordSuccess');
+            this._flashSuccess();
             if (this.onWordComplete) this.onWordComplete(this.wordsCompleted);
 
             if (this.wordsCompleted >= this.wordsRequired) {
-                this.scene.time.delayedCall(180, () => {
+                this.scene.time.delayedCall(350, () => {
                     if (!this.cancelled) this._finish();
                 });
             } else {
-                this.scene.time.delayedCall(180, () => {
+                this.scene.time.delayedCall(350, () => {
                     if (!this.cancelled) {
                         this._pickNewProblem();
                         this._buildProblemDisplay();
@@ -155,6 +172,7 @@ export default class MathMinigame {
             this.scene.soundSynth?.play('error');
             this._inputText.setColor('#ff4444');
             this._typed = '';
+            this._wobble(true);
             this.scene.time.delayedCall(300, () => {
                 if (!this.cancelled && this._inputText.active) {
                     this._inputText.setColor('#00ffcc');
@@ -162,6 +180,38 @@ export default class MathMinigame {
                 }
             });
         }
+    }
+
+    // ── Success / error feedback ──────────────────────────────────────────────
+
+    _flashSuccess() {
+        if (this._wobbleTween) { this._wobbleTween.stop(); this._wordGroup.y = 0; }
+        this._wordGroup.setScale(1);
+        this.scene.tweens.add({
+            targets:  this._wordGroup,
+            scaleX:   1.18,
+            scaleY:   1.18,
+            duration: 100,
+            yoyo:     true,
+            ease:     'Sine.easeOut',
+        });
+    }
+
+    _wobble(violent) {
+        if (this._wobbleTween) this._wobbleTween.stop();
+        this._wordGroup.y = 0;
+        const amp = violent ? 10 : 2;
+        const dur  = violent ? 40 : 55;
+        const reps = violent ? 5  : 0;
+        this._wobbleTween = this.scene.tweens.add({
+            targets:  this._wordGroup,
+            y:        amp,
+            duration: dur,
+            yoyo:     true,
+            repeat:   reps,
+            ease:     'Sine.easeInOut',
+            onComplete: () => { if (this._wordGroup?.active) this._wordGroup.y = 0; },
+        });
     }
 
     // ── Progress ──────────────────────────────────────────────────────────────
@@ -190,6 +240,7 @@ export default class MathMinigame {
     }
 
     _cleanup() {
+        if (this._blinkTimer) { this._blinkTimer.remove(false); this._blinkTimer = null; }
         if (this.keyHandler) this.scene.input.keyboard.off('keydown', this.keyHandler);
         if (this.container && this.container.active) this.container.destroy();
     }

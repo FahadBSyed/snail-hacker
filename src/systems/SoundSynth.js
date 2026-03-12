@@ -596,6 +596,92 @@ export default class SoundSynth {
         });
     }
 
+    /** Alien arrives on screen — descending saucer tone + noise impact. */
+    _alienSpawn() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const g = this._gain(ctx, 0.26, t, 0.30);
+        this._osc(ctx, 'sawtooth', 560, 110, t, 0.26, g);
+        const ng  = this._gain(ctx, 0.13, t + 0.08, 0.18);
+        const lpf = this._filter(ctx, 'lowpass', 500, ng);
+        this._noise(ctx, 0.16, lpf);
+    }
+
+    /** Frog ribbet — low guttural gurgle then high chirp. */
+    _alienRibbet() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Low "rrr" gurgle
+        const g1 = this._gain(ctx, 0.20, t, 0.22);
+        this._osc(ctx, 'triangle', 95, 68, t, 0.20, g1);
+        // High "bit" chirp
+        const g2 = this._gain(ctx, 0.16, t + 0.17, 0.20);
+        this._osc(ctx, 'sine', 340, 210, t + 0.17, 0.18, g2);
+    }
+
+    /** Decorative escape frog hop — soft thud with a little texture. */
+    _frogEscapeHop() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const g = this._gain(ctx, 0.15, t, 0.13);
+        this._osc(ctx, 'sine', 170, 75, t, 0.11, g);
+        const ng  = this._gain(ctx, 0.07, t, 0.08);
+        const lpf = this._filter(ctx, 'lowpass', 380, ng);
+        this._noise(ctx, 0.07, lpf);
+    }
+
+    /**
+     * Alien swarm movement hum — low throbbing sawtooth drone.
+     * Returns { stop(fadeOut?), setVolume(v) } for dynamic volume control.
+     */
+    _alienSwarm_looped() {
+        const ctx = this._ctx_get();
+        const t   = ctx.currentTime;
+
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = 52;
+
+        // LFO throb at 3.5 Hz gives it an organic pulse
+        const lfo = ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = 3.5;
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.value = 7;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+
+        const lpf = ctx.createBiquadFilter();
+        lpf.type = 'lowpass';
+        lpf.frequency.value = 280;
+        lpf.Q.value = 1.5;
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.connect(ctx.destination);
+
+        osc.connect(lpf);
+        lpf.connect(gain);
+        osc.start(t);
+        lfo.start(t);
+
+        const self = this;
+        return {
+            setVolume(v) {
+                try {
+                    gain.gain.setTargetAtTime(Math.max(0, v) * self.volume, ctx.currentTime, 0.15);
+                } catch (_) {}
+            },
+            stop(fadeOut = 0.5) {
+                try {
+                    const now = ctx.currentTime;
+                    gain.gain.cancelScheduledValues(now);
+                    gain.gain.setValueAtTime(gain.gain.value, now);
+                    gain.gain.linearRampToValueAtTime(0, now + fadeOut);
+                    osc.stop(now + fadeOut);
+                    lfo.stop(now + fadeOut);
+                } catch (_) {}
+            },
+        };
+    }
+
     /** New wave beginning — two sharp alert beeps. */
     _waveStart() {
         const ctx = this._ctx_get(), t = ctx.currentTime;

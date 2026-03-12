@@ -25,6 +25,15 @@
  *   slithering  ← looped via playLooped(); procedural fallback built-in
  */
 export const SOUND_OVERRIDES = {
+    alienSpawn: [
+        { url: 'assets/sounds/frog-croak-a.mp3', volume: 0.3 },
+        { url: 'assets/sounds/frog-croak-b.mp3', volume: 0.3 },
+        { url: 'assets/sounds/frog-croak-c.mp3', volume: 0.3 },
+    ],
+    alienRibbet: [
+        { url: 'assets/sounds/frog-croak-d.mp3', volume: 0.3 },
+        { url: 'assets/sounds/frog-croak-e.mp3', volume: 0.3 },
+    ],
     error: [
          { url: 'assets/sounds/error-a.mp3', volume: 0.15 },
          { url: 'assets/sounds/error-b.mp3', volume: 0.15 },
@@ -53,14 +62,8 @@ export const SOUND_OVERRIDES = {
     shootTurret: [
          { url: 'assets/sounds/shoot-d.mp3', volume: 0.085 }
     ],
-    success: [
-         { url: 'assets/sounds/success-a.mp3', volume: 0.4 },
-         { url: 'assets/sounds/success-b.mp3', volume: 0.4 },
-         { url: 'assets/sounds/success-c.mp3', volume: 0.4 },
-         { url: 'assets/sounds/success-d.mp3', volume: 0.4 }
-    ],
     waveStart: [
-        { url: 'assets/sounds/wave-start.mp3', volume: 0.4 }
+        // { url: 'assets/sounds/wave-start.mp3', volume: 0.4 }
     ],
     waveBegin: [
         { url: 'assets/sounds/wave-start.mp3', volume: 0.4 }
@@ -70,6 +73,12 @@ export const SOUND_OVERRIDES = {
     ],
     waveComplete: [
         { url: 'assets/sounds/wave-end.mp3', volume: 0.3 }
+    ],
+        wordSuccess: [
+         { url: 'assets/sounds/success-a.mp3', volume: 0.4 },
+         { url: 'assets/sounds/success-b.mp3', volume: 0.4 },
+         { url: 'assets/sounds/success-c.mp3', volume: 0.4 },
+         { url: 'assets/sounds/success-d.mp3', volume: 0.4 }
     ]
     // explosion: ['assets/sounds/explosion.mp3'],
     // shieldReflect: [{ url: 'assets/sounds/ricochet.wav', volume: 0.6 }],

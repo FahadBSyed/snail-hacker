@@ -1,6 +1,43 @@
 # SNAIL HACKER — Changelog
 
+## Session — 2026-03-12
+
+### Helicopter Minigame
+
+New `HelicopterMinigame` added to `src/minigames/HelicopterMinigame.js`. The player holds SPACE to thrust upward and releases to fall under gravity, guiding a small chevron ship through incoming wall pairs. Flying past **2 wall pairs** scores one "word" (calls `onWordComplete`); touching a wall or the tunnel ceiling/floor triggers failure (`onCancel`). The minigame is temporarily set as the **default** hack minigame for testing (replaces the `HackMinigame`/`MathMinigame` rotation in `GameScene.js`).
+
+- **`src/minigames/HelicopterMinigame.js`** — new file. Panel footprint matches `FroggerMinigame` (anchored at 640, 600). Physics: gravity 420 px/s², thrust −380 px/s, terminal velocity ±260/220. Walls scroll at 90 px/s with a 52 px gap, gap position randomised each pair. Progress shown as filled dots (one per word). Interface identical to `HackMinigame`: `wordsRequired / onWordComplete / onSuccess / onCancel / cancel()`.
+- **`src/scenes/GameScene.js`** — imported `HelicopterMinigame`; replaced minigame selector line with `const MinigameCls = HelicopterMinigame` (TODO comment marks the temporary change).
+
+### Blinking cursors in HackMinigame and MathMinigame
+
+- `HackMinigame`: underline rectangle gets a looping `alpha 0→1` Phaser tween (500 ms, `Stepped` ease). Tween stopped when cursor is rebuilt for a new word.
+- `MathMinigame`: 530 ms repeating time event toggles the `_` character while no digits are typed. Timer removed in `_cleanup`.
+
+### Alien swarm sound disabled
+
+Removed the looping proximity-based `alienSwarm` hum from `GameScene`. The `_alienSwarm_looped()` definition remains in `SoundSynth.js` for future use.
+
 ## Session 10k — 2026-03-11
+
+### Escape Ship Flythrough in Intermission Scene
+
+The `EscapeShip` now appears in every normal (non-startup) intermission. It flies in from off-screen bottom-left to the bottom-center of the screen (`Cubic.easeOut`, 900ms), then idles with its hover-bob animation. When the player makes any choice (card select, key press, or countdown expiry), the ship exits by flying out to the bottom-right (`Cubic.easeIn`, 580ms); the scene only transitions once the ship has cleared the screen.
+
+- **`src/scenes/IntermissionScene.js`**:
+  - Added `import EscapeShip` at the top.
+  - `create()` calls `_spawnEscapeShip()` for all non-startup paths.
+  - New `_spawnEscapeShip()` spawns the ship at `(-140, 840)` with `skipIntro: true`, tweens it to `(640, 620)`, then calls `startHoverBob()` on arrival.
+  - `_advance()` now kills hover-bob tweens and flies the ship out to `(1440, 860)` before calling `_doAdvance()` (extracted from the old `_advance()`).
+  - Card `select()` calls `_advance()` directly — the ship exit tween replaces the old 600ms fixed delay.
+
+### Upgrade Card Entrance and Selection Animations
+
+Upgrade cards in the intermission scene now animate in and respond visually to selection.
+
+- **Entrance**: Each card slides down from above the screen while expanding from a small scale to full size (`Back.easeOut`). Cards animate in left-to-right with a 140 ms stagger so they arrive sequentially rather than all at once.
+- **Selection**: Selecting a card triggers a rapid alpha flash (5 pulses) combined with a full 360° spin. Non-selected cards fade to 25% opacity.
+- **Implementation**: Refactored `_showUpgradeCards` in `src/scenes/IntermissionScene.js` to wrap each card's graphics + text objects in a `Phaser.GameObjects.Container`. All drawing coords are now container-local (origin at card center). Interactivity uses `container.setSize` + `container.setInteractive()` instead of a separate zone object.
 
 ### EMP Mines Bypass Boss Shield (with 30% Damage Reduction)
 

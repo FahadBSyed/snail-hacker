@@ -11,18 +11,24 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         super(scene, x, y);
         scene.add.existing(this);
 
-        this.health    = CONFIG.STATION.MAX_HEALTH;
-        this.maxHealth = CONFIG.STATION.MAX_HEALTH;
-        this.radius    = CONFIG.STATION.RADIUS;
-
-        // ── Outer glow (procedural, behind everything) ──────────────────────
-        this.glowGfx = scene.add.graphics();
-        this.add(this.glowGfx);
-        this._drawGlow(false);
+        this.health    = 100;
+        this.maxHealth = 100;
 
         // ── Mainframe body sprite ────────────────────────────────────────────
         this.bodyImg = scene.add.image(0, 0, 'station-mainframe').setOrigin(0.5);
         this.add(this.bodyImg);
+
+        // Derive collision radius from the sprite's actual rendered size
+        this.radius = this.bodyImg.width / 2;
+
+        // ── Power-loss red overlay (Canvas-renderer-safe; no setTint) ──────────
+        const hw = this.bodyImg.width / 2;
+        const hh = this.bodyImg.height / 2;
+        this._powerOverlay = scene.add.graphics();
+        this._powerOverlay.fillStyle(0xff2200, 0.55);
+        this._powerOverlay.fillRect(-hw, -hh, hw * 2, hh * 2);
+        this._powerOverlay.setVisible(false);
+        this.add(this._powerOverlay);
 
         // ── Gun sprite (rotates to face cursor; pivot at sprite centre) ──────
         this.gunImg = scene.add.image(GUN_MOUNT_OX, GUN_MOUNT_OY, 'station-gun').setOrigin(0.5);
@@ -59,18 +65,6 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         // Recoil tween handle (cancelled if a second shot fires during recoil)
         this._recoilTween = null;
         this._muzzleTimer = null;
-    }
-
-    // ── Glow (replaces the old hex body for "is station powered" feedback) ───
-    _drawGlow(offline) {
-        const g   = this.glowGfx;
-        const r   = this.radius;
-        const col = offline ? 0xff3311 : 0x00ffcc;
-        g.clear();
-        g.fillStyle(col, offline ? 0.08 : 0.12);
-        g.fillCircle(0, 0, r + 18);
-        g.lineStyle(1.5, col, offline ? 0.3 : 0.5);
-        g.strokeCircle(0, 0, r + 4);
     }
 
     // ── Gun tracking ─────────────────────────────────────────────────────────
@@ -134,11 +128,15 @@ export default class HackingStation extends Phaser.GameObjects.Container {
     // ── Power state ──────────────────────────────────────────────────────────
     setPowered(on) {
         this.powered = on;
-        this._drawGlow(!on);
         this.bodyImg.setAlpha(on ? 1 : 0.55);
         this.gunImg.setAlpha(on ? 1 : 0.4);
 
         if (!on) {
+            this._powerOverlay.setVisible(true).setAlpha(1);
+            this._powerOverlayTween = this.scene.tweens.add({
+                targets: this._powerOverlay, alpha: 0.1, yoyo: true, repeat: -1, duration: 350,
+            });
+
             if (!this.offlineLabel) {
                 this.offlineLabel = this.scene.add.text(0, this.radius + 40, 'POWER OUT!\nFIND BATTERY', {
                     fontSize: '11px', fontFamily: 'monospace', color: '#ff4444',
@@ -150,6 +148,11 @@ export default class HackingStation extends Phaser.GameObjects.Container {
                 });
             }
         } else {
+            if (this._powerOverlayTween) {
+                this._powerOverlayTween.stop();
+                this._powerOverlayTween = null;
+            }
+            this._powerOverlay.setVisible(false);
             if (this.offlineLabel) {
                 this.offlineLabel.destroy();
                 this.offlineLabel = null;

@@ -17,8 +17,7 @@ import HackMinigame from '../minigames/HackMinigame.js';
 import FroggerMinigame from '../minigames/FroggerMinigame.js';
 import MathMinigame from '../minigames/MathMinigame.js';
 import RhythmMinigame from '../minigames/RhythmMinigame.js';
-import SequenceMinigame from '../minigames/SequenceMinigame.js';
-import TypingMinigame from '../minigames/TypingMinigame.js';
+import HelicopterMinigame from '../minigames/HelicopterMinigame.js';
 import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import FrogEscape from '../entities/FrogEscape.js'; // decorative escape frogs
@@ -316,20 +315,6 @@ export default class GameScene extends Phaser.Scene {
         // ── Service terminals ─────────────────────────────────────────────────
         // Minigame launchers — each wraps the minigame and tracks it for grab-cancel support.
         this.activeTerminalMinigame = null;
-        const sequenceLauncher = (_term, onSuccess, onFailure) => {
-            const mg = new SequenceMinigame(this, {
-                onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
-                onFailure: () => { this.activeTerminalMinigame = null; onFailure(); },
-            });
-            this.activeTerminalMinigame = mg;
-        };
-        const typingLauncher = (_term, onSuccess, onFailure) => {
-            const mg = new TypingMinigame(this, {
-                onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
-                onFailure: () => { this.activeTerminalMinigame = null; onFailure(); },
-            });
-            this.activeTerminalMinigame = mg;
-        };
         const rhythmLauncher = (_term, onSuccess, onFailure) => {
             const mg = new RhythmMinigame(this, {
                 onSuccess: () => { this.activeTerminalMinigame = null; onSuccess(); },
@@ -337,15 +322,13 @@ export default class GameScene extends Phaser.Scene {
             });
             this.activeTerminalMinigame = mg;
         };
-        // Store launchers so _spawnUpgradeTerminals can use them.
-        this._sequenceLauncher = sequenceLauncher;
-        this._typingLauncher   = typingLauncher;
+        // Store launcher so _spawnUpgradeTerminals can use it.
         this._rhythmLauncher   = rhythmLauncher;
 
         // RELOAD — orbits the hacking station at a fixed radius; relocates on each success.
         // Picks an angle that won't overlap existing upgrade terminals.
         const _placeReloadTerm = () => {
-            const r = CONFIG.STATIONS.RELOAD_ORBIT_RADIUS;
+            const r = CONFIG.TERMINALS.RELOAD.ORBIT_RADIUS;
             let angle, attempts = 0;
             do {
                 angle = Math.random() * Math.PI * 2;
@@ -370,7 +353,7 @@ export default class GameScene extends Phaser.Scene {
 
         const reloadTerm = new Terminal(this, 0, 0, {
             label:    'RELOAD',
-            cooldown: CONFIG.STATIONS.RELOAD_COOLDOWN,
+            cooldown: CONFIG.TERMINALS.RELOAD.COOLDOWN,
             color:    0x44ddff,
             launchMinigame: rhythmLauncher,
             onSuccess: () => {
@@ -458,6 +441,8 @@ export default class GameScene extends Phaser.Scene {
                 this.hud.updateWave(this.wave);
                 this.hud.updateHack(this.hackProgress, this.hackThreshold);
                 this.soundSynth.play('waveStart');
+                this._waveFirstAlienSpawned = false;
+                this._startRibbetTimer();
                 this.logDebug(`Wave ${wave} started — need ${this.hackThreshold} words`);
 
                 // Pause alien spawning until drop-in completes
@@ -646,7 +631,7 @@ export default class GameScene extends Phaser.Scene {
                     });
                     term = new Terminal(this, x, y + 25, {
                         label:          'TURRET',
-                        cooldown:       CONFIG.TERMINALS.CANNON_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.CANNON.DURATION + CONFIG.TERMINALS.CANNON.COOLDOWN,
                         color:          0xff8844,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => cannon.activate(),
@@ -656,16 +641,16 @@ export default class GameScene extends Phaser.Scene {
                 case 'SHIELD':
                     term = new Terminal(this, x, y, {
                         label:          'SHIELD',
-                        cooldown:       CONFIG.TERMINALS.SHIELD_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.SHIELD.DURATION + CONFIG.TERMINALS.SHIELD.COOLDOWN,
                         color:          0x4488ff,
                         launchMinigame: this._rhythmLauncher,
-                        onSuccess:      () => { this.soundSynth.play('shieldActivate'); this.snail.shield(CONFIG.TERMINALS.SHIELD_DURATION); },
+                        onSuccess:      () => { this.soundSynth.play('shieldActivate'); this.snail.shield(CONFIG.TERMINALS.SHIELD.DURATION); },
                     });
                     break;
                 case 'SLOWFIELD':
                     term = new Terminal(this, x, y, {
                         label:          'SLOW',
-                        cooldown:       CONFIG.TERMINALS.SLOW_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.SLOW.DURATION + CONFIG.TERMINALS.SLOW.COOLDOWN,
                         color:          0xaa44ff,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateSlowField(),
@@ -674,13 +659,13 @@ export default class GameScene extends Phaser.Scene {
                 case 'REPAIR':
                     term = new Terminal(this, x, y, {
                         label:          'REPAIR',
-                        cooldown:       CONFIG.TERMINALS.REPAIR_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.REPAIR.COOLDOWN,
                         color:          0x44ff88,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => {
                             this.snail.health = Math.min(
                                 this.snail.maxHealth,
-                                this.snail.health + CONFIG.TERMINALS.REPAIR_HEAL,
+                                this.snail.health + CONFIG.TERMINALS.REPAIR.HEAL,
                             );
                             this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
                         },
@@ -692,7 +677,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'DECOY':
                     term = new Terminal(this, x, y, {
                         label:          'DECOY',
-                        cooldown:       CONFIG.TERMINALS.DECOY_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.DECOY.COOLDOWN,
                         color:          0xff44cc,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateDecoy(),
@@ -701,7 +686,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'EMP_MINES':
                     term = new Terminal(this, x, y, {
                         label:          'EMP',
-                        cooldown:       CONFIG.TERMINALS.EMP_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.EMP.ACTIVE_DURATION + CONFIG.TERMINALS.EMP.COOLDOWN,
                         color:          0x00ff88,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateEmpMines(),
@@ -729,11 +714,11 @@ export default class GameScene extends Phaser.Scene {
         this._droneContainer = this.add.container(startX, startY, [this._droneGfx]).setDepth(60);
 
         // First activation: random time within DRONE_FIRST_SHOT_MAX, then fixed cooldown loop.
-        const firstDelay = Math.random() * CONFIG.TERMINALS.DRONE_FIRST_SHOT_MAX;
+        const firstDelay = Math.random() * CONFIG.TERMINALS.DRONE.FIRST_SHOT_MAX;
         this._droneTimer = this.time.delayedCall(firstDelay, () => {
             this._droneFire();
             this._droneTimer = this.time.addEvent({
-                delay:    CONFIG.TERMINALS.DRONE_COOLDOWN,
+                delay:    CONFIG.TERMINALS.DRONE.COOLDOWN,
                 loop:     true,
                 callback: () => this._droneFire(),
             });
@@ -830,7 +815,7 @@ export default class GameScene extends Phaser.Scene {
             callback: () => { if (this.slowFieldActive) this.soundSynth.play('slowTick'); },
         });
 
-        this.time.delayedCall(CONFIG.TERMINALS.SLOW_DURATION, () => {
+        this.time.delayedCall(CONFIG.TERMINALS.SLOW.DURATION, () => {
             this.slowFieldActive = false;
 
             // Stop tick, fade out overlay
@@ -883,9 +868,9 @@ export default class GameScene extends Phaser.Scene {
         spawnMine(); // first mine immediately
 
         let spawned = 1;
-        const maxMines = Math.floor(CONFIG.TERMINALS.EMP_ACTIVE_DURATION / CONFIG.TERMINALS.EMP_SPAWN_INTERVAL);
+        const maxMines = Math.floor(CONFIG.TERMINALS.EMP.ACTIVE_DURATION / CONFIG.TERMINALS.EMP.SPAWN_INTERVAL);
         this._empSpawnTimer = this.time.addEvent({
-            delay:    CONFIG.TERMINALS.EMP_SPAWN_INTERVAL,
+            delay:    CONFIG.TERMINALS.EMP.SPAWN_INTERVAL,
             loop:     true,
             callback: () => {
                 spawnMine();
@@ -1019,9 +1004,11 @@ export default class GameScene extends Phaser.Scene {
             return;
         }
 
-        // ── Waves 1–9: typing / math hack ─────────────────────────────────────
+        // ── Waves 1–9: typing / math / helicopter rotation ────────────────────
         const remaining   = this.hackThreshold - this.hackProgress;
-        const MinigameCls = this._hackMode === 'math' ? MathMinigame : HackMinigame;
+        const MinigameCls = this._hackMode === 'math'       ? MathMinigame
+                          : this._hackMode === 'helicopter' ? HelicopterMinigame
+                          :                                   HackMinigame;
         this.activeHack = new MinigameCls(this, {
             wordsRequired: remaining,
             onWordComplete: (_count) => {
@@ -1261,8 +1248,10 @@ export default class GameScene extends Phaser.Scene {
         this.station.setPowered(false);
         this.soundSynth.play('powerLoss');
 
-        // Toggle hack minigame mode so the next hack session uses the other type
-        this._hackMode = this._hackMode === 'typing' ? 'math' : 'typing';
+        // Advance hack minigame rotation: typing → math → helicopter → typing → …
+        this._hackMode = this._hackMode === 'typing'     ? 'math'
+                       : this._hackMode === 'math'       ? 'helicopter'
+                       :                                   'typing';
 
         // ── Delivery ship animation ───────────────────────────────────────────
         // Pick a drop point around the station, then enter from off-screen in
@@ -1636,7 +1625,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Collect all circular obstacles for this frame
         const obstacles = [];
-        obstacles.push({ x: this.station.x, y: this.station.y, r: CONFIG.STATION.RADIUS });
+        obstacles.push({ x: this.station.x, y: this.station.y, r: this.station.radius });
         for (const term of this.terminals) {
             if (term.active) obstacles.push({ x: term.x, y: term.y, r: CONFIG.PROPS.TERMINAL_RADIUS });
         }
@@ -1674,12 +1663,28 @@ export default class GameScene extends Phaser.Scene {
         this.snail.y = Phaser.Math.Clamp(this.snail.y, margin, 720 - margin);
     }
 
+    /** Schedule a sporadic ribbet while aliens are alive; re-schedules itself. */
+    _startRibbetTimer() {
+        if (this._ribbetTimer) { this._ribbetTimer.remove(false); this._ribbetTimer = null; }
+        const scheduleNext = () => {
+            const delay = Phaser.Math.Between(3500, 9000);
+            this._ribbetTimer = this.time.delayedCall(delay, () => {
+                if (this.aliens.some(a => a.active)) {
+                    this.soundSynth?.play('alienRibbet');
+                }
+                scheduleNext();
+            });
+        };
+        scheduleNext();
+    }
+
     spawnFrogEscape(x, y) {
         if (!this.sys.isActive()) return;
         if (Math.random() >= 0.25) return;
         if (this.frogEscapes.filter(f => f.active).length >= 5) return;
         const frog = new FrogEscape(this, x, y);
         this.frogEscapes.push(frog);
+        this.soundSynth.play('alienRibbet');
     }
 
     // ── Alien spawning ─────────────────────────────────────────────────────────
@@ -1713,6 +1718,15 @@ export default class GameScene extends Phaser.Scene {
             alien.speed = alien.speed * CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER;
         }
         this.aliens.push(alien);
+
+        // Spawn sound: always for the first alien of a wave, 30% chance after
+        if (!this._waveFirstAlienSpawned) {
+            this._waveFirstAlienSpawned = true;
+            this.soundSynth.play('alienSpawn');
+        } else if (Math.random() < 0.3) {
+            this.soundSynth.play('alienSpawn');
+        }
+
     }
 
     // ── Main update loop ──────────────────────────────────────────────────────
@@ -1825,14 +1839,15 @@ export default class GameScene extends Phaser.Scene {
                 if (mine.state !== 'ground') { surviving.push(mine); continue; }
 
                 let triggered = false;
+                const triggerR = CONFIG.EMP.BLAST_RADIUS;
                 for (const alien of this.aliens) {
                     if (!alien.active || alien._dying) continue;
                     const d = Phaser.Math.Distance.Between(mine.x, mine.y, alien.x, alien.y);
-                    if (d < mine.triggerRadius + alien.radius) { triggered = true; break; }
+                    if (d < triggerR) { triggered = true; break; }
                 }
                 if (!triggered && this.boss && this.boss.active && !this.boss._dying) {
                     const d = Phaser.Math.Distance.Between(mine.x, mine.y, this.boss.x, this.boss.y);
-                    if (d < mine.triggerRadius + this.boss.radius) triggered = true;
+                    if (d < triggerR) triggered = true;
                 }
 
                 if (triggered) {
@@ -1962,7 +1977,7 @@ export default class GameScene extends Phaser.Scene {
                     }
                 } else if (bp.projType === 'emp') {
                     const stationDist = Phaser.Math.Distance.Between(bp.x, bp.y, this.station.x, this.station.y);
-                    if (stationDist < bp.radius + CONFIG.STATION.RADIUS) {
+                    if (stationDist < bp.radius + this.station.radius) {
                         this._triggerPowerLoss();
                         spawnDeathBurst(this, bp.x, bp.y, 0xffcc00);
                         bp.destroy();

@@ -93,6 +93,10 @@ export default class HackMinigame {
         this.container.add(this.progressLabel);
         this._progressBarW = barW;
 
+        // Word group — only the characters and cursor wobble, not the whole panel
+        this._wordGroup = this.scene.add.container(0, 0);
+        this.container.add(this._wordGroup);
+
         this._buildWordDisplay();
     }
 
@@ -101,6 +105,7 @@ export default class HackMinigame {
         if (this.charTexts) {
             this.charTexts.forEach(t => { if (t.active) t.destroy(); });
         }
+        if (this._cursorTween) { this._cursorTween.stop(); this._cursorTween = null; }
         if (this.cursor && this.cursor.active) this.cursor.destroy();
 
         const n           = this.phrase.length;
@@ -113,12 +118,16 @@ export default class HackMinigame {
                 fontSize: '20px', fontFamily: 'monospace', color: '#777788',
             }).setOrigin(0.5);
             this.charTexts.push(ch);
-            this.container.add(ch);
+            this._wordGroup.add(ch);
         }
 
         // Cursor underline beneath the next character to type
         this.cursor = this.scene.add.rectangle(startX, 9, 18, 2, 0x00ffcc, 0.9).setOrigin(0.5);
-        this.container.add(this.cursor);
+        this._wordGroup.add(this.cursor);
+        this._cursorTween = this.scene.tweens.add({
+            targets: this.cursor, alpha: 0, duration: 500,
+            ease: 'Stepped', yoyo: true, repeat: -1,
+        });
         this._startX      = startX;
         this._charSpacing = charSpacing;
     }
@@ -137,10 +146,13 @@ export default class HackMinigame {
 
             if (this.pointer < this.phrase.length) {
                 this.cursor.x = this._startX + this.pointer * this._charSpacing;
+                this._wobble(false);
             }
 
             if (this.pointer >= this.phrase.length) {
-                // Word complete
+                // Word complete — scale pop + white flash
+                this.charTexts.forEach(t => { if (t.active) t.setColor('#ffffff'); });
+                this._flashSuccess();
                 this.wordsCompleted++;
                 this._updateProgressUI();
                 this.scene.soundSynth?.play('wordSuccess');
@@ -150,8 +162,7 @@ export default class HackMinigame {
                 if (this.wordsCompleted >= this.wordsRequired) {
                     this._finish();
                 } else {
-                    // Brief green flash before next word
-                    this.scene.time.delayedCall(180, () => {
+                    this.scene.time.delayedCall(350, () => {
                         if (!this.cancelled) {
                             this._pickNewWord();
                             this._buildWordDisplay();
@@ -167,7 +178,38 @@ export default class HackMinigame {
             this.scene.time.delayedCall(160, () => {
                 if (!this.cancelled && cur.active) cur.setColor('#777788');
             });
+            this._wobble(true);
         }
+    }
+
+    _flashSuccess() {
+        if (this._wobbleTween) { this._wobbleTween.stop(); this._wordGroup.y = 0; }
+        this._wordGroup.setScale(1);
+        this.scene.tweens.add({
+            targets:  this._wordGroup,
+            scaleX:   1.18,
+            scaleY:   1.18,
+            duration: 100,
+            yoyo:     true,
+            ease:     'Sine.easeOut',
+        });
+    }
+
+    _wobble(violent) {
+        if (this._wobbleTween) this._wobbleTween.stop();
+        this._wordGroup.y = 0;
+        const amp = violent ? 10 : 2;
+        const dur  = violent ? 40 : 55;
+        const reps = violent ? 5  : 0;
+        this._wobbleTween = this.scene.tweens.add({
+            targets:  this._wordGroup,
+            y:        amp,
+            duration: dur,
+            yoyo:     true,
+            repeat:   reps,
+            ease:     'Sine.easeInOut',
+            onComplete: () => { if (this._wordGroup?.active) this._wordGroup.y = 0; },
+        });
     }
 
     _updateProgressUI() {
