@@ -129,13 +129,13 @@ export default class WaveManager {
             }
             // else: withhold — don't spend on singles; let budget grow toward a formation
         } else {
-            // Single-alien branch — spend on a random affordable type
-            const affordableTypes = cfg.types.filter(t => alienCost(t) <= this.budget);
-            if (affordableTypes.length > 0) {
-                const type = Phaser.Utils.Array.GetRandom(affordableTypes);
-                this.budget -= alienCost(type);
-                if (this.onSpawn) this.onSpawn(type);
-            }
+            // Single-alien branch — pick freely from all wave-eligible types.
+            // Deducting a pricey alien's cost (e.g. tank=$3) may send budget
+            // slightly negative, creating a proportionally longer gap before the
+            // next spend check — natural rate-limiting without starving heavy units.
+            const type = Phaser.Utils.Array.GetRandom(cfg.types);
+            this.budget -= alienCost(type);
+            if (this.onSpawn) this.onSpawn(type);
         }
 
         // NOTE: Waves end via completeWave() when the hack is finished, not by timer.
