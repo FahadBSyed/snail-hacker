@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 13;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 14;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -173,6 +173,9 @@ export const DEFAULTS = {
     SPAWN_BUDGET: {
         // Budget regenerates at (BASE_REGEN + (wave-1) * WAVE_REGEN) $/s, capped at MAX_BUDGET.
         // A spend check fires each frame; one alien or formation is purchased when affordable.
+        STARTING_BUDGET:          0,  // budget each wave begins with
+        STARTING_BUDGET_PER_WAVE: 0,  // additional starting budget per wave number (wave N gets + (N-1) * this)
+
         BASE_REGEN:   0.6,  // $/s on wave 1
         WAVE_REGEN:   0.3,  // additional $/s per wave (wave 9 → 3.0 $/s total)
         MAX_BUDGET:   25,   // cap — enough to save for the priciest formation (Phalanx ≈ $21)

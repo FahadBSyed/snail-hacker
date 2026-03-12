@@ -79,9 +79,10 @@ export default class WaveManager {
 
     startWave() {
         const cfg = this.getConfig();
+        const bud = CONFIG.SPAWN_BUDGET;
         this.elapsed      = 0;
         this.graceElapsed = 0;
-        this.budget       = 0;
+        this.budget       = bud.STARTING_BUDGET + (this.wave - 1) * bud.STARTING_BUDGET_PER_WAVE;
         this.bias         = 0;
         this.active = true;
         if (this.onWaveStart) this.onWaveStart(this.wave, cfg.duration);
