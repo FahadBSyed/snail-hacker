@@ -1820,6 +1820,29 @@ export default class GameScene extends Phaser.Scene {
         // Play a single warning sound for the whole formation
         this.soundSynth?.play('alienSpawn');
 
+        // Wave 9 validation banner — shows formation name so each can be verified
+        if (this.wave === 9) {
+            const idx   = this.waveManager._formationSequenceIdx; // already incremented
+            const total = (this.waveManager._formationSequenceIdx > 0)
+                ? `${((idx - 1) % 12) + 1}/12`
+                : '1/12';
+            const banner = this.add.text(640, 80,
+                `FORMATION ${total}: ${formation.name.toUpperCase()}`,
+                { fontFamily: 'monospace', fontSize: '22px', color: '#00ffcc',
+                  stroke: '#003322', strokeThickness: 4 }
+            ).setOrigin(0.5, 0.5).setDepth(80).setAlpha(0);
+
+            this.tweens.add({
+                targets: banner, alpha: 1, duration: 200, ease: 'Sine.easeOut',
+                onComplete: () => {
+                    this.tweens.add({
+                        targets: banner, alpha: 0, duration: 400, delay: 2400,
+                        onComplete: () => banner.destroy(),
+                    });
+                },
+            });
+        }
+
         // Stagger each member spawn
         formation.members.forEach((member, i) => {
             const delay = i * formation.stagger;
