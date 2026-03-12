@@ -1004,10 +1004,11 @@ export default class GameScene extends Phaser.Scene {
             return;
         }
 
-        // ── Waves 1–9: typing / math hack ─────────────────────────────────────
+        // ── Waves 1–9: typing / math / helicopter rotation ────────────────────
         const remaining   = this.hackThreshold - this.hackProgress;
-        // TODO: restore rotation after helicopter testing
-        const MinigameCls = HelicopterMinigame; // eslint-disable-line no-unused-vars
+        const MinigameCls = this._hackMode === 'math'       ? MathMinigame
+                          : this._hackMode === 'helicopter' ? HelicopterMinigame
+                          :                                   HackMinigame;
         this.activeHack = new MinigameCls(this, {
             wordsRequired: remaining,
             onWordComplete: (_count) => {
@@ -1247,8 +1248,10 @@ export default class GameScene extends Phaser.Scene {
         this.station.setPowered(false);
         this.soundSynth.play('powerLoss');
 
-        // Toggle hack minigame mode so the next hack session uses the other type
-        this._hackMode = this._hackMode === 'typing' ? 'math' : 'typing';
+        // Advance hack minigame rotation: typing → math → helicopter → typing → …
+        this._hackMode = this._hackMode === 'typing'     ? 'math'
+                       : this._hackMode === 'math'       ? 'helicopter'
+                       :                                   'typing';
 
         // ── Delivery ship animation ───────────────────────────────────────────
         // Pick a drop point around the station, then enter from off-screen in
