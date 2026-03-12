@@ -12,6 +12,8 @@
  *   cancel()
  */
 
+import { CONFIG } from '../config.js';
+
 // ── Layout (matches FroggerMinigame panel footprint) ──────────────────────────
 const PANEL_W  = 310;
 const PANEL_H  = 192;
@@ -26,19 +28,9 @@ const PLAY_H = PANEL_H - HEADER_H - PADDING * 2; // 148
 const PLAY_OX = -PLAY_W / 2;
 const PLAY_OY = -(PANEL_H / 2) + HEADER_H + PADDING;
 
-// ── Physics ───────────────────────────────────────────────────────────────────
-const GRAVITY      = 140;   // px/s² downward
-const THRUST       = -130;  // acceleration while SPACE is held
-const MAX_VEL_DOWN = 90;    // terminal velocity
-const MAX_VEL_UP   = 75;
-
-// ── Walls ─────────────────────────────────────────────────────────────────────
-const WALL_SPEED      = 90;    // px/s scroll speed
-const WALL_SPACING    = 120;   // horizontal gap between wall pairs
-const WALL_WIDTH      = 14;    // thickness of each wall segment
-const GAP_HEIGHT      = 65;    // vertical opening size the ship must pass through
-const GAP_MIN_Y       = 10;    // min gap top edge from play area top
-const WALLS_PER_WORD  = 1;     // wall pairs the player must pass to earn one "word"
+// ── Fixed visual constants (not tunable) ─────────────────────────────────────
+const WALL_WIDTH = 14;    // thickness of each wall segment (px)
+const GAP_MIN_Y  = 10;    // min gap top edge from play area top (px)
 
 // ── Ship ──────────────────────────────────────────────────────────────────────
 const SHIP_X    = 40;   // fixed horizontal position (relative to play area left)
@@ -177,12 +169,13 @@ export default class HelicopterMinigame {
             this._hint.setAlpha(0);  // hide hint on first use
         }
 
+        const C = CONFIG.MINIGAMES;
         if (thrusting) {
-            this._vel += THRUST * dt;
+            this._vel += C.HELICOPTER_THRUST * dt;
         } else {
-            this._vel += GRAVITY * dt;
+            this._vel += C.HELICOPTER_GRAVITY * dt;
         }
-        this._vel = Phaser.Math.Clamp(this._vel, -MAX_VEL_UP, MAX_VEL_DOWN);
+        this._vel = Phaser.Math.Clamp(this._vel, -C.HELICOPTER_MAX_VEL_UP, C.HELICOPTER_MAX_VEL_DOWN);
         this._shipY += this._vel * dt;
 
         // ── Boundary collision ────────────────────────────────────────────────
@@ -195,14 +188,14 @@ export default class HelicopterMinigame {
         if (this._nextWallX <= PLAY_W) {
             const gapY = Phaser.Math.Between(
                 GAP_MIN_Y,
-                PLAY_H - GAP_HEIGHT - GAP_MIN_Y,
+                PLAY_H - C.HELICOPTER_GAP_HEIGHT - GAP_MIN_Y,
             );
             this._walls.push({ x: this._nextWallX, gapY, scored: false });
-            this._nextWallX += WALL_SPACING;
+            this._nextWallX += C.HELICOPTER_WALL_SPACING;
         }
 
         // ── Scroll & score walls ──────────────────────────────────────────────
-        const scrollDx = WALL_SPEED * dt;
+        const scrollDx = C.HELICOPTER_WALL_SPEED * dt;
         this._nextWallX -= scrollDx;
         for (const wall of this._walls) {
             wall.x -= scrollDx;
@@ -214,7 +207,7 @@ export default class HelicopterMinigame {
                 this._wallsPassed++;
                 this.scene.soundSynth?.play('jump');
 
-                if (this._wallsPassed % WALLS_PER_WORD === 0) {
+                if (this._wallsPassed % C.HELICOPTER_WALLS_PER_WORD === 0) {
                     this.wordsCompleted++;
                     this._updateProgress();
                     this.scene.soundSynth?.play('wordSuccess');
@@ -232,7 +225,7 @@ export default class HelicopterMinigame {
             const wallLeft  = wall.x;
             const wallRight = wall.x + WALL_WIDTH;
             const gapTop    = wall.gapY;
-            const gapBot    = wall.gapY + GAP_HEIGHT;
+            const gapBot    = wall.gapY + CONFIG.MINIGAMES.HELICOPTER_GAP_HEIGHT;
 
             if (shipScreenX + SHIP_SIZE > wallLeft && shipScreenX - SHIP_SIZE < wallRight) {
                 // Horizontally overlapping — check if ship is outside the gap
@@ -258,7 +251,7 @@ export default class HelicopterMinigame {
             const wx = PLAY_OX + wall.x;
             const wy = PLAY_OY;
             const gapTop = wall.gapY;
-            const gapBot = wall.gapY + GAP_HEIGHT;
+            const gapBot = wall.gapY + CONFIG.MINIGAMES.HELICOPTER_GAP_HEIGHT;
 
             // Solid body — flashes white briefly when cleared
             if (wall.flashTime > 0) wall.flashTime -= 16 / 1000;

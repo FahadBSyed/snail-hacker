@@ -118,6 +118,15 @@ export const DEFAULTS = {
         TYPING_MS_PER_CHAR:    1500,  // ms per character in typing minigame
         FROGGER_TIME_LIMIT:   45000,  // ms before frogger minigame expires
         FROGGER_CROSSINGS:        3,  // successful crossings needed to win
+
+        HELICOPTER_GRAVITY:       140,  // px/s² downward pull
+        HELICOPTER_THRUST:       -130,  // px/s² upward acceleration while SPACE held
+        HELICOPTER_MAX_VEL_DOWN:   90,  // terminal fall speed (px/s)
+        HELICOPTER_MAX_VEL_UP:     75,  // max upward speed (px/s)
+        HELICOPTER_WALL_SPEED:     90,  // wall scroll speed (px/s)
+        HELICOPTER_WALL_SPACING:  120,  // horizontal distance between wall pairs (px)
+        HELICOPTER_GAP_HEIGHT:     65,  // vertical gap opening (px)
+        HELICOPTER_WALLS_PER_WORD:  1,  // walls cleared per progress point
     },
 
     RELOAD: {
