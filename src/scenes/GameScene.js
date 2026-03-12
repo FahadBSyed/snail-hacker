@@ -1625,7 +1625,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Collect all circular obstacles for this frame
         const obstacles = [];
-        obstacles.push({ x: this.station.x, y: this.station.y, r: CONFIG.STATION.RADIUS });
+        obstacles.push({ x: this.station.x, y: this.station.y, r: this.station.radius });
         for (const term of this.terminals) {
             if (term.active) obstacles.push({ x: term.x, y: term.y, r: CONFIG.PROPS.TERMINAL_RADIUS });
         }
@@ -1977,7 +1977,7 @@ export default class GameScene extends Phaser.Scene {
                     }
                 } else if (bp.projType === 'emp') {
                     const stationDist = Phaser.Math.Distance.Between(bp.x, bp.y, this.station.x, this.station.y);
-                    if (stationDist < bp.radius + CONFIG.STATION.RADIUS) {
+                    if (stationDist < bp.radius + this.station.radius) {
                         this._triggerPowerLoss();
                         spawnDeathBurst(this, bp.x, bp.y, 0xffcc00);
                         bp.destroy();

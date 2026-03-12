@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 9;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 10;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -19,10 +19,6 @@ export const DEFAULTS = {
         INVINCIBILITY_MS: 3000,  // ms of i-frames after taking damage
     },
 
-    STATION: {
-        MAX_HEALTH: 100,
-        RADIUS:     50,  // px — collision + visual radius
-    },
 
     HACK: {
         BASE_WORDS:   10,  // words required to complete wave 1
