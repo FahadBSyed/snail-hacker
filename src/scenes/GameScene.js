@@ -631,7 +631,7 @@ export default class GameScene extends Phaser.Scene {
                     });
                     term = new Terminal(this, x, y + 25, {
                         label:          'TURRET',
-                        cooldown:       CONFIG.TERMINALS.CANNON_COOLDOWN,
+                        cooldown:       CONFIG.CANNON.ACTIVE_DURATION + CONFIG.TERMINALS.CANNON_COOLDOWN,
                         color:          0xff8844,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => cannon.activate(),
@@ -641,7 +641,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'SHIELD':
                     term = new Terminal(this, x, y, {
                         label:          'SHIELD',
-                        cooldown:       CONFIG.TERMINALS.SHIELD_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.SHIELD_DURATION + CONFIG.TERMINALS.SHIELD_COOLDOWN,
                         color:          0x4488ff,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => { this.soundSynth.play('shieldActivate'); this.snail.shield(CONFIG.TERMINALS.SHIELD_DURATION); },
@@ -650,7 +650,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'SLOWFIELD':
                     term = new Terminal(this, x, y, {
                         label:          'SLOW',
-                        cooldown:       CONFIG.TERMINALS.SLOW_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.SLOW_DURATION + CONFIG.TERMINALS.SLOW_COOLDOWN,
                         color:          0xaa44ff,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateSlowField(),
@@ -686,7 +686,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'EMP_MINES':
                     term = new Terminal(this, x, y, {
                         label:          'EMP',
-                        cooldown:       CONFIG.TERMINALS.EMP_COOLDOWN,
+                        cooldown:       CONFIG.TERMINALS.EMP_ACTIVE_DURATION + CONFIG.TERMINALS.EMP_COOLDOWN,
                         color:          0x00ff88,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateEmpMines(),

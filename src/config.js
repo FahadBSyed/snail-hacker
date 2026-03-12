@@ -79,13 +79,13 @@ export const DEFAULTS = {
     TERMINALS: {
         PROXIMITY:        50,     // px — activation range
         FAILURE_COOLDOWN: 3000,   // ms — cooldown on minigame failure
-        CANNON_COOLDOWN:  20000,  // ms — terminal cooldown after triggering cannon
+        CANNON_COOLDOWN:  20000,  // ms — post-effect rest before terminal is usable again (total = CANNON.ACTIVE_DURATION + this)
         RELOAD_COOLDOWN:  8000,
         REPAIR_COOLDOWN:  12000,
         REPAIR_HEAL:      25,     // HP restored per repair
-        SHIELD_COOLDOWN:  25000,
+        SHIELD_COOLDOWN:  25000,  // ms — post-effect rest before terminal is usable again (total = SHIELD_DURATION + this)
         SHIELD_DURATION:  12000,  // ms — how long the shield lasts
-        SLOW_COOLDOWN:    18000,
+        SLOW_COOLDOWN:    18000,  // ms — post-effect rest before terminal is usable again (total = SLOW_DURATION + this)
         SLOW_DURATION:    25000,  // ms — how long SlowField lasts
         DRONE_FIRST_SHOT_MAX: 10000,  // ms — drone fires at a random time within this window each round
         DRONE_COOLDOWN:       60000,  // ms — cooldown between subsequent drone activations
@@ -94,7 +94,7 @@ export const DEFAULTS = {
         DECOY_HEALTH:        200,     // HP — aliens chip away at this; 0 destroys decoy early
         EMP_SPAWN_INTERVAL:    5000,  // ms between each mine spawn while active
         EMP_ACTIVE_DURATION:  25000,  // ms of continuous mine spawning (5 mines total)
-        EMP_COOLDOWN:         30000,  // ms — terminal cooldown after activation
+        EMP_COOLDOWN:         30000,  // ms — post-effect rest before terminal is usable again (total = EMP_ACTIVE_DURATION + this)
     },
 
     EMP: {
