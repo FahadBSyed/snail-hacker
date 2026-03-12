@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 5;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 6;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -84,14 +84,14 @@ export const DEFAULTS = {
         REPAIR_COOLDOWN:  12000,
         REPAIR_HEAL:      25,     // HP restored per repair
         SHIELD_COOLDOWN:  25000,
-        SHIELD_DURATION:  25000,  // ms — how long the shield lasts
+        SHIELD_DURATION:  12000,  // ms — how long the shield lasts
         SLOW_COOLDOWN:    18000,
         SLOW_DURATION:    25000,  // ms — how long SlowField lasts
         DRONE_FIRST_SHOT_MAX: 10000,  // ms — drone fires at a random time within this window each round
         DRONE_COOLDOWN:       60000,  // ms — cooldown between subsequent drone activations
-        DECOY_DURATION:       12000,  // ms — how long the decoy lure lasts
+        DECOY_DURATION:       25000,  // ms — how long the decoy lure lasts
         DECOY_COOLDOWN:       22000,  // ms — terminal cooldown after deploying decoy
-        DECOY_HEALTH:         60,     // HP — aliens chip away at this; 0 destroys decoy early
+        DECOY_HEALTH:        200,     // HP — aliens chip away at this; 0 destroys decoy early
         EMP_SPAWN_INTERVAL:    5000,  // ms between each mine spawn while active
         EMP_ACTIVE_DURATION:  25000,  // ms of continuous mine spawning (5 mines total)
         EMP_COOLDOWN:         30000,  // ms — terminal cooldown after activation
@@ -99,7 +99,7 @@ export const DEFAULTS = {
 
     EMP: {
         MINE_DAMAGE:      30,   // damage dealt to all aliens in blast — ignores shields
-        BLAST_RADIUS:     180,  // px — both trigger distance and explosion AoE
+        BLAST_RADIUS:     200,  // px — both trigger distance and explosion AoE
         MINE_PICKUP_DIST: 45,   // px — cursor proximity to grab a mine
     },
 
