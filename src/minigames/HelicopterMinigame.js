@@ -208,9 +208,9 @@ export default class HelicopterMinigame {
 
         // ── Scroll & score walls ──────────────────────────────────────────────
         const scrollDx = WALL_SPEED * dt;
+        this._nextWallX -= scrollDx;
         for (const wall of this._walls) {
             wall.x -= scrollDx;
-            this._nextWallX -= scrollDx;
 
             // Check if the ship's x just cleared the right edge of this wall
             if (!wall.scored && wall.x + WALL_WIDTH < SHIP_X) {
