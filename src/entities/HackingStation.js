@@ -21,10 +21,14 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         // Derive collision radius from the sprite's actual rendered size
         this.radius = this.bodyImg.width / 2;
 
-        // ── Bounding-box outline (flashes red on power loss) ─────────────────
-        this._bboxGfx = scene.add.graphics();
-        this.add(this._bboxGfx);
-        this._drawBbox(false);
+        // ── Power-loss red overlay (Canvas-renderer-safe; no setTint) ──────────
+        const hw = this.bodyImg.width / 2;
+        const hh = this.bodyImg.height / 2;
+        this._powerOverlay = scene.add.graphics();
+        this._powerOverlay.fillStyle(0xff2200, 0.55);
+        this._powerOverlay.fillRect(-hw, -hh, hw * 2, hh * 2);
+        this._powerOverlay.setVisible(false);
+        this.add(this._powerOverlay);
 
         // ── Gun sprite (rotates to face cursor; pivot at sprite centre) ──────
         this.gunImg = scene.add.image(GUN_MOUNT_OX, GUN_MOUNT_OY, 'station-gun').setOrigin(0.5);
@@ -61,17 +65,6 @@ export default class HackingStation extends Phaser.GameObjects.Container {
         // Recoil tween handle (cancelled if a second shot fires during recoil)
         this._recoilTween = null;
         this._muzzleTimer = null;
-    }
-
-    // ── Bounding-box outline ─────────────────────────────────────────────────
-    _drawBbox(offline) {
-        const g   = this._bboxGfx;
-        const hw  = this.bodyImg.width  / 2;
-        const hh  = this.bodyImg.height / 2;
-        const col = offline ? 0xff3311 : 0x00ffcc;
-        g.clear();
-        g.lineStyle(2, col, offline ? 0.9 : 0.4);
-        g.strokeRect(-hw, -hh, hw * 2, hh * 2);
     }
 
     // ── Gun tracking ─────────────────────────────────────────────────────────
@@ -135,14 +128,13 @@ export default class HackingStation extends Phaser.GameObjects.Container {
     // ── Power state ──────────────────────────────────────────────────────────
     setPowered(on) {
         this.powered = on;
-        this._drawBbox(!on);
         this.bodyImg.setAlpha(on ? 1 : 0.55);
         this.gunImg.setAlpha(on ? 1 : 0.4);
 
         if (!on) {
-            // Flash the bounding box red while offline
-            this._bboxTween = this.scene.tweens.add({
-                targets: this._bboxGfx, alpha: 0.15, yoyo: true, repeat: -1, duration: 350,
+            this._powerOverlay.setVisible(true).setAlpha(1);
+            this._powerOverlayTween = this.scene.tweens.add({
+                targets: this._powerOverlay, alpha: 0.1, yoyo: true, repeat: -1, duration: 350,
             });
 
             if (!this.offlineLabel) {
@@ -156,12 +148,11 @@ export default class HackingStation extends Phaser.GameObjects.Container {
                 });
             }
         } else {
-            if (this._bboxTween) {
-                this._bboxTween.stop();
-                this._bboxTween = null;
-                this._bboxGfx.setAlpha(1);
-                this._drawBbox(false);
+            if (this._powerOverlayTween) {
+                this._powerOverlayTween.stop();
+                this._powerOverlayTween = null;
             }
+            this._powerOverlay.setVisible(false);
             if (this.offlineLabel) {
                 this.offlineLabel.destroy();
                 this.offlineLabel = null;
