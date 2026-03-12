@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 12;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 13;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -167,11 +167,29 @@ export const DEFAULTS = {
     },
 
     WAVES: {
-        SPAWN_GRACE_MS:            3000,  // ms of no-spawn buffer at the start of each wave
-        FORMATIONS_ONLY:          false,  // debug: suppress single-alien spawns; show only formations
-        FORMATION_BASE_INTERVAL:  20000, // ms between formations on wave 1 (decreases each wave)
-        FORMATION_INTERVAL_STEP:   1500, // ms subtracted per wave number
-        FORMATION_MIN_INTERVAL:    8000, // floor: formations never fire faster than this
+        SPAWN_GRACE_MS: 3000,  // ms of no-spawn buffer at the start of each wave
+    },
+
+    SPAWN_BUDGET: {
+        // Budget regenerates at (BASE_REGEN + (wave-1) * WAVE_REGEN) $/s, capped at MAX_BUDGET.
+        // A spend check fires each frame; one alien or formation is purchased when affordable.
+        BASE_REGEN:   0.6,  // $/s on wave 1
+        WAVE_REGEN:   0.3,  // additional $/s per wave (wave 9 → 3.0 $/s total)
+        MAX_BUDGET:   25,   // cap — enough to save for the priciest formation (Phalanx ≈ $21)
+
+        // Formation bias increases at BIAS_RATE/s since the last formation spawn (0→1).
+        // At the spend check, Math.random() < bias → try formation branch (withhold if none
+        // affordable); otherwise spend on a random single alien the budget can cover.
+        BIAS_RATE:    0.05, // /s — reaches 1.0 after 20 s without a formation
+
+        // Per-type alien costs; formation cost = sum of member costs.
+        ALIEN_COSTS: {
+            BASIC:  1,
+            FAST:   2,
+            TANK:   3,
+            BOMBER: 2,
+            SHIELD: 3,
+        },
     },
 
     ESCAPE: {

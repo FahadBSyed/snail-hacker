@@ -1,3 +1,5 @@
+import { CONFIG } from '../config.js';
+
 /**
  * FormationManager — defines all alien formations and helpers to filter by wave.
  *
@@ -248,4 +250,23 @@ export function getEligibleFormations(waveTypes) {
     return FORMATIONS.filter(f =>
         f.requiredTypes.every(t => waveTypes.includes(t))
     );
+}
+
+/**
+ * Spawn-budget cost for a single alien type.
+ * Falls back to 1 if the type is unrecognised.
+ * @param {string} type
+ * @returns {number}
+ */
+export function alienCost(type) {
+    return CONFIG.SPAWN_BUDGET.ALIEN_COSTS[type.toUpperCase()] ?? 1;
+}
+
+/**
+ * Total spawn-budget cost of a formation (sum of member costs).
+ * @param {object} formation
+ * @returns {number}
+ */
+export function formationCost(formation) {
+    return formation.members.reduce((sum, m) => sum + alienCost(m.type), 0);
 }
