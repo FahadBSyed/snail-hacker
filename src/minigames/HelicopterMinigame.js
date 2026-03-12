@@ -96,14 +96,14 @@ export default class HelicopterMinigame {
             .setStrokeStyle(2, 0x00ffcc, 0.85);
         this.container.add(panel);
 
-        // Title
+        // Title (left-aligned in header row)
         this.container.add(
-            this.scene.add.text(0, -(PANEL_H / 2) + 8, '[ HELICOPTER HACK ]', {
+            this.scene.add.text(-PANEL_W / 2 + 8, -(PANEL_H / 2) + 8, '[ HELICOPTER HACK ]', {
                 fontSize: '11px', fontFamily: 'monospace', color: '#00ffcc',
-            }).setOrigin(0.5, 0),
+            }).setOrigin(0, 0),
         );
 
-        // Progress dots (one per wordsRequired)
+        // Progress dots (right-aligned in the same header row)
         this._dotGfx = this.scene.add.graphics();
         this.container.add(this._dotGfx);
         this._drawDots();
@@ -152,8 +152,10 @@ export default class HelicopterMinigame {
         const total  = this.wordsRequired;
         const radius = 4;
         const step   = radius * 2 + 4;
-        const startX = -(total - 1) * step / 2;
-        const dotY   = -(PANEL_H / 2) + 20;
+        const dotY   = -(PANEL_H / 2) + 14;  // vertically centred in header
+        // Right-aligned: last dot sits 8px from right edge
+        const rightEdge = PANEL_W / 2 - 8;
+        const startX = rightEdge - (total - 1) * step;
         for (let i = 0; i < total; i++) {
             const filled = i < this.wordsCompleted;
             g.fillStyle(filled ? 0x00ffcc : 0x223344, 1);
