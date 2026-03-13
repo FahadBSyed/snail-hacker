@@ -699,6 +699,106 @@ export default class GameScene extends Phaser.Scene {
                         onSuccess:      () => this._activateEmpMines(),
                     });
                     break;
+
+                // ── Tier II actives ────────────────────────────────────────
+                case 'CANNON_2': {
+                    const cannon2 = new DefenseStation(this, x, y - 30, {
+                        type:          'CANNON II',
+                        getAliens:     () => this.aliens,
+                        alienFilter:   () => true,   // hits shielded aliens
+                        fireInterval:  CONFIG.TERMINALS.CANNON_2.FIRE_INTERVAL,
+                        activeDuration: CONFIG.TERMINALS.CANNON_2.DURATION,
+                    });
+                    term = new Terminal(this, x, y + 25, {
+                        label:          'TURRET II',
+                        cooldown:       CONFIG.TERMINALS.CANNON_2.DURATION + CONFIG.TERMINALS.CANNON_2.COOLDOWN,
+                        color:          0xffaa66,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => cannon2.activate(),
+                    });
+                    break;
+                }
+                case 'SHIELD_2':
+                    term = new Terminal(this, x, y, {
+                        label:          'SHIELD II',
+                        cooldown:       CONFIG.TERMINALS.SHIELD_2.DURATION + CONFIG.TERMINALS.SHIELD_2.COOLDOWN,
+                        color:          0x88bbff,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => {
+                            this.soundSynth.play('shieldActivate');
+                            this.snail.shield(CONFIG.TERMINALS.SHIELD_2.DURATION);
+                            this._shieldLethal = true;
+                            this.time.delayedCall(CONFIG.TERMINALS.SHIELD_2.DURATION,
+                                () => { this._shieldLethal = false; });
+                        },
+                    });
+                    break;
+                case 'SLOWFIELD_2':
+                    term = new Terminal(this, x, y, {
+                        label:          'SLOW II',
+                        cooldown:       CONFIG.TERMINALS.SLOW_2.DURATION + CONFIG.TERMINALS.SLOW_2.COOLDOWN,
+                        color:          0xcc88ff,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => this._activateSlowField(
+                            CONFIG.TERMINALS.SLOW_2.SPEED_MULTIPLIER,
+                            CONFIG.TERMINALS.SLOW_2.DURATION,
+                        ),
+                    });
+                    break;
+                case 'REPAIR_2':
+                    term = new Terminal(this, x, y, {
+                        label:          'REPAIR II',
+                        cooldown:       CONFIG.TERMINALS.REPAIR_2.COOLDOWN,
+                        color:          0x88ffcc,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => {
+                            // Instant heal
+                            this.snail.health = Math.min(
+                                this.snail.maxHealth,
+                                this.snail.health + CONFIG.TERMINALS.REPAIR_2.HEAL,
+                            );
+                            this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
+                            // Passive regen ticks
+                            const tickMs   = 500;
+                            const hpPerTick = CONFIG.TERMINALS.REPAIR_2.REGEN_RATE * (tickMs / 1000);
+                            const maxTicks  = Math.round(CONFIG.TERMINALS.REPAIR_2.REGEN_DURATION / tickMs);
+                            let ticks = 0;
+                            const regenTimer = this.time.addEvent({
+                                delay: tickMs, loop: true,
+                                callback: () => {
+                                    if (!this.snail?.active) return;
+                                    this.snail.health = Math.min(
+                                        this.snail.maxHealth,
+                                        this.snail.health + hpPerTick,
+                                    );
+                                    this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
+                                    if (++ticks >= maxTicks) regenTimer.remove(false);
+                                },
+                            });
+                        },
+                    });
+                    break;
+                case 'DRONE_2':
+                    this._setupDrone(CONFIG.TERMINALS.DRONE_2);
+                    break;
+                case 'DECOY_2':
+                    term = new Terminal(this, x, y, {
+                        label:          'DECOY II',
+                        cooldown:       CONFIG.TERMINALS.DECOY_2.COOLDOWN,
+                        color:          0xff88ee,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => this._activateDecoy2(),
+                    });
+                    break;
+                case 'EMP_MINES_2':
+                    term = new Terminal(this, x, y, {
+                        label:          'EMP II',
+                        cooldown:       CONFIG.TERMINALS.EMP_2.ACTIVE_DURATION + CONFIG.TERMINALS.EMP_2.COOLDOWN,
+                        color:          0xaaff44,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => this._activateEmpMines2(),
+                    });
+                    break;
                 default:
                     break;
             }
@@ -706,7 +806,7 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    _setupDrone() {
+    _setupDrone(cfg = CONFIG.TERMINALS.DRONE) {
         // Small yellow diamond that orbits the station inside the terminal ring.
         // Uses a Container so Phaser tweens can animate its world position.
         this._droneAngle  = Math.random() * Math.PI * 2;
@@ -720,12 +820,12 @@ export default class GameScene extends Phaser.Scene {
         this._renderDroneGfx(false);
         this._droneContainer = this.add.container(startX, startY, [this._droneGfx]).setDepth(60);
 
-        // First activation: random time within DRONE_FIRST_SHOT_MAX, then fixed cooldown loop.
-        const firstDelay = Math.random() * CONFIG.TERMINALS.DRONE.FIRST_SHOT_MAX;
+        // First activation: random time within FIRST_SHOT_MAX, then fixed cooldown loop.
+        const firstDelay = Math.random() * cfg.FIRST_SHOT_MAX;
         this._droneTimer = this.time.delayedCall(firstDelay, () => {
             this._droneFire();
             this._droneTimer = this.time.addEvent({
-                delay:    CONFIG.TERMINALS.DRONE.COOLDOWN,
+                delay:    cfg.COOLDOWN,
                 loop:     true,
                 callback: () => this._droneFire(),
             });
@@ -799,12 +899,14 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
-    _activateSlowField() {
+    _activateSlowField(
+        mult     = CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER,
+        duration = CONFIG.TERMINALS.SLOW.DURATION,
+    ) {
         if (this.slowFieldActive) return;
         this.slowFieldActive = true;
         this.soundSynth.play('slowActivate');
 
-        const mult = CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER;
         for (const alien of this.aliens) {
             if (!alien.active || alien._dying) continue;
             alien._origSpeed = alien._origSpeed || alien.speed;
@@ -822,7 +924,7 @@ export default class GameScene extends Phaser.Scene {
             callback: () => { if (this.slowFieldActive) this.soundSynth.play('slowTick'); },
         });
 
-        this.time.delayedCall(CONFIG.TERMINALS.SLOW.DURATION, () => {
+        this.time.delayedCall(duration, () => {
             this.slowFieldActive = false;
 
             // Stop tick, fade out overlay
@@ -890,12 +992,66 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
+    _activateDecoy2() {
+        if (this.decoy && this.decoy.active) this.decoy._expire();
+
+        const angle = Math.random() * Math.PI * 2;
+        const dist  = 180 + Math.random() * 180;
+        const dx    = Math.cos(angle) * dist;
+        const dy    = Math.sin(angle) * dist;
+        const px    = Phaser.Math.Clamp(640 + dx, 80, 1200);
+        const py    = Phaser.Math.Clamp(360 + dy, 80, 640);
+
+        this.decoy = new Decoy(this, px, py);
+        // Override duration to Tier II and make the decoy invulnerable
+        this.decoy._expireTimer.remove(false);
+        this.decoy._expireTimer = this.time.delayedCall(
+            CONFIG.TERMINALS.DECOY_2.DURATION, () => this.decoy?._expire());
+        this.decoy.takeDamage = () => {};  // invulnerable — ignore alien hits
+        this.soundSynth.play('slowActivate');
+    }
+
+    _activateEmpMines2() {
+        if (this._empSpawnTimer) { this._empSpawnTimer.remove(false); this._empSpawnTimer = null; }
+
+        const spawnPair = () => {
+            const angle = Math.random() * Math.PI * 2;
+            const dist  = 120 + Math.random() * 230;
+            // Two mines on opposite sides of the station along the same axis
+            for (const sign of [1, -1]) {
+                const mx = Phaser.Math.Clamp(640 + Math.cos(angle) * dist * sign, 60, 1220);
+                const my = Phaser.Math.Clamp(360 + Math.sin(angle) * dist * sign, 60, 660);
+                const mine = new EmpMine(this, mx, my);
+                mine.blastRadius = CONFIG.TERMINALS.EMP_2.BLAST_RADIUS;
+                this.mines.push(mine);
+            }
+        };
+
+        spawnPair(); // first pair immediately
+
+        let spawned = 1;
+        const maxSpawns = Math.floor(CONFIG.TERMINALS.EMP_2.ACTIVE_DURATION / CONFIG.TERMINALS.EMP_2.SPAWN_INTERVAL);
+        this._empSpawnTimer = this.time.addEvent({
+            delay:    CONFIG.TERMINALS.EMP_2.SPAWN_INTERVAL,
+            loop:     true,
+            callback: () => {
+                spawnPair();
+                spawned++;
+                if (spawned >= maxSpawns) {
+                    this._empSpawnTimer.remove(false);
+                    this._empSpawnTimer = null;
+                }
+            },
+        });
+    }
+
     /**
      * Detonate a mine: deal CONFIG.EMP.MINE_DAMAGE to every alien within
      * BLAST_RADIUS, bypassing shields. Shows an EMP ring + flash visual.
      */
     _empExplode(mine) {
         const { x, y } = mine;
+        const blastRadius = mine.blastRadius ?? CONFIG.EMP.BLAST_RADIUS;
         mine.destroy();
 
         this.soundSynth.play('explosion');
@@ -905,8 +1061,8 @@ export default class GameScene extends Phaser.Scene {
         ring.setStrokeStyle(3, 0x00ff88, 0.95);
         this.tweens.add({
             targets: ring,
-            scaleX:  CONFIG.EMP.BLAST_RADIUS / 8,
-            scaleY:  CONFIG.EMP.BLAST_RADIUS / 8,
+            scaleX:  blastRadius / 8,
+            scaleY:  blastRadius / 8,
             alpha:   0,
             duration: 500, ease: 'Power2.easeOut',
             onComplete: () => ring.destroy(),
@@ -923,7 +1079,7 @@ export default class GameScene extends Phaser.Scene {
         for (const alien of this.aliens) {
             if (!alien.active || alien._dying) continue;
             const dist = Phaser.Math.Distance.Between(x, y, alien.x, alien.y);
-            if (dist >= CONFIG.EMP.BLAST_RADIUS) continue;
+            if (dist >= blastRadius) continue;
 
             // Green hit flash on each affected alien
             const bx = alien.x, by = alien.y;
@@ -954,7 +1110,7 @@ export default class GameScene extends Phaser.Scene {
         // Also damage the boss if in blast radius (boss is not in this.aliens)
         if (this.boss && this.boss.active && !this.boss._dying) {
             const dist = Phaser.Math.Distance.Between(x, y, this.boss.x, this.boss.y);
-            if (dist < CONFIG.EMP.BLAST_RADIUS) {
+            if (dist < blastRadius) {
                 const bx = this.boss.x, by = this.boss.y;
                 const hitFlash = this.add.arc(bx, by, this.boss.radius, 0, 360, false, 0x00ff88, 0.75).setDepth(58);
                 this.tweens.add({ targets: hitFlash, alpha: 0, duration: 240, onComplete: () => hitFlash.destroy() });
@@ -2002,7 +2158,7 @@ export default class GameScene extends Phaser.Scene {
                 if (mine.state !== 'ground') { surviving.push(mine); continue; }
 
                 let triggered = false;
-                const triggerR = CONFIG.EMP.BLAST_RADIUS;
+                const triggerR = mine.blastRadius ?? CONFIG.EMP.BLAST_RADIUS;
                 for (const alien of this.aliens) {
                     if (!alien.active || alien._dying) continue;
                     const d = Phaser.Math.Distance.Between(mine.x, mine.y, alien.x, alien.y);
@@ -2063,8 +2219,15 @@ export default class GameScene extends Phaser.Scene {
                     checkBomberBlast(this, bx, by);
                     return false;
                 } else if (this.snail.shielded) {
-                    // Bounce the alien away for 3 s, then let it attack again
                     this.soundSynth.play('shieldReflect');
+                    if (this._shieldLethal) {
+                        // Kill Shield (Tier II) — destroy the alien on contact
+                        alien.destroy();
+                        spawnDeathBurst(this, bx, by, burstColor,
+                            () => this.spawnFrogEscape(bx, by));
+                        return false;
+                    }
+                    // Standard shield — bounce the alien away for 3 s
                     const bounceAngle = Phaser.Math.Angle.Between(
                         this.snail.x, this.snail.y, bx, by);
                     const bounceSpeed = alien.speed * 2;

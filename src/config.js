@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 15;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 16;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -106,6 +106,42 @@ export const DEFAULTS = {
             SPAWN_INTERVAL:  5000,  // ms between each mine spawn while active
             ACTIVE_DURATION: 25000, // ms of continuous mine spawning (5 mines total)
             COOLDOWN:        30000, // ms — post-effect rest (total lockout = ACTIVE_DURATION + this)
+        },
+
+        // ── Tier II active upgrades ────────────────────────────────────────
+        CANNON_2: {
+            DURATION:      37500,  // ms — 1.5× Tier I
+            COOLDOWN:      20000,  // ms
+            FIRE_INTERVAL:   500,  // ms — 2× faster than Tier I (1000 ms)
+        },
+        SHIELD_2: {
+            DURATION: 18000,  // ms — 1.5× Tier I
+            COOLDOWN: 25000,  // ms
+        },
+        SLOW_2: {
+            DURATION:         25000,  // ms
+            COOLDOWN:         18000,  // ms
+            SPEED_MULTIPLIER:  0.15,  // slows aliens to 15% speed (vs 40% for Tier I)
+        },
+        REPAIR_2: {
+            COOLDOWN:       12000,  // ms
+            HEAL:              50,  // HP restored immediately
+            REGEN_DURATION:  5000,  // ms of passive regen after the instant heal
+            REGEN_RATE:         6,  // HP/s during regen (30 HP total)
+        },
+        DRONE_2: {
+            FIRST_SHOT_MAX: 10000,  // ms
+            COOLDOWN:       20000,  // ms — 3× faster than Tier I (60 000 ms)
+        },
+        DECOY_2: {
+            DURATION: 37500,  // ms — 1.5× Tier I; invulnerable (no HP)
+            COOLDOWN: 22000,  // ms
+        },
+        EMP_2: {
+            SPAWN_INTERVAL:  5000,  // ms between paired mine spawns
+            ACTIVE_DURATION: 25000, // ms of continuous spawning (5 pairs = 10 mines)
+            COOLDOWN:        30000, // ms
+            BLAST_RADIUS:      300, // px — 1.5× Tier I (200 px)
         },
     },
 
