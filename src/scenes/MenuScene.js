@@ -52,8 +52,9 @@ export default class MenuScene extends Phaser.Scene {
         });
         this.add.text(680, 264, [
             'Left click     Fire toward cursor',
-            'Right drag     Grab & relocate snail',
-            '               (cancels active hack)',
+            'Left click     Grab snail / battery',
+            '  (on target)  (cancels active hack)',
+            'Right drag     Teleport snail to cursor',
         ].join('\n'), colStyle('#66bbcc'));
 
         // Objective blurb
