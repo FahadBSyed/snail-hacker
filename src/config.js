@@ -37,6 +37,7 @@ export const DEFAULTS = {
         MAX_PICKUP_DISTANCE: 24,   // px — cursor must be within this radius of the snail to grab
         MAX_SPEED:           400,  // px/s — max speed while carrying snail or battery
         COOLDOWN:             7,   // s — cooldown after releasing (shared between snail and battery grabs)
+        MAX_CURSOR_DIST:     48,   // px — max distance cursor can stray from held object (= snail sprite width)
     },
 
     BATTERY: {

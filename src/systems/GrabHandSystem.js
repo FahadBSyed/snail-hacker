@@ -234,6 +234,20 @@ export default class GrabHandSystem {
         this._showCursor('crosshair');
     }
 
+    /**
+     * Return a point clamped to within MAX_CURSOR_DIST of `obj`.
+     * The cursor graphic and _moveToward both use this so the physics leash
+     * is visible and consistent.
+     */
+    _clampCursor(pointer, obj) {
+        const maxDist = CONFIG.GRAB.MAX_CURSOR_DIST;
+        const dx = pointer.x - obj.x;
+        const dy = pointer.y - obj.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= maxDist) return { x: pointer.x, y: pointer.y };
+        return { x: obj.x + (dx / dist) * maxDist, y: obj.y + (dy / dist) * maxDist };
+    }
+
     _moveToward(target, pointer, maxSpeed, delta) {
         const dx      = pointer.x - target.x;
         const dy      = pointer.y - target.y;
@@ -278,9 +292,6 @@ export default class GrabHandSystem {
     update(delta) {
         const pointer = this.scene.input.activePointer;
 
-        // Keep all cursor graphics tracking the pointer
-        this._positionCursor(pointer.x, pointer.y);
-
         // Safety: if left button was released outside the canvas we still get the drop
         if (this.heldTarget !== null && !pointer.leftButtonDown()) {
             this._drop();
@@ -296,13 +307,18 @@ export default class GrabHandSystem {
         }
 
         if (this.heldTarget === 'snail') {
-            this._moveToward(this.snail, pointer, CONFIG.GRAB.MAX_SPEED, delta);
+            // Clamp cursor to MAX_CURSOR_DIST from the held object
+            const cur = this._clampCursor(pointer, this.snail);
+            this._positionCursor(cur.x, cur.y);
+            this._moveToward(this.snail, cur, CONFIG.GRAB.MAX_SPEED, delta);
             this._applyDangle(this.snail, delta);
 
         } else if (this.heldTarget) {
             // Item drag (battery or mine)
             const item = this.heldTarget;
-            this._moveToward(item, pointer, CONFIG.GRAB.MAX_SPEED, delta);
+            const cur  = this._clampCursor(pointer, item);
+            this._positionCursor(cur.x, cur.y);
+            this._moveToward(item, cur, CONFIG.GRAB.MAX_SPEED, delta);
             this._applyDangle(item, delta);
 
             // Battery-only: auto-release when max drag distance is exceeded
@@ -315,7 +331,10 @@ export default class GrabHandSystem {
             }
 
         } else {
-            // No hold: pick cursor based on proximity + cooldown state
+            // No hold: cursor follows raw pointer
+            this._positionCursor(pointer.x, pointer.y);
+
+            // Pick cursor based on proximity + cooldown state
             let nearGrabbable = false;
 
             const battery = this.getBattery();
