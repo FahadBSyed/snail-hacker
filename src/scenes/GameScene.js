@@ -1067,32 +1067,38 @@ export default class GameScene extends Phaser.Scene {
         if (sin > 0)  tMax = Math.min(tMax, (720 - sy) / sin);
         else if (sin < 0) tMax = Math.min(tMax, -sy / sin);
 
-        const ex = sx + cos * tMax;
-        const ey = sy + sin * tMax;
-
-        // Hit all aliens along the ray
+        // Hit aliens along the ray, front-to-back.
+        // A shielded alien or one that survives the hit blocks the beam.
+        // Only dead aliens let the laser pass through.
         const HIT_RADIUS = 18;
         const hitSet = new Set();  // track hits for ricochet to avoid re-targeting
         let ricochetOriginX = sx, ricochetOriginY = sy, ricochetBestAlong = 0;
+
+        // Collect candidates sorted nearest-first so blocking works correctly
+        const candidates = [];
         for (const alien of this.aliens) {
             if (!alien.active || alien._dying) continue;
-            const rx    = alien.x - sx;
-            const ry    = alien.y - sy;
+            const rx = alien.x - sx;
+            const ry = alien.y - sy;
             const along = rx * cos + ry * sin;
             if (along <= 0 || along > tMax) continue;
-            const perp = Math.abs(rx * sin - ry * cos);
-            if (perp > HIT_RADIUS) continue;
+            if (Math.abs(rx * sin - ry * cos) > HIT_RADIUS) continue;
+            candidates.push({ alien, along });
+        }
+        candidates.sort((a, b) => a.along - b.along);
 
+        let laserEnd = tMax;  // beam travels to screen edge unless blocked
+        for (const { alien, along } of candidates) {
             const bx = alien.x, by = alien.y;
 
             if (alien.shielded) {
                 alien.flashShield?.();
                 this.soundSynth.play('shieldReflect');
-                continue;
+                laserEnd = along;  // shield stops the beam here
+                break;
             }
 
             hitSet.add(alien);
-            // Track the farthest hit alien as ricochet origin
             if (along > ricochetBestAlong) {
                 ricochetBestAlong = along;
                 ricochetOriginX = bx;
@@ -1120,20 +1126,27 @@ export default class GameScene extends Phaser.Scene {
                     if (isBomber) checkBomberBlast(this, bx, by);
                     alien.destroy();
                 });
+                // Beam continues through aliens that die
+            } else {
+                laserEnd = along;  // surviving alien blocks the beam
+                break;
             }
         }
+
+        const ex = sx + cos * laserEnd;
+        const ey = sy + sin * laserEnd;
 
         // Laser ricochet — fires from the farthest hit alien toward a new target
         if (this.ricochetEnabled && hitSet.size > 0) {
             this._fireLaserRicochet(ricochetOriginX, ricochetOriginY, 0, hitSet);
         }
 
-        // Boss hit check (laser mode)
+        // Boss hit check (laser mode) — only if beam reaches the boss
         if (this.boss && this.boss.active && !this.boss._dying) {
             const rx    = this.boss.x - sx;
             const ry    = this.boss.y - sy;
             const along = rx * cos + ry * sin;
-            if (along > 0 && along <= tMax) {
+            if (along > 0 && along <= laserEnd) {
                 const perp = Math.abs(rx * sin - ry * cos);
                 if (perp <= this.boss.radius) {
                     if (this.boss.shielded) {
@@ -1159,7 +1172,7 @@ export default class GameScene extends Phaser.Scene {
             const rx    = bp.x - sx;
             const ry    = bp.y - sy;
             const along = rx * cos + ry * sin;
-            if (along <= 0 || along > tMax) return true;
+            if (along <= 0 || along > laserEnd) return true;
             const perp = Math.abs(rx * sin - ry * cos);
             if (perp > bp.radius + HIT_RADIUS) return true;
 
@@ -2012,6 +2025,20 @@ export default class GameScene extends Phaser.Scene {
         // Aliens — move and check contact with snail or decoy
         this.aliens = this.aliens.filter(alien => {
             if (!alien.active || alien._dying) return false;
+
+            // Shield bounce: move away from snail for 3 s, then resume normal behaviour
+            if (alien._bounceUntil) {
+                if (time < alien._bounceUntil) {
+                    const dt = delta / 1000;
+                    alien.x += alien._bounceVx * dt;
+                    alien.y += alien._bounceVy * dt;
+                    return true;
+                }
+                delete alien._bounceUntil;
+                delete alien._bounceVx;
+                delete alien._bounceVy;
+            }
+
             const status = alien.update(time, delta);
 
             if (status === 'reached_decoy') {
@@ -2030,16 +2057,23 @@ export default class GameScene extends Phaser.Scene {
                 const isBomber = alien.alienType === 'bomber';
                 const bx = alien.x, by = alien.y;
                 const burstColor = BURST_COLORS[alien.alienType] || 0xff4444;
-                alien.destroy();
 
                 if (isBomber) {
+                    alien.destroy();
                     checkBomberBlast(this, bx, by);
+                    return false;
                 } else if (this.snail.shielded) {
-                    // Shield absorbs the hit — kill the alien, play shield sound, no damage
+                    // Bounce the alien away for 3 s, then let it attack again
                     this.soundSynth.play('shieldReflect');
-                    spawnDeathBurst(this, bx, by, burstColor,
-                        () => this.spawnFrogEscape(bx, by));
+                    const bounceAngle = Phaser.Math.Angle.Between(
+                        this.snail.x, this.snail.y, bx, by);
+                    const bounceSpeed = alien.speed * 2;
+                    alien._bounceVx   = Math.cos(bounceAngle) * bounceSpeed;
+                    alien._bounceVy   = Math.sin(bounceAngle) * bounceSpeed;
+                    alien._bounceUntil = time + 3000;
+                    return true;
                 } else {
+                    alien.destroy();
                     const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                     this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
                     this.soundSynth.play('damage');
@@ -2049,8 +2083,8 @@ export default class GameScene extends Phaser.Scene {
                         this.scene.start('GameOverScene', { wave: this.wave, score: this.score });
                         return false;
                     }
+                    return false;
                 }
-                return false;
             }
             return true;
         });

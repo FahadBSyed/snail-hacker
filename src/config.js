@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 14;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 15;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -146,7 +146,7 @@ export const DEFAULTS = {
     RICOCHET: {
         BASE_CHANCE:   0.8,   // probability of first bounce
         FALLOFF:       0.5,   // chance multiplier each successive bounce (0.8 → 0.4 → 0.2 …)
-        SEARCH_RADIUS: 400,   // px — max distance to find next ricochet target
+        SEARCH_RADIUS: 240,   // px — max distance to find next ricochet target
     },
 
     PROPS: {

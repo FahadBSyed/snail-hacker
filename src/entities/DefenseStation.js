@@ -225,6 +225,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
                 if (!this.active) return;
                 this.scene.soundSynth?.play('shootTurret');
                 const proj = new Projectile(this.scene, this.x, this.y, nearest.x, nearest.y);
+                proj.fromCannon = true;
                 if (this.scene.projectiles) {
                     this.scene.projectiles.push(proj);
                 }

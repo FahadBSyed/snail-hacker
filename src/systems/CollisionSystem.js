@@ -240,7 +240,7 @@ export function checkProjectileCollisions(scene) {
             const bx = alien.x, by = alien.y;
 
             // Ricochet: attempt bounce before deciding whether to destroy
-            const ricocheted = scene.ricochetEnabled
+            const ricocheted = scene.ricochetEnabled && !proj.fromCannon
                 ? tryRicochetBullet(proj, scene, alien, bx, by)
                 : false;
             if (!ricocheted) proj.destroy();
