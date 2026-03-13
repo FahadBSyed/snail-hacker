@@ -34,7 +34,7 @@ export const DEFAULTS = {
 
 
     GRAB: {
-        MAX_PICKUP_DISTANCE: 60,   // px — cursor must be within this radius of the snail to grab
+        MAX_PICKUP_DISTANCE: 24,   // px — cursor must be within this radius of the snail to grab
         MAX_SPEED:           400,  // px/s — max speed while carrying snail or battery
         COOLDOWN:             7,   // s — cooldown after releasing (shared between snail and battery grabs)
     },
@@ -43,7 +43,7 @@ export const DEFAULTS = {
         SPAWN_RADIUS:      200,   // px from station center where the battery spawns
         SNAIL_PICKUP_DIST: 35,    // px — snail auto-picks up battery within this range
         DELIVERY_DIST:     55,    // px — snail must be within station.radius + this to deliver
-        MOUSE_PICKUP_DIST: 50,    // px — mouse can grab battery within this range
+        MOUSE_PICKUP_DIST: 18,    // px — mouse can grab battery within this range
         MOUSE_MAX_DRAG:    220,   // px — max total distance mouse can move battery per grab
         POWER_LOSS_WORDS:  10,    // words typed before station loses power again
     },
@@ -111,7 +111,7 @@ export const DEFAULTS = {
     EMP: {
         MINE_DAMAGE:      30,   // damage dealt to all aliens in blast — ignores shields
         BLAST_RADIUS:     200,  // px — both trigger distance and explosion AoE
-        MINE_PICKUP_DIST: 45,   // px — cursor proximity to grab a mine
+        MINE_PICKUP_DIST: 20,   // px — cursor proximity to grab a mine
     },
 
     CANNON: {

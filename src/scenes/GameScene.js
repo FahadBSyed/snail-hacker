@@ -270,6 +270,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.input.on('pointerdown', (pointer) => {
             if (pointer.button !== 0) return;
+            if (this.grabHand && this.grabHand.hovering) return;  // grab takes priority
             if (this.ammo <= 0) return;
             this.ammo--;
             if (this._laserMode) {
