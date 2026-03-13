@@ -8,6 +8,7 @@ const LABEL_TO_SPRITE = {
     SHIELD: 'terminal-shield',
     SLOW:   'terminal-slow',
     REPAIR: 'terminal-repair',
+    DECOY:  'terminal-decoy',
     EMP:    'terminal-emp',
 };
 
