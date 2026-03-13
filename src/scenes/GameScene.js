@@ -728,10 +728,10 @@ export default class GameScene extends Phaser.Scene {
                 // ── Tier II actives ────────────────────────────────────────
                 case 'CANNON_2': {
                     const cannon2 = new DefenseStation(this, x, y - 30, {
-                        type:          'CANNON II',
-                        getAliens:     () => this.aliens,
-                        alienFilter:   () => true,   // hits shielded aliens
-                        fireInterval:  CONFIG.TERMINALS.CANNON_2.FIRE_INTERVAL,
+                        type:           'CANNON II',
+                        getAliens:      () => this.aliens,
+                        alienFilter:    (a) => !a.shielded,
+                        fireInterval:   CONFIG.TERMINALS.CANNON_2.FIRE_INTERVAL,
                         activeDuration: CONFIG.TERMINALS.CANNON_2.DURATION,
                     });
                     term = new Terminal(this, x, y + 25, {
