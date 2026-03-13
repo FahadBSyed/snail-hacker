@@ -105,7 +105,7 @@ export default class HackMinigame {
         if (this.charTexts) {
             this.charTexts.forEach(t => { if (t.active) t.destroy(); });
         }
-        if (this._cursorTween) { this._cursorTween.stop(); this._cursorTween = null; }
+        this._stopCursorBlink();
         if (this.cursor && this.cursor.active) this.cursor.destroy();
 
         const n           = this.phrase.length;
@@ -124,10 +124,7 @@ export default class HackMinigame {
         // Cursor underline beneath the next character to type
         this.cursor = this.scene.add.rectangle(startX, 9, 18, 2, 0x00ffcc, 0.9).setOrigin(0.5);
         this._wordGroup.add(this.cursor);
-        this._cursorTween = this.scene.tweens.add({
-            targets: this.cursor, alpha: 0, duration: 500,
-            ease: 'Stepped', yoyo: true, repeat: -1,
-        });
+        this._startCursorBlink();
         this._startX      = startX;
         this._charSpacing = charSpacing;
     }
@@ -146,6 +143,7 @@ export default class HackMinigame {
 
             if (this.pointer < this.phrase.length) {
                 this.cursor.x = this._startX + this.pointer * this._charSpacing;
+                this._resetCursorBlink();
                 this._wobble(false);
             }
 
@@ -225,6 +223,32 @@ export default class HackMinigame {
         if (this.onSuccess) this.onSuccess();
     }
 
+    // --- Cursor blink helpers (solid 80%, off 20% of a 1000ms cycle) ---
+
+    _startCursorBlink() {
+        this._cursorBlinkTimer = this.scene.time.addEvent({
+            delay: 1000, loop: true,
+            callback: () => {
+                if (!this.cursor || !this.cursor.active) return;
+                this.cursor.alpha = 0;
+                this.scene.time.delayedCall(200, () => {
+                    if (this.cursor && this.cursor.active) this.cursor.alpha = 0.9;
+                });
+            },
+        });
+    }
+
+    _stopCursorBlink() {
+        if (this._cursorBlinkTimer) { this._cursorBlinkTimer.remove(false); this._cursorBlinkTimer = null; }
+    }
+
+    /** Reset to solid immediately and restart the blink cycle (call on rightward cursor advance). */
+    _resetCursorBlink() {
+        this._stopCursorBlink();
+        if (this.cursor && this.cursor.active) this.cursor.alpha = 0.9;
+        this._startCursorBlink();
+    }
+
     /** Cancel the minigame without success (teleport or ESC). Progress is retained by caller. */
     cancel() {
         if (this.cancelled) return;
@@ -234,6 +258,7 @@ export default class HackMinigame {
     }
 
     _cleanup() {
+        this._stopCursorBlink();
         if (this.keyHandler) this.scene.input.keyboard.off('keydown', this.keyHandler);
         if (this.container && this.container.active) this.container.destroy();
     }
