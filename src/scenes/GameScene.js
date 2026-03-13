@@ -624,9 +624,29 @@ export default class GameScene extends Phaser.Scene {
         const cx = 640, cy = 360;
         const r  = CONFIG.UPGRADES.ORBIT_RADIUS;
 
+        // Build the owned-type set so we can skip T1s replaced by their T2.
+        const ownedTypes = new Set(this.upgradesList.map(u => u.type));
+
+        // Reverse map: T2 type → T1 type (used to resolve the T1's orbital angle).
+        const T2_TO_T1 = {
+            CANNON_2: 'CANNON', SHIELD_2: 'SHIELD', SLOWFIELD_2: 'SLOWFIELD',
+            REPAIR_2: 'REPAIR', DRONE_2: 'DRONE', DECOY_2: 'DECOY', EMP_MINES_2: 'EMP_MINES',
+        };
+
         for (const upgrade of this.upgradesList) {
-            const x = cx + Math.cos(upgrade.angle) * r;
-            const y = cy + Math.sin(upgrade.angle) * r;
+            // Skip the T1 when its T2 is also owned — the T2 entry below spawns
+            // the replacement terminal at the T1's orbital angle.
+            if (ownedTypes.has(upgrade.type + '_2')) continue;
+
+            // T2 upgrades slot into the T1 predecessor's orbital position so the
+            // terminal replaces the old one in exactly the same screen location.
+            const t1Type = T2_TO_T1[upgrade.type];
+            const angle  = t1Type
+                ? (this.upgradesList.find(u => u.type === t1Type)?.angle ?? upgrade.angle)
+                : upgrade.angle;
+
+            const x = cx + Math.cos(angle) * r;
+            const y = cy + Math.sin(angle) * r;
 
             let term;
             switch (upgrade.type) {

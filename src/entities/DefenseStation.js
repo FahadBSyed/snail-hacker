@@ -60,7 +60,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
         g.clear();
         this.barrelGfx.clear();
 
-        if (this.stationType === 'CANNON') {
+        if (this.stationType === 'CANNON' || this.stationType === 'CANNON II') {
             // Colour palette matching station-gun / station-mainframe SVG sprites
             const BODY_COL  = 0x556070; // gunmetal
             const BODY_LIT  = 0x7a8898; // lit top face
