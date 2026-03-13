@@ -39,7 +39,8 @@ export default class Terminal extends Phaser.GameObjects.Container {
         this.color            = opts.color || 0x44ffcc;
 
         // ── SVG sprite body ──────────────────────────────────────────────────
-        const spriteKey = LABEL_TO_SPRITE[this.label] || 'terminal-reload';
+        const baseLabel = this.label.replace(/ II$/, '');
+        const spriteKey = LABEL_TO_SPRITE[this.label] || LABEL_TO_SPRITE[baseLabel] || 'terminal-reload';
         this.bodyImg = scene.add.image(0, 0, spriteKey).setOrigin(0.5);
         this.add(this.bodyImg);
 
