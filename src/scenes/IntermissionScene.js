@@ -63,21 +63,35 @@ function getUpgradeDefs() {
         SPEED_BOOST:  { label: 'SPEED BOOST',    color: 0x44ffdd, desc: `Gerald moves\nat double speed.` },
 
         // ── Tier II actives ───────────────────────────────────────────────
-        CANNON_2:    { label: 'TURRET MK.II',   color: 0xffaa66,
+        CANNON_2:    { label: 'AUTO TURRET II',  color: 0xffaa66,
             desc: `2× fire rate, 1.5× duration.\nIgnores alien shields.` },
-        SHIELD_2:    { label: 'KILL SHIELD',    color: 0x88bbff,
+        SHIELD_2:    { label: 'FORCE SHIELD II', color: 0x88bbff,
             desc: `Shield kills on contact.\nLasts ${Math.round(CONFIG.TERMINALS.SHIELD_2.DURATION / 1000)}s.` },
-        SLOWFIELD_2: { label: 'FREEZE FIELD',   color: 0xcc88ff,
+        SLOWFIELD_2: { label: 'SLOW FIELD II',   color: 0xcc88ff,
             desc: `Slows aliens to ${Math.round(CONFIG.TERMINALS.SLOW_2.SPEED_MULTIPLIER * 100)}% speed\nfor ${Math.round(CONFIG.TERMINALS.SLOW_2.DURATION / 1000)}s.` },
-        REPAIR_2:    { label: 'NANOBOTS',       color: 0x88ffcc,
+        REPAIR_2:    { label: 'REPAIR KIT II',   color: 0x88ffcc,
             desc: `+${CONFIG.TERMINALS.REPAIR_2.HEAL} HP instantly,\nthen +${CONFIG.TERMINALS.REPAIR_2.REGEN_RATE} HP/s\nfor ${CONFIG.TERMINALS.REPAIR_2.REGEN_DURATION / 1000}s.` },
-        DRONE_2:     { label: 'FAST DRONE',     color: 0xffee88,
+        DRONE_2:     { label: 'AUTO DRONE II',   color: 0xffee88,
             desc: `Drone activates every\n${Math.round(CONFIG.TERMINALS.DRONE_2.COOLDOWN / 1000)}s\n(was ${Math.round(CONFIG.TERMINALS.DRONE.COOLDOWN / 1000)}s).` },
-        DECOY_2:     { label: 'SUPER DECOY',    color: 0xff88ee,
+        DECOY_2:     { label: 'DECOY LURE II',   color: 0xff88ee,
             desc: `Invulnerable lure.\nLasts ${Math.round(CONFIG.TERMINALS.DECOY_2.DURATION / 1000)}s.` },
-        EMP_MINES_2: { label: 'EMP SWARM',      color: 0xaaff44,
+        EMP_MINES_2: { label: 'EMP MINES II',    color: 0xaaff44,
             desc: `Spawns 2 mines per event,\nopposite each other.\n1.5× blast radius.` },
     };
+}
+
+/**
+ * Build the offered-card list from an available pool.
+ * T2 upgrades are always included when present; remaining slots are filled
+ * with shuffled T1 options. At most CONFIG.UPGRADES.CARDS_OFFERED cards total.
+ */
+function buildOffered(available) {
+    const limit = CONFIG.UPGRADES.CARDS_OFFERED;
+    const t2s   = available.filter(t =>  ACTIVE_POOL_T2.includes(t));
+    const t1s   = available.filter(t => !ACTIVE_POOL_T2.includes(t));
+    const guaranteed = Phaser.Utils.Array.Shuffle(t2s.slice());  // shuffle if > limit
+    const filler     = Phaser.Utils.Array.Shuffle(t1s.slice()).slice(0, limit - guaranteed.length);
+    return [...guaranteed, ...filler].slice(0, limit);
 }
 
 export default class IntermissionScene extends Phaser.Scene {
@@ -188,8 +202,7 @@ export default class IntermissionScene extends Phaser.Scene {
             fontSize: '24px', fontFamily: 'monospace', color: '#cc88ff',
         }).setOrigin(0.5);
 
-        const offered = Phaser.Utils.Array.Shuffle(available.slice())
-            .slice(0, CONFIG.UPGRADES.CARDS_OFFERED);
+        const offered = buildOffered(available);
         this._showUpgradeCards(offered, cx, 390);
     }
 
@@ -301,9 +314,7 @@ export default class IntermissionScene extends Phaser.Scene {
             fontSize: '13px', fontFamily: 'monospace', color: '#776688',
         }).setOrigin(0.5);
 
-        // Shuffle and limit to CARDS_OFFERED
-        const offered = Phaser.Utils.Array.Shuffle(available.slice())
-            .slice(0, CONFIG.UPGRADES.CARDS_OFFERED);
+        const offered = buildOffered(available);
 
         this._showUpgradeCards(offered, cx, 390);
     }
