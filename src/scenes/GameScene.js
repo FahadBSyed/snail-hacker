@@ -268,28 +268,11 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
-        this.input.on('pointerdown', (pointer) => {
-            if (pointer.button !== 0) return;
-            if (this.grabHand && this.grabHand.hovering) return;  // grab takes priority
-            if (this.ammo <= 0) return;
-            this.ammo--;
-            if (this._laserMode) {
-                this._fireLaser(pointer.x, pointer.y);
-            } else {
-                const proj = new Projectile(this, this.station.x, this.station.y, pointer.x, pointer.y);
-                this.projectiles.push(proj);
-            }
-            this.hud.updateAmmo(this.ammo);
-            this.cameras.main.shake(90, 0.005);
-            this.soundSynth.play('shoot');
-            this.station.fireEffect();
-        });
-
         // ── Battery / power state ─────────────────────────────────────────────
         this.battery        = null;   // Battery instance or null
         this.stationPowered = true;
 
-        // ── Grab hand system (Player 2 — right-click to pick up snail or battery) ──
+        // ── Grab hand system (Player 2 — left-click to pick up snail or battery) ──
         this.grabSystem = new GrabHandSystem(this, {
             snail:      this.snail,
             getBattery: () => this.battery,
@@ -312,6 +295,25 @@ export default class GameScene extends Phaser.Scene {
         if (this.upgradesList.some(u => u.type === 'QUICK_GRAB')) {
             this.grabSystem.cooldownMultiplier = 0.5;
         }
+
+        // Shoot listener registered AFTER grabSystem so grab's pointerdown fires first,
+        // ensuring grabSystem.hovering is already up-to-date when this check runs.
+        this.input.on('pointerdown', (pointer) => {
+            if (pointer.button !== 0) return;
+            if (this.grabSystem.hovering) return;  // grab consumed this click
+            if (this.ammo <= 0) return;
+            this.ammo--;
+            if (this._laserMode) {
+                this._fireLaser(pointer.x, pointer.y);
+            } else {
+                const proj = new Projectile(this, this.station.x, this.station.y, pointer.x, pointer.y);
+                this.projectiles.push(proj);
+            }
+            this.hud.updateAmmo(this.ammo);
+            this.cameras.main.shake(90, 0.005);
+            this.soundSynth.play('shoot');
+            this.station.fireEffect();
+        });
 
         // ── Service terminals ─────────────────────────────────────────────────
         // Minigame launchers — each wraps the minigame and tracks it for grab-cancel support.
