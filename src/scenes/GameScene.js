@@ -315,6 +315,9 @@ export default class GameScene extends Phaser.Scene {
             this.station.fireEffect();
         });
 
+        // Notify grabSystem when the scene is resumed from pause
+        this.events.on('resume', () => this.grabSystem.onResume());
+
         // ── Service terminals ─────────────────────────────────────────────────
         // Minigame launchers — each wraps the minigame and tracks it for grab-cancel support.
         this.activeTerminalMinigame = null;
@@ -1696,6 +1699,7 @@ export default class GameScene extends Phaser.Scene {
 
     _openPause() {
         if (this.scene.isActive('PauseScene')) return;
+        this.grabSystem.onPause();
         this.scene.launch('PauseScene');
         this.scene.pause();
     }

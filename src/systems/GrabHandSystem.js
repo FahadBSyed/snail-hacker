@@ -86,6 +86,9 @@ export default class GrabHandSystem {
 
         this.onCooldown        = false;
         this.cooldownRemaining = 0;     // seconds
+
+        this._lastCur          = null;  // last clamped cursor pos while holding (saved on pause)
+        this._resumeCursorPos  = null;  // override cursor pos to use on resume until mouse returns
         this.cooldownMultiplier = 1.0;  // reduced by QUICK_GRAB upgrade
 
         // Dangle spring state (shared; only one object held at a time)
@@ -307,16 +310,29 @@ export default class GrabHandSystem {
         }
 
         if (this.heldTarget === 'snail') {
-            // Clamp cursor to MAX_CURSOR_DIST from the held object
-            const cur = this._clampCursor(pointer, this.snail);
+            const obj = this.snail;
+            // On resume, use the saved cursor pos until the real mouse returns within range
+            if (this._resumeCursorPos) {
+                const d = Phaser.Math.Distance.Between(pointer.x, pointer.y, obj.x, obj.y);
+                if (d <= CONFIG.GRAB.MAX_CURSOR_DIST) this._resumeCursorPos = null;
+            }
+            const src = this._resumeCursorPos || pointer;
+            const cur = this._clampCursor(src, obj);
+            this._lastCur = cur;
             this._positionCursor(cur.x, cur.y);
-            this._moveToward(this.snail, cur, CONFIG.GRAB.MAX_SPEED, delta);
-            this._applyDangle(this.snail, delta);
+            this._moveToward(obj, cur, CONFIG.GRAB.MAX_SPEED, delta);
+            this._applyDangle(obj, delta);
 
         } else if (this.heldTarget) {
             // Item drag (battery or mine)
             const item = this.heldTarget;
-            const cur  = this._clampCursor(pointer, item);
+            if (this._resumeCursorPos) {
+                const d = Phaser.Math.Distance.Between(pointer.x, pointer.y, item.x, item.y);
+                if (d <= CONFIG.GRAB.MAX_CURSOR_DIST) this._resumeCursorPos = null;
+            }
+            const src = this._resumeCursorPos || pointer;
+            const cur = this._clampCursor(src, item);
+            this._lastCur = cur;
             this._positionCursor(cur.x, cur.y);
             this._moveToward(item, cur, CONFIG.GRAB.MAX_SPEED, delta);
             this._applyDangle(item, delta);
@@ -367,6 +383,20 @@ export default class GrabHandSystem {
                 this._showCursor('crosshair');
             }
         }
+    }
+
+    // ── Pause / resume ────────────────────────────────────────────────────────
+
+    /** Called when GameScene is paused. Saves cursor position and restores OS cursor. */
+    onPause() {
+        this._resumeCursorPos = this._lastCur ? { ...this._lastCur } : null;
+        this.canvas.style.cursor = 'default';
+    }
+
+    /** Called when GameScene is resumed. Hides OS cursor and re-locks cursor to saved position. */
+    onResume() {
+        this.canvas.style.cursor = 'none';
+        // _resumeCursorPos is already set from onPause; update() will clear it once mouse returns
     }
 
     // ── Public state ──────────────────────────────────────────────────────────
