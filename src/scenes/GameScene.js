@@ -779,20 +779,28 @@ export default class GameScene extends Phaser.Scene {
                             );
                             this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
                             // Passive regen ticks
-                            const tickMs   = 500;
+                            const tickMs    = 500;
                             const hpPerTick = CONFIG.TERMINALS.REPAIR_2.REGEN_RATE * (tickMs / 1000);
                             const maxTicks  = Math.round(CONFIG.TERMINALS.REPAIR_2.REGEN_DURATION / tickMs);
                             let ticks = 0;
+                            this.hud.showRegen();
                             const regenTimer = this.time.addEvent({
                                 delay: tickMs, loop: true,
                                 callback: () => {
-                                    if (!this.snail?.active) return;
+                                    if (!this.snail?.active) {
+                                        this.hud.hideRegen();
+                                        regenTimer.remove(false);
+                                        return;
+                                    }
                                     this.snail.health = Math.min(
                                         this.snail.maxHealth,
                                         this.snail.health + hpPerTick,
                                     );
                                     this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
-                                    if (++ticks >= maxTicks) regenTimer.remove(false);
+                                    if (++ticks >= maxTicks) {
+                                        this.hud.hideRegen();
+                                        regenTimer.remove(false);
+                                    }
                                 },
                             });
                         },
