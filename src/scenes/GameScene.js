@@ -658,7 +658,8 @@ export default class GameScene extends Phaser.Scene {
                     });
                     term = new Terminal(this, x, y + 25, {
                         label:          'TURRET',
-                        cooldown:       CONFIG.TERMINALS.CANNON.DURATION + CONFIG.TERMINALS.CANNON.COOLDOWN,
+                        effectDuration: CONFIG.TERMINALS.CANNON.DURATION,
+                        cooldown:       CONFIG.TERMINALS.CANNON.COOLDOWN,
                         color:          0xff8844,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => cannon.activate(),
@@ -668,7 +669,8 @@ export default class GameScene extends Phaser.Scene {
                 case 'SHIELD':
                     term = new Terminal(this, x, y, {
                         label:          'SHIELD',
-                        cooldown:       CONFIG.TERMINALS.SHIELD.DURATION + CONFIG.TERMINALS.SHIELD.COOLDOWN,
+                        effectDuration: CONFIG.TERMINALS.SHIELD.DURATION,
+                        cooldown:       CONFIG.TERMINALS.SHIELD.COOLDOWN,
                         color:          0x4488ff,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => { this.soundSynth.play('shieldActivate'); this.snail.shield(CONFIG.TERMINALS.SHIELD.DURATION); },
@@ -677,7 +679,8 @@ export default class GameScene extends Phaser.Scene {
                 case 'SLOWFIELD':
                     term = new Terminal(this, x, y, {
                         label:          'SLOW',
-                        cooldown:       CONFIG.TERMINALS.SLOW.DURATION + CONFIG.TERMINALS.SLOW.COOLDOWN,
+                        effectDuration: CONFIG.TERMINALS.SLOW.DURATION,
+                        cooldown:       CONFIG.TERMINALS.SLOW.COOLDOWN,
                         color:          0xaa44ff,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateSlowField(),
@@ -704,6 +707,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'DECOY':
                     term = new Terminal(this, x, y, {
                         label:          'DECOY',
+                        effectDuration: CONFIG.TERMINALS.DECOY.DURATION,
                         cooldown:       CONFIG.TERMINALS.DECOY.COOLDOWN,
                         color:          0xff44cc,
                         launchMinigame: this._rhythmLauncher,
@@ -713,7 +717,8 @@ export default class GameScene extends Phaser.Scene {
                 case 'EMP_MINES':
                     term = new Terminal(this, x, y, {
                         label:          'EMP',
-                        cooldown:       CONFIG.TERMINALS.EMP.ACTIVE_DURATION + CONFIG.TERMINALS.EMP.COOLDOWN,
+                        effectDuration: CONFIG.TERMINALS.EMP.ACTIVE_DURATION,
+                        cooldown:       CONFIG.TERMINALS.EMP.COOLDOWN,
                         color:          0x00ff88,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateEmpMines(),
@@ -731,7 +736,8 @@ export default class GameScene extends Phaser.Scene {
                     });
                     term = new Terminal(this, x, y + 25, {
                         label:          'TURRET II',
-                        cooldown:       CONFIG.TERMINALS.CANNON_2.DURATION + CONFIG.TERMINALS.CANNON_2.COOLDOWN,
+                        effectDuration: CONFIG.TERMINALS.CANNON_2.DURATION,
+                        cooldown:       CONFIG.TERMINALS.CANNON_2.COOLDOWN,
                         color:          0xffaa66,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => cannon2.activate(),
@@ -741,7 +747,8 @@ export default class GameScene extends Phaser.Scene {
                 case 'SHIELD_2':
                     term = new Terminal(this, x, y, {
                         label:          'SHIELD II',
-                        cooldown:       CONFIG.TERMINALS.SHIELD_2.DURATION + CONFIG.TERMINALS.SHIELD_2.COOLDOWN,
+                        effectDuration: CONFIG.TERMINALS.SHIELD_2.DURATION,
+                        cooldown:       CONFIG.TERMINALS.SHIELD_2.COOLDOWN,
                         color:          0x88bbff,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => {
@@ -756,7 +763,8 @@ export default class GameScene extends Phaser.Scene {
                 case 'SLOWFIELD_2':
                     term = new Terminal(this, x, y, {
                         label:          'SLOW II',
-                        cooldown:       CONFIG.TERMINALS.SLOW_2.DURATION + CONFIG.TERMINALS.SLOW_2.COOLDOWN,
+                        effectDuration: CONFIG.TERMINALS.SLOW_2.DURATION,
+                        cooldown:       CONFIG.TERMINALS.SLOW_2.COOLDOWN,
                         color:          0xcc88ff,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateSlowField(
@@ -768,6 +776,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'REPAIR_2':
                     term = new Terminal(this, x, y, {
                         label:          'REPAIR II',
+                        effectDuration: CONFIG.TERMINALS.REPAIR_2.REGEN_DURATION,
                         cooldown:       CONFIG.TERMINALS.REPAIR_2.COOLDOWN,
                         color:          0x88ffcc,
                         launchMinigame: this._rhythmLauncher,
@@ -812,6 +821,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'DECOY_2':
                     term = new Terminal(this, x, y, {
                         label:          'DECOY II',
+                        effectDuration: CONFIG.TERMINALS.DECOY_2.DURATION,
                         cooldown:       CONFIG.TERMINALS.DECOY_2.COOLDOWN,
                         color:          0xff88ee,
                         launchMinigame: this._rhythmLauncher,
@@ -821,7 +831,8 @@ export default class GameScene extends Phaser.Scene {
                 case 'EMP_MINES_2':
                     term = new Terminal(this, x, y, {
                         label:          'EMP II',
-                        cooldown:       CONFIG.TERMINALS.EMP_2.ACTIVE_DURATION + CONFIG.TERMINALS.EMP_2.COOLDOWN,
+                        effectDuration: CONFIG.TERMINALS.EMP_2.ACTIVE_DURATION,
+                        cooldown:       CONFIG.TERMINALS.EMP_2.COOLDOWN,
                         color:          0xaaff44,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateEmpMines2(),

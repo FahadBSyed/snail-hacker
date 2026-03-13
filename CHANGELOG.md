@@ -1,5 +1,29 @@
 # SNAIL HACKER — Changelog
 
+## Session — 2026-03-13
+
+### Terminal Active-Phase State + Cooldown Sequencing Fix
+
+Terminals with a timed effect (Cannon, Shield, Slow Field, Decoy, EMP, and all T2 equivalents) now correctly show an "ACTIVE" phase while the effect is running, and only begin the cooldown countdown *after* the effect expires.
+
+**Root cause**: `handleMinigameResult` immediately called `startCooldown(DURATION + COOLDOWN)` — so the cooldown timer started the moment the hack succeeded and could expire before the effect ended (most visible with DECOY, whose DURATION > COOLDOWN).
+
+**`src/entities/Terminal.js`**:
+- Added `opts.effectDuration` (ms the effect runs before cooldown starts; defaults to 0 for instant terminals).
+- Added `startEffect(effectDuration, cooldownDuration)` method: sets `terminalState = 'EFFECT_ACTIVE'`, shows a bright screen glow and `ACT Xs` countdown in the terminal's own colour, then automatically calls `startCooldown(cooldownDuration)` when the effect timer expires.
+- `handleMinigameResult`: on success, calls `startEffect` when `effectDuration > 0`, otherwise `startCooldown` as before.
+- `startCooldown` and `forceLock` both cancel `_effectHandle` as well as `_cooldownHandle`.
+
+**`src/scenes/GameScene.js`**: Updated all duration-based terminal constructions to pass `effectDuration` + `cooldown` separately (instead of the previous combined `DURATION + COOLDOWN` total):
+- CANNON / CANNON_2, SHIELD / SHIELD_2, SLOWFIELD / SLOWFIELD_2, DECOY / DECOY_2, EMP_MINES / EMP_MINES_2, REPAIR_2 (regen duration).
+
+### REPAIR_2 Regen — Visible Indicator
+
+Added a `▲ REGEN` label next to the health bar that appears while Repair Kit II's 5-second passive regen is active, making it clear nanobots are running even if the health bar is near full.
+
+- **`src/scenes/HUD.js`**: `_regenLabel` text object (hidden by default); `showRegen()` / `hideRegen()` methods.
+- **`src/scenes/GameScene.js`**: REPAIR_2 `onSuccess` calls `hud.showRegen()` at start and `hud.hideRegen()` at the last tick (or if Gerald dies mid-regen).
+
 ## Session — 2026-03-12
 
 ### EMP Terminal Sprite + Unified Electric-Yellow Color
