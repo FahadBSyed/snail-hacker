@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 21;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 22;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -199,6 +199,10 @@ export const DEFAULTS = {
     RICOCHET_2: {
         FALLOFF:       1.0,   // no chance reduction — every bounce stays at BASE_CHANCE
         SEARCH_RADIUS: 480,   // px — 2× Tier I search distance
+    },
+
+    LASER_2: {
+        SNAP_RADIUS: 80,   // px — auto-aim snaps to nearest alien within this distance of cursor
     },
 
     PROPS: {

@@ -299,6 +299,7 @@ export default class GameScene extends Phaser.Scene {
             this.grabSystem.cooldownMultiplier = CONFIG.GRAB.QUICK_GRAB_2_COOLDOWN / CONFIG.GRAB.COOLDOWN;
         }
         this._healthDropGravitate = this.upgradesList.some(u => u.type === 'HEALTH_2');
+        this._laser2 = this.upgradesList.some(u => u.type === 'LASER_2');
         const hasRicochet2 = this.upgradesList.some(u => u.type === 'RICOCHET_2');
         this._ricochetFalloff      = hasRicochet2 ? CONFIG.RICOCHET_2.FALLOFF       : CONFIG.RICOCHET.FALLOFF;
         this._ricochetSearchRadius = hasRicochet2 ? CONFIG.RICOCHET_2.SEARCH_RADIUS : CONFIG.RICOCHET.SEARCH_RADIUS;
@@ -1311,6 +1312,17 @@ export default class GameScene extends Phaser.Scene {
      * Hits every alien along the ray (within HIT_RADIUS px) in one instant shot.
      */
     _fireLaser(tx, ty) {
+        // LASER_2: snap aim to the nearest alien within SNAP_RADIUS of the cursor
+        if (this._laser2) {
+            let nearest = null, nearestDist = CONFIG.LASER_2.SNAP_RADIUS;
+            for (const a of this.aliens) {
+                if (!a.active || a._dying || a.shielded) continue;
+                const d = Phaser.Math.Distance.Between(tx, ty, a.x, a.y);
+                if (d < nearestDist) { nearest = a; nearestDist = d; }
+            }
+            if (nearest) { tx = nearest.x; ty = nearest.y; }
+        }
+
         const sx  = this.station.x;
         const sy  = this.station.y;
         const angle = Phaser.Math.Angle.Between(sx, sy, tx, ty);
@@ -1384,8 +1396,8 @@ export default class GameScene extends Phaser.Scene {
                     alien.destroy();
                 });
                 // Beam continues through aliens that die
-            } else {
-                laserEnd = along;  // surviving alien blocks the beam
+            } else if (!this._laser2) {
+                laserEnd = along;  // surviving alien blocks the beam (Laser II passes through)
                 break;
             }
         }

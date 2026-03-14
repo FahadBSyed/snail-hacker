@@ -2,6 +2,19 @@
 
 ## Session — 2026-03-14
 
+### Hitscan Laser II — Tier II Passive
+
+Adds **LASER_2**, offered on even waves once Laser is owned. Pure passive with two improvements over T1:
+
+1. **Pass-through** — the beam no longer stops at surviving aliens. The `break` in `_fireLaser`'s candidate loop is now gated on `!this._laser2`, so the beam continues to screen edge regardless of whether hit aliens die.
+2. **Auto-aim** — at the start of `_fireLaser`, if `_laser2` is set, scan all active aliens within `LASER_2.SNAP_RADIUS` (80 px) of the cursor position and redirect `(tx, ty)` to the nearest one. If no alien is within range the shot fires at cursor as normal.
+
+**`src/config.js`**: Bumped `CONFIG_VERSION` to 22. Added `LASER_2: { SNAP_RADIUS: 80 }`.
+
+**`src/scenes/IntermissionScene.js`**: Added `LASER_2` to `PASSIVE_UPGRADES`, `PASSIVE_POOL_T2`, `T2_PREREQS`, and `getUpgradeDefs()`.
+
+**`src/scenes/GameScene.js`**: Caches `this._laser2` flag in `create()`; prepends auto-aim block and changes the surviving-alien `break` to `else if (!this._laser2)` in `_fireLaser`.
+
 ### Ricochet II — Tier II Passive
 
 Adds **RICOCHET_2**, offered on even waves once Ricochet is owned. Pure passive with two improvements over T1:
