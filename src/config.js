@@ -252,8 +252,8 @@ export const DEFAULTS = {
     },
 
     BOSS: {
-        HP:                   40,   // total hit points
-        PHASE_SHIFT_HP:       20,   // damage taken before each phase shift
+        HP:                  400,   // total hit points
+        PHASE_SHIFT_HP:      200,   // damage taken before each phase shift
         ORBIT_RADIUS_X:      500,   // horizontal semi-axis (px)
         ORBIT_RADIUS_Y:      130,   // vertical semi-axis (px)
         MIN_ORBIT_DIST:      400,   // px — boss is never closer than this to the station center
