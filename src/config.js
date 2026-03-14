@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 23;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 24;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -168,7 +168,7 @@ export const DEFAULTS = {
         RHYTHM_BEAT_TIMEOUT:   2500,  // ms before auto-miss per beat
         TYPING_MS_PER_CHAR:    1500,  // ms per character in typing minigame
         FROGGER_TIME_LIMIT:   45000,  // ms before frogger minigame expires
-        FROGGER_CROSSINGS:        3,  // successful crossings needed to win
+        FROGGER_CROSSINGS:        1,  // successful crossings needed to win
 
         HELICOPTER_GRAVITY:       140,  // px/s² downward pull
         HELICOPTER_THRUST:       -130,  // px/s² upward acceleration while SPACE held
@@ -252,8 +252,8 @@ export const DEFAULTS = {
     },
 
     BOSS: {
-        HP:                  200,   // total hit points
-        PHASE_SHIFT_HP:      100,   // damage taken before each phase shift
+        HP:                   40,   // total hit points
+        PHASE_SHIFT_HP:       20,   // damage taken before each phase shift
         ORBIT_RADIUS_X:      500,   // horizontal semi-axis (px)
         ORBIT_RADIUS_Y:      130,   // vertical semi-axis (px)
         MIN_ORBIT_DIST:      400,   // px — boss is never closer than this to the station center
@@ -263,7 +263,6 @@ export const DEFAULTS = {
         ENRAGE_HP:           100,   // HP threshold for enrage
         ENRAGE_ORBIT_MULT:   1.5,
         ENRAGE_COOLDOWN_MULT: 0.7,
-        SHIELD_DROP_WORDS:     3,   // frogger crossings required to drop shield
         SHIELD_DOWN_DURATION: 5000, // ms shield stays down after breaking
         ALIEN_BURST_COUNT: 3,       // FastAliens spawned per burst attack
         BLACK_HOLE_HP:           30,   // projectile hits required to destroy a black hole
@@ -275,10 +274,10 @@ export const DEFAULTS = {
         TERMINAL_LOCK_SPEED:    100,   // px/s — homes toward target terminal
         TERMINAL_LOCK_DURATION: 15000, // ms terminal stays locked
         ATTACK_COOLDOWNS: {
-            ALIEN_BURST:    5000,   // ms between alien burst attacks
-            BLACK_HOLE:     8000,   // ms between black hole shots
-            EMP:           12000,   // ms between EMP shots
-            TERMINAL_LOCK: 15000,   // ms between terminal lock EMP shots
+            ALIEN_BURST:   10000,   // ms between alien burst attacks
+            BLACK_HOLE:    15000,   // ms between black hole shots
+            EMP:           20000,   // ms between EMP shots
+            TERMINAL_LOCK: 30000,   // ms between terminal lock EMP shots
         },
     },
 };

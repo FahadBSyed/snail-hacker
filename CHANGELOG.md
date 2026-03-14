@@ -2,6 +2,19 @@
 
 ## Session — 2026-03-14
 
+### Fix FROGGER_CROSSINGS config; rebalance boss
+
+**Bug fix:** `CONFIG.MINIGAMES.FROGGER_CROSSINGS` had no effect because `_wordsForWave(10)` returned `CONFIG.BOSS.SHIELD_DROP_WORDS` (a separate, duplicate constant), which was then passed explicitly as `pointsNeeded` to `FroggerMinigame`, bypassing the config fallback. Fixed by removing `BOSS.SHIELD_DROP_WORDS` and making `_wordsForWave(10)` return `CONFIG.MINIGAMES.FROGGER_CROSSINGS` directly — single source of truth.
+
+**Config changes** (CONFIG_VERSION → 24):
+- `MINIGAMES.FROGGER_CROSSINGS`: 3 → 1
+- `BOSS.HP`: 200 → 40; `BOSS.PHASE_SHIFT_HP`: 100 → 20 (kept at 50% of HP)
+- `BOSS.ATTACK_COOLDOWNS.ALIEN_BURST`: 5000 → 10000
+- `BOSS.ATTACK_COOLDOWNS.BLACK_HOLE`: 8000 → 15000
+- `BOSS.ATTACK_COOLDOWNS.EMP`: 12000 → 20000
+- `BOSS.ATTACK_COOLDOWNS.TERMINAL_LOCK`: 15000 → 30000
+- `BOSS.SHIELD_DROP_WORDS`: removed (superseded by `MINIGAMES.FROGGER_CROSSINGS`)
+
 ### Speed II — reworked as pure passive (skip rhythm minigame)
 
 Speed II no longer creates a terminal or grants a speed burst. It is now a pure passive: when owned, every terminal's `launchMinigame` is replaced with `_instantLauncher` immediately after `_spawnUpgradeTerminals()` runs, so pressing E on any terminal (including RELOAD and all upgrade terminals) succeeds instantly without the rhythm minigame. `CONFIG.TERMINALS.SPEED_2` block removed from `config.js`; CONFIG_VERSION bumped to 23. IntermissionScene description updated. The `SPEED_2` case removed from `_spawnUpgradeTerminals`.

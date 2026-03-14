@@ -667,7 +667,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     _wordsForWave(wave) {
-        if (wave === 10) return CONFIG.BOSS.SHIELD_DROP_WORDS;
+        if (wave === 10) return CONFIG.MINIGAMES.FROGGER_CROSSINGS;
         return CONFIG.HACK.BASE_WORDS + (wave - 1) * CONFIG.HACK.WORDS_GROWTH;
     }
 
