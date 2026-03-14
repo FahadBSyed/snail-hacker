@@ -21,6 +21,8 @@ import HelicopterMinigame from '../minigames/HelicopterMinigame.js';
 import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import FrogEscape from '../entities/FrogEscape.js'; // decorative escape frogs
+import Bush from '../entities/Bush.js';
+import BasicSnake from '../entities/snakes/BasicSnake.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
 import Decoy from '../entities/Decoy.js';
@@ -361,6 +363,7 @@ export default class GameScene extends Phaser.Scene {
 
         // ── Game state ────────────────────────────────────────────────────────
         this.aliens      = [];
+        this.bushes      = [];
         this.healthDrops = [];
         this.frogEscapes = [];
         this.score       = this.startScore;
@@ -423,6 +426,10 @@ export default class GameScene extends Phaser.Scene {
             onWaveStart: (wave) => {
                 this.wave          = wave;
                 this._spawnProps(wave);
+                if (this.world === 2) {
+                    const bushCount = this.waveManager.getConfig().bushCount || 0;
+                    this._spawnBushes(bushCount);
+                }
                 this.hackProgress  = 0;
                 this.hackThreshold = this._wordsForWave(wave);
                 this.escapePhase  = false;
@@ -569,6 +576,57 @@ export default class GameScene extends Phaser.Scene {
 
         for (let i = 0; i < rockCount;     i++) tryPlace(rockKeys[Math.floor(rng() * rockKeys.length)]);
         for (let i = 0; i < mushroomCount; i++) tryPlace(mushroomKeys[Math.floor(rng() * mushroomKeys.length)]);
+    }
+
+    /**
+     * Spawn World 2 bushes for the current wave.
+     * Clears previous bushes first, then places `count` bushes using rejection
+     * sampling to avoid the station center, screen edges, and each other.
+     */
+    _spawnBushes(count) {
+        for (const b of this.bushes) { if (b.active) b.destroy(); }
+        this.bushes = [];
+        if (!count) return;
+
+        const W = 1280, H = 720;
+        const MARGIN   = 80;
+        const CLEAR_R  = 260;  // keep away from station center (640,360)
+        const TERM_R   = 100;  // keep away from terminals
+        const MIN_GAP  = 90;   // minimum between bushes
+        const MAX_TRIES = 60;
+
+        let seed = this.wave * 2_000_003 + 99;
+        const rng = () => {
+            seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+            let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+            return ((t ^ t >>> 14) >>> 0) / 4_294_967_296;
+        };
+
+        const placed = [];
+        for (let i = 0; i < count; i++) {
+            let tries = 0;
+            while (tries < MAX_TRIES) {
+                tries++;
+                const x = MARGIN + rng() * (W - MARGIN * 2);
+                const y = MARGIN + rng() * (H - MARGIN * 2);
+                const dx = x - 640, dy = y - 360;
+                if (dx * dx + dy * dy < CLEAR_R * CLEAR_R) continue;
+                const nearTerm = this.terminals.some(t => {
+                    const tx = t.x - x, ty = t.y - y;
+                    return tx * tx + ty * ty < TERM_R * TERM_R;
+                });
+                if (nearTerm) continue;
+                const tooClose = placed.some(p => {
+                    const px = p.x - x, py = p.y - y;
+                    return px * px + py * py < MIN_GAP * MIN_GAP;
+                });
+                if (tooClose) continue;
+                placed.push({ x, y });
+                this.bushes.push(new Bush(this, x, y));
+                break;
+            }
+        }
     }
 
     /**
@@ -1861,6 +1919,10 @@ export default class GameScene extends Phaser.Scene {
         }
         this.aliens = [];
 
+        // Destroy World 2 bushes
+        for (const bush of this.bushes) { if (bush.active) bush.destroy(); }
+        this.bushes = [];
+
         // Move snail onto the ship
         this.escapeShip.setPromptVisible(false);
         this.snail.x = this.escapeShip.x;
@@ -1977,6 +2039,17 @@ export default class GameScene extends Phaser.Scene {
         const margin = 24;
         this.snail.x = Phaser.Math.Clamp(this.snail.x, margin, 1280 - margin);
         this.snail.y = Phaser.Math.Clamp(this.snail.y, margin, 720 - margin);
+
+        // World 2: Gerald walking through an occupied bush flushes the hiding snake
+        if (this.world === 2) {
+            for (const bush of this.bushes) {
+                if (!bush.active || !bush.isOccupied) continue;
+                const d = Phaser.Math.Distance.Between(this.snail.x, this.snail.y, bush.x, bush.y);
+                if (d < CONFIG.PROPS.SNAIL_RADIUS + CONFIG.BUSHES.OCCUPY_RADIUS) {
+                    bush.flush();
+                }
+            }
+        }
     }
 
     /** Schedule a sporadic ribbet while aliens are alive; re-schedules itself. */
@@ -2074,11 +2147,12 @@ export default class GameScene extends Phaser.Scene {
         const { x, y } = pos;
         let alien;
         switch (type) {
-            case 'fast':   alien = new FastAlien(this, x, y);   break;
-            case 'tank':   alien = new TankAlien(this, x, y);   break;
-            case 'bomber': alien = new BomberAlien(this, x, y); break;
-            case 'shield': alien = new ShieldAlien(this, x, y); break;
-            default:       alien = new BasicAlien(this, x, y);
+            case 'fast':         alien = new FastAlien(this, x, y);   break;
+            case 'tank':         alien = new TankAlien(this, x, y);   break;
+            case 'bomber':       alien = new BomberAlien(this, x, y); break;
+            case 'shield':       alien = new ShieldAlien(this, x, y); break;
+            case 'basic-snake':  alien = new BasicSnake(this, x, y);  break;
+            default:             alien = new BasicAlien(this, x, y);
         }
         if (this.slowFieldActive) {
             alien._origSpeed = alien.speed;

@@ -220,6 +220,7 @@ export function checkProjectileCollisions(scene) {
         if (!proj.active) continue;
         for (const alien of scene.aliens) {
             if (!alien.active) continue;
+            if (alien.hidingInBush) continue;   // World 2: invulnerable while hiding
             const dist = Phaser.Math.Distance.Between(proj.x, proj.y, alien.x, alien.y);
             if (dist >= alien.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) continue;
 

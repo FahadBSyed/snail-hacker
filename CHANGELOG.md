@@ -2,6 +2,39 @@
 
 ## Session — 2026-03-14
 
+### World 2 — Bush entity, BasicSnake entity, GameScene integration (W2-1 & W2-4)
+
+**Config additions** (`CONFIG_VERSION` → 26):
+- `CONFIG.SNAKES.BODY_SPACING`, `CONFIG.SNAKES.HIDE_SEEK_DIST`
+- `CONFIG.SNAKES.BASIC` — `SPEED`, `HEALTH`, `RADIUS`, `SEGMENT_COUNT`, `HIDE_CHANCE`
+- `CONFIG.BUSHES` — `RUSTLE_DURATION`, `BURN_FLASH_ALPHA`, `FLUSH_STUN_MS`, `OCCUPY_RADIUS`
+
+**Bush entity** (`src/entities/Bush.js` — new file):
+- Phaser Container at depth 30; children: sprite image (`bush` / `bush-scorched`) + white-flash graphics overlay
+- `enter(snake)` — accepts snake if not occupied/scorched; plays rustle tween; returns false if rejected
+- `exit()` — clears occupant
+- `flush()` — force-ejects occupant; sets `snake._stunMs = CONFIG.BUSHES.FLUSH_STUN_MS`; brief flash
+- `burn()` — scorches permanently; ejects occupant; swaps to `bush-scorched` texture; full flash
+
+**BasicSnake entity** (`src/entities/snakes/BasicSnake.js` — new file):
+- Extends `Phaser.GameObjects.Container`; fits into `scene.aliens` array; `update()` returns `'alive' | 'reached_snail'`
+- Multi-segment body: head = container child (moves with container); body/tail = world-space images positioned from a `_history` array of past head positions, each spaced `BODY_SPACING` px apart along the trail, rotated toward the preceding sample
+- State machine: `HUNT` (straight-line toward snail) → `TO_BUSH` (seeks nearest available bush) → `HIDING` (fully still, invulnerable) → back to `HUNT` (not yet, future: on timer or flush)
+- `takeDamage()` blocked when `hidingInBush === true`; `takeDamageRaw()` bypasses
+- `destroy()` cleans up world-space segment/tail images and calls `currentBush.exit()`
+
+**GameScene** (`src/scenes/GameScene.js`):
+- Imports `Bush` and `BasicSnake`
+- `this.bushes = []` initialized in `create()`
+- `onWaveStart`: calls `this._spawnBushes(count)` when `this.world === 2`
+- `_spawnBushes(count)`: destroys previous bushes, places N new ones using seeded PRNG rejection-sampling (avoids station center, screen edges, terminals, and each other)
+- `spawnAlien`: added `case 'basic-snake': alien = new BasicSnake(this, x, y)`
+- Wave-end cleanup: destroys and clears `this.bushes` in `_boardEscapeShip`
+- `_resolveSnailCollisions`: Gerald walking into an occupied bush calls `bush.flush()`
+
+**CollisionSystem** (`src/systems/CollisionSystem.js`):
+- `checkProjectileCollisions`: added `if (alien.hidingInBush) continue;` guard — snakes inside a bush are immune to projectile hits
+
 ### World 2 foundation — world system, asset manifest, snake sprites
 
 **World system** — The game now supports multiple worlds selectable from the main menu. `world: 1 | 2` is passed through all scene transitions (Menu → Game → Intermission → Game → Victory/GameOver). All scenes read `data.world` in `init()` and forward it on `scene.start()`.

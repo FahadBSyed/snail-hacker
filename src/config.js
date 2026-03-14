@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 25;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 26;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -249,6 +249,27 @@ export const DEFAULTS = {
     ESCAPE: {
         BOARD_RADIUS:    40,   // px — snail must be within this distance to board the ship
         ASCENT_DURATION: 1200, // ms for the ship to fly off the top of the screen
+    },
+
+    // ── World 2: Snake Pit ────────────────────────────────────────────────────
+    SNAKES: {
+        BODY_SPACING: 14,       // px between history samples used for body segment placement
+        HIDE_SEEK_DIST: 200,    // px — snake starts moving toward a bush when this close
+
+        BASIC: {
+            SPEED:         55,   // px/s movement speed
+            HEALTH:        30,   // hit points
+            RADIUS:        14,   // px — head collision radius
+            SEGMENT_COUNT:  4,   // number of body segments (not counting head/tail)
+            HIDE_CHANCE:   0.4,  // probability of seeking a bush after spawning
+        },
+    },
+
+    BUSHES: {
+        RUSTLE_DURATION:  400,   // ms — bush shake tween when snake enters
+        BURN_FLASH_ALPHA: 0.9,   // peak alpha of white flash on burn
+        FLUSH_STUN_MS:    600,   // ms the flushed snake is stunned (speed=0)
+        OCCUPY_RADIUS:    28,    // px — snake head must be this close to enter a bush
     },
 
     BOSS: {
