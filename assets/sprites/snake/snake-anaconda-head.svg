@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 60" width="80" height="60">
+
+  <!-- Ground shadow -->
+  <ellipse cx="44" cy="55" rx="32" ry="7" fill="#000000" opacity="0.22"/>
+
+  <!-- Neck / collar (metallic ring at left) -->
+  <rect x="1" y="15" width="18" height="30" rx="4" fill="#2a1040" stroke="#180828" stroke-width="1"/>
+  <!-- Collar highlight edge -->
+  <line x1="8" y1="16" x2="8" y2="44" stroke="#3c1a58" stroke-width="1.2" opacity="0.7"/>
+  <!-- Collar ring bolts -->
+  <circle cx="9" cy="17" r="2" fill="#180828" stroke="#3c1a58" stroke-width="0.7"/>
+  <circle cx="9" cy="43" r="2" fill="#180828" stroke="#3c1a58" stroke-width="0.7"/>
+  <!-- Boss gold collar trim -->
+  <rect x="1" y="15" width="18" height="2" fill="#ffcc44" opacity="0.8"/>
+  <rect x="1" y="44" width="18" height="2" fill="#ffcc44" opacity="0.8"/>
+
+  <!-- Main head body -->
+  <ellipse cx="42" cy="30" rx="34" ry="22" fill="#160822" stroke="#0a0414" stroke-width="1.2"/>
+  <!-- Snout bulge -->
+  <ellipse cx="70" cy="30" rx="11" ry="12" fill="#220e34" stroke="#0a0414" stroke-width="1"/>
+
+  <!-- Scale texture (diagonal stroke lines across head) -->
+  <line x1="24" y1="8" x2="30" y2="52" stroke="#1a0c2c" stroke-width="1.1" opacity="0.55"/>
+  <line x1="35" y1="8" x2="41" y2="52" stroke="#1a0c2c" stroke-width="1.1" opacity="0.55"/>
+  <line x1="46" y1="8" x2="52" y2="52" stroke="#1a0c2c" stroke-width="1.1" opacity="0.55"/>
+  <line x1="56" y1="8" x2="62" y2="52" stroke="#1a0c2c" stroke-width="1.1" opacity="0.55"/>
+  <!-- Cross hatching on snout -->
+  <line x1="61" y1="18" x2="74" y2="36" stroke="#0a0414" stroke-width="0.8" opacity="0.5"/>
+
+  <!-- Head highlight (dorsal ridge) -->
+  <ellipse cx="42" cy="14" rx="20" ry="7" fill="#220e34" opacity="0.45"/>
+
+  <!-- Visor dome (space helmet glass) -->
+  <ellipse cx="35" cy="26" rx="16" ry="13" fill="rgba(160,50,255,0.38)" stroke="#aa44ff" stroke-width="1.4"/>
+  <!-- Visor interior depth -->
+  <ellipse cx="35" cy="26" rx="14" ry="11" fill="#cc88ff" opacity="0.12"/>
+  <!-- Visor glare (top-left) -->
+  <ellipse cx="28" cy="20" rx="4" ry="3" fill="white" opacity="0.22" transform="rotate(-20,28,20)"/>
+
+  <!-- Alien eyes (through visor) -->
+  <ellipse cx="29" cy="26" rx="3" ry="6" fill="#cc44ff"/>
+  <ellipse cx="41" cy="26" rx="3" ry="6" fill="#cc44ff"/>
+  <!-- Slit pupils -->
+  <ellipse cx="29" cy="26" rx="1" ry="5" fill="#111100"/>
+  <ellipse cx="41" cy="26" rx="1" ry="5" fill="#111100"/>
+  <!-- Eye glow -->
+  <ellipse cx="29" cy="26" rx="5" ry="8" fill="#cc44ff" opacity="0.28"/>
+  <ellipse cx="41" cy="26" rx="5" ry="8" fill="#cc44ff" opacity="0.28"/>
+
+  <!-- Antennae -->
+  <line x1="26" y1="13" x2="22" y2="2" stroke="#cc44ff" stroke-width="1.3" stroke-linecap="round"/>
+  <circle cx="22" cy="2" r="3" fill="#cc44ff"/>
+  <circle cx="22" cy="2" r="5" fill="#cc44ff" opacity="0.25"/>
+  <line x1="34" y1="13" x2="40" y2="2" stroke="#cc44ff" stroke-width="1.3" stroke-linecap="round"/>
+  <circle cx="40" cy="2" r="3" fill="#cc44ff"/>
+  <circle cx="40" cy="2" r="5" fill="#cc44ff" opacity="0.25"/>
+
+  <!-- Nostril dots on snout -->
+  <circle cx="73" cy="23" r="1.3" fill="#0a0414" opacity="0.8"/>
+  <circle cx="73" cy="37" r="1.3" fill="#0a0414" opacity="0.8"/>
+
+  <!-- Boss crown / crest detail -->
+  <path d="M26,6 L29,2 L32,6 L35,2 L38,6" fill="none" stroke="#ffcc44" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
+  <!-- Boss eye glow rings -->
+  <ellipse cx="29" cy="26" rx="7" ry="10" fill="none" stroke="#ffcc44" stroke-width="0.8" opacity="0.4"/>
+  <ellipse cx="41" cy="26" rx="7" ry="10" fill="none" stroke="#ffcc44" stroke-width="0.8" opacity="0.4"/>
+</svg>

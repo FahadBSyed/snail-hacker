@@ -131,6 +131,7 @@ export default class IntermissionScene extends Phaser.Scene {
                          : data.stationHealth !== undefined ? data.stationHealth
                          : CONFIG.SNAIL.MAX_HEALTH;
         this.upgrades       = data.upgrades    || [];
+        this.world          = data.world       || 1;
         this._advanced      = false;
         this.countdownTimer = null;
         // Pre-game setup mode: pick upgrades before starting at a later wave
@@ -543,6 +544,7 @@ export default class IntermissionScene extends Phaser.Scene {
                 // Need more upgrades — loop back
                 this.scene.start('IntermissionScene', {
                     wave: 0, score: 0, upgrades: this.upgrades,
+                    world: this.world,
                     _startupMode: true, _targetWave: this._targetWave,
                 });
             } else {
@@ -552,6 +554,7 @@ export default class IntermissionScene extends Phaser.Scene {
                     score:       0,
                     snailHealth: CONFIG.SNAIL.MAX_HEALTH,
                     upgrades:    this.upgrades,
+                    world:       this.world,
                 });
             }
             return;
@@ -562,6 +565,7 @@ export default class IntermissionScene extends Phaser.Scene {
             score:       this.score,
             snailHealth: Math.min(CONFIG.SNAIL.MAX_HEALTH, this.snailHealth + CONFIG.INTERMISSION.HEAL_AMOUNT),
             upgrades:    this.upgrades,
+            world:       this.world,
         });
     }
 }

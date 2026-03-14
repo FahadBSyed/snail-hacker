@@ -2,6 +2,38 @@
 
 ## Session — 2026-03-14
 
+### World 2 foundation — world system, asset manifest, snake sprites
+
+**World system** — The game now supports multiple worlds selectable from the main menu. `world: 1 | 2` is passed through all scene transitions (Menu → Game → Intermission → Game → Victory/GameOver). All scenes read `data.world` in `init()` and forward it on `scene.start()`.
+
+**Menu** — `MenuScene` now shows two world buttons instead of a single "START GAME":
+- `[ WORLD 1: ALIEN INVASION ]` (cyan) — the existing alien campaign
+- `[ WORLD 2: THE SNAKE PIT  ]` (green) — the new snake campaign
+
+**Asset manifest** (`src/data/assetManifest.js` — new file) — Central registry of every loadable texture tagged by world:
+- `worlds: 'all'` — loaded in every world (snail, station, terminals, props)
+- `worlds: [1]`   — World 1 only (alien/frog sprites, 8-directional × 6 types)
+- `worlds: [2]`   — World 2 only (snake sprites, bush props, snake terminals)
+
+`GameScene.preload()` now iterates the manifest and skips entries whose world tag doesn't match the current world, replacing ~70 lines of manual `load.svg()` calls with a 6-line loop. Frog and alien sprites are not loaded at all in World 2.
+
+**WaveManager** (`src/systems/WaveManager.js`) — Now accepts `opts.world` and maintains separate wave-config tables:
+- `WAVE_CONFIGS` — unchanged World 1 alien waves
+- `SNAKE_WAVE_CONFIGS` — 10 World 2 waves with snake type names and `bushCount` per wave
+- World 2 uses a simple interval-based spawn system (one snake every `spawnInterval` ms, random from pool) instead of the budget+bias system, as snakes don't use formation spawning
+
+**Sprite generation scripts** (3 new scripts, all runnable with `node scripts/…`):
+- `scripts/generate-snake-sprites.js` — 18 SVGs: 5 enemy types + anaconda boss, each with head (64×48), body (32×24), tail (28×20). Anaconda uses larger canvases (80×60 / 36×28 / 32×24). All sprites face right and are rotated at runtime — no 8-directional variants needed. Aesthetic: alien snake in a space suit (bubble visor, metallic collar ring, scale texture, slit-pupil eyes, antennae). Each type has a distinct color palette.
+- `scripts/generate-bush-sprite.js` — 2 SVGs: `bush.svg` (lush green, multi-layer foliage) and `bush-scorched.svg` (charred grey with orange ember glints). Saved to `assets/sprites/props/`.
+- `scripts/generate-snake-terminal-sprites.js` — 2 SVGs: `terminal-burner.svg` (hot orange screen, flame icon on desk) and `terminal-mongoose.svg` (amber screen, mongoose silhouette + paw-print). Saved to `assets/sprites/terminal/`.
+
+**Generated assets** (22 new SVG files):
+- `assets/sprites/snake/snake-{basic,sidewinder,python,burrower,spitter,anaconda}-{head,body,tail}.svg`
+- `assets/sprites/props/bush.svg`, `bush-scorched.svg`
+- `assets/sprites/terminal/terminal-burner.svg`, `terminal-mongoose.svg`
+
+**SNAKE_WORLD.md** — Updated `Implementation Plan` section to reflect that Steps W2-2 (world select), W2-3 (WaveManager snake config), and sprite generation are now complete.
+
 ### Fix FROGGER_CROSSINGS config; rebalance boss
 
 **Bug fix:** `CONFIG.MINIGAMES.FROGGER_CROSSINGS` had no effect because `_wordsForWave(10)` returned `CONFIG.BOSS.SHIELD_DROP_WORDS` (a separate, duplicate constant), which was then passed explicitly as `pointsNeeded` to `FroggerMinigame`, bypassing the config fallback. Fixed by removing `BOSS.SHIELD_DROP_WORDS` and making `_wordsForWave(10)` return `CONFIG.MINIGAMES.FROGGER_CROSSINGS` directly — single source of truth.

@@ -28,6 +28,7 @@ import EmpMine from '../entities/EmpMine.js';
 import HUD from './HUD.js';
 import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions, BURST_COLORS } from '../systems/CollisionSystem.js';
 import { PROP_PALETTES } from '../data/propPalettes.js';
+import { ASSET_MANIFEST } from '../data/assetManifest.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -35,6 +36,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     init(data = {}) {
+        this.world        = data.world       || 1;
         this.startWave    = data.wave        || 1;
         this.startScore   = data.score       || 0;
         // Accept snailHealth (new) or stationHealth (legacy from old intermission saves)
@@ -127,74 +129,13 @@ export default class GameScene extends Phaser.Scene {
             this.load.svg(this.bgKey, `assets/backgrounds/${this.bgKey}.svg`, { width: 1280, height: 720 });
         }
 
-        const svgSize = { width: 48, height: 48 };
-        // Snail directional sprites
-        this.load.svg('snail-right', 'assets/sprites/snail/snail-right.svg', svgSize);
-        this.load.svg('snail-left',  'assets/sprites/snail/snail-left.svg',  svgSize);
-        this.load.svg('snail-up',    'assets/sprites/snail/snail-up.svg',    svgSize);
-        this.load.svg('snail-down',  'assets/sprites/snail/snail-down.svg',  svgSize);
-        // Walk, idle and damage animation frames
-        for (const dir of ['right', 'left', 'up', 'down']) {
-            for (let i = 0; i < 6; i++) {
-                const f = `f${String(i).padStart(2, '0')}`;
-                this.load.svg(`snail-walk-${dir}-${f}`, `assets/sprites/snail/snail-walk-${dir}-${f}.svg`, svgSize);
-            }
-            for (let i = 0; i < 12; i++) {
-                const f = `f${String(i).padStart(2, '0')}`;
-                this.load.svg(`snail-idle-${dir}-${f}`, `assets/sprites/snail/snail-idle-${dir}-${f}.svg`, svgSize);
-            }
-            for (let i = 0; i <= 15; i++) {
-                const f = `f${String(i).padStart(2, '0')}`;
-                this.load.svg(`snail-hit-${dir}-${f}`, `assets/sprites/snail/snail-hit-${dir}-${f}.svg`, svgSize);
-            }
-        }
-        // On-foot frog sprites (4 cardinal directions, idle + 4 hop frames each)
-        for (const dir of ['right', 'left', 'up', 'down']) {
-            this.load.svg(`frog-${dir}`, `assets/sprites/frog/frog-${dir}.svg`, svgSize);
-            for (const frame of ['f00', 'f01', 'f02', 'f03']) {
-                this.load.svg(`frog-hop-${dir}-${frame}`,
-                    `assets/sprites/frog/frog-hop-${dir}-${frame}.svg`, svgSize);
-            }
-        }
-
-        // Alien sprites — 8 directions each
-        const dirs = ['right', 'diag-right-down', 'down', 'diag-left-down',
-                      'left',  'diag-left-up',    'up',   'diag-right-up'];
-        for (const dir of dirs) {
-            this.load.svg(`alien-frog-${dir}`,    `assets/sprites/alien/alien-frog-${dir}.svg`,    svgSize);
-            this.load.svg(`alien-fast-${dir}`,    `assets/sprites/alien/alien-fast-${dir}.svg`,    svgSize);
-            this.load.svg(`alien-tank-${dir}`,    `assets/sprites/alien/alien-tank-${dir}.svg`,    svgSize);
-            this.load.svg(`alien-bomber-${dir}`,  `assets/sprites/alien/alien-bomber-${dir}.svg`,  svgSize);
-            this.load.svg(`alien-shield-${dir}`,  `assets/sprites/alien/alien-shield-${dir}.svg`,  svgSize);
-            this.load.svg(`alien-boss-${dir}`,    `assets/sprites/alien/alien-boss-${dir}.svg`,    { width: 96, height: 96 });
-        }
-
-        // Station + terminal sprites
-        if (!this.textures.exists('station-mainframe')) {
-            this.load.svg('station-mainframe', 'assets/sprites/station/station-mainframe.svg', { width: 96, height: 96 });
-        }
-        if (!this.textures.exists('station-gun')) {
-            this.load.svg('station-gun', 'assets/sprites/station/station-gun.svg', { width: 48, height: 48 });
-        }
-        for (const key of ['terminal-reload', 'terminal-turret', 'terminal-shield', 'terminal-slow', 'terminal-repair', 'terminal-decoy', 'terminal-emp']) {
-            if (!this.textures.exists(key)) {
-                this.load.svg(key, `assets/sprites/terminal/${key}.svg`, { width: 64, height: 64 });
-            }
-        }
-
-        // ── Prop sprites (rocks + mushrooms) — loaded once, tinted per wave ──
-        const PROP_SIZES = {
-            'prop-rock-0':     { w: 40,  h: 34 },
-            'prop-rock-1':     { w: 60,  h: 38 },
-            'prop-rock-2':     { w: 46,  h: 56 },
-            'prop-mushroom-0': { w: 32,  h: 52 },
-            'prop-mushroom-1': { w: 48,  h: 68 },
-        };
-        for (const [key, sz] of Object.entries(PROP_SIZES)) {
-            if (!this.textures.exists(key)) {
-                const file = key.replace('prop-', '') + '.svg'; // rock-0.svg etc.
-                this.load.svg(key, `assets/sprites/props/${file}`, { width: sz.w, height: sz.h });
-            }
+        // ── Load all assets tagged for this world (or 'all' worlds) ──────────
+        // The manifest skips world-specific assets that don't belong to this world,
+        // e.g. frog/alien sprites are skipped in World 2 (snake world) and vice versa.
+        for (const { key, path, size, worlds } of ASSET_MANIFEST) {
+            if (worlds !== 'all' && !worlds.includes(this.world)) continue;
+            if (this.textures.exists(key)) continue;
+            this.load.svg(key, path, size);
         }
     }
 
@@ -475,6 +416,7 @@ export default class GameScene extends Phaser.Scene {
 
         // ── Wave Manager ──────────────────────────────────────────────────────
         this.waveManager = new WaveManager(this, {
+            world:     this.world,
             startWave: this.startWave,
             onSpawn: (type) => this.spawnAlien(type),
             onFormation: (formation) => this._spawnFormation(formation),
@@ -1960,13 +1902,14 @@ export default class GameScene extends Phaser.Scene {
         this.soundSynth.play('waveComplete');
         const wave = this.waveManager.wave;
         if (this.waveManager.isLastWave) {
-            this.scene.start('VictoryScene', { wave, score: this.score });
+            this.scene.start('VictoryScene', { wave, score: this.score, world: this.world });
         } else {
             this.scene.start('IntermissionScene', {
                 wave,
                 score:       this.score,
                 snailHealth: this.snail.health,
                 upgrades:    this.upgradesList,
+                world:       this.world,
             });
         }
     }
@@ -2353,7 +2296,7 @@ export default class GameScene extends Phaser.Scene {
                     if (died) {
                         if (this.waveManager) this.waveManager.active = false;
                         if (this.activeHack)  { this.activeHack.cancel(); this.activeHack = null; }
-                        this.scene.start('GameOverScene', { wave: this.wave, score: this.score });
+                        this.scene.start('GameOverScene', { wave: this.wave, score: this.score, world: this.world });
                         return false;
                     }
                     return false;

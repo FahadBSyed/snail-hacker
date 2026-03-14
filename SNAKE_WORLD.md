@@ -293,6 +293,8 @@ Generate 10 new jungle backgrounds (`bg-s-00.svg` → `bg-s-09.svg`) distinct fr
 
 ### Phase 1 — Foundation (Bushes + Basic Snake)
 
+> **Status as of 2026-03-14:** Steps W2-2, W2-3, and sprite generation are complete (world system, asset manifest, WaveManager snake configs, all SVG assets). Step W2-1 (Bush entity) is next.
+
 **Step W2-1: Bush entity**
 - `src/entities/Bush.js` — Container with graphics blob, `isOccupied` flag
 - Bush stores reference to occupying snake (`this.occupant`)

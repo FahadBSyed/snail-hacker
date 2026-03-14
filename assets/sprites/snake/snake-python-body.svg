@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 24" width="32" height="24">
+
+  <!-- Shadow -->
+  <ellipse cx="17" cy="22" rx="13" ry="3" fill="#000000" opacity="0.18"/>
+
+  <!-- Body pill -->
+  <rect x="2" y="4" width="28" height="16" rx="8" fill="#243828" stroke="#0e1e0e" stroke-width="1"/>
+
+  <!-- Dorsal ridge (lighter top surface) -->
+  <ellipse cx="16" cy="9" rx="12" ry="3" fill="#2e4830" opacity="0.5"/>
+
+  <!-- Scale plate arcs -->
+  <ellipse cx="8" cy="13" rx="5" ry="7" fill="none" stroke="#142414" stroke-width="1" opacity="0.6"/>
+  <ellipse cx="16" cy="13" rx="5" ry="7" fill="none" stroke="#142414" stroke-width="1" opacity="0.6"/>
+  <ellipse cx="24" cy="13" rx="5" ry="7" fill="none" stroke="#142414" stroke-width="1" opacity="0.6"/>
+
+  <!-- Spine seam (glowing line along body center) -->
+  <line x1="10" y1="12" x2="22" y2="12" stroke="#44bb55" stroke-width="1.2" opacity="0.7"/>
+  <!-- Seam glow -->
+  <line x1="10" y1="12" x2="22" y2="12" stroke="#44bb55" stroke-width="3" opacity="0.2"/>
+</svg>
