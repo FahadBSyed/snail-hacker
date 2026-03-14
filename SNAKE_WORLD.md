@@ -180,6 +180,15 @@ Unlike the Overlord (who orbits and attacks from a fixed range), the Anaconda **
 - Body segments deal contact damage to Gerald if walked into.
 - The Anaconda enters/exits at random edges; its path is a smooth Bezier or sinusoidal curve across the arena.
 
+### Head Telegraph
+
+The head **must** have a clear visual tell so P2 can reliably target it during fast passes. Implementation:
+
+- The head pulses with a **bright yellow-white glow** (a radial gradient overlay, alpha tweened 0.4→1.0→0.4, period 600ms) at all times while the Anaconda is on-screen.
+- When scales are **exposed** (bomb just hit, full-damage window): the glow shifts to **red-orange** and pulses faster (period 300ms) — unmistakable signal to "shoot now."
+- An optional **targeting reticle** (thin white circle, 32px radius, 0.5 alpha) centers on the head. This disappears in phase 3 to increase difficulty — players must track the glow alone.
+- Phase 3 fast passes: add a **motion blur trail** on the head (3 ghost images fading over 80ms) so its direction of movement is readable even when it's moving quickly.
+
 ### HP & Phase Structure
 
 | Phase | HP Range | Behavior |
@@ -347,6 +356,7 @@ Generate 10 new jungle backgrounds (`bg-s-00.svg` → `bg-s-09.svg`) distinct fr
 - Scale mechanic (50% damage reduction until bomb hit)
 - 3-phase behavior (speed + attack frequency)
 - All 4 attacks wired to callbacks (same pattern as BossAlien)
+- Head telegraph: pulsing glow overlay (Graphics child, redrawn each frame); color/speed driven by `_exposed` flag and current phase; targeting reticle shown in phases 1–2 only; 3-ghost motion trail in phase 3
 
 **Step W2-11: Boss HUD adaptation**
 - `HUD.showBossBar()` already exists — reuse it
@@ -464,8 +474,8 @@ The current upgrade pool (Cannon, Shield, Slow, Repair, passives) all work fine 
 - **Herpetologist** passive: reveals which bush each snake is hiding in (glowing outline through the bush)
 - **Flamethrower** terminal: cone-shaped AoE shot that hits everything in a wedge, ignores bush cover for one shot
 
-**2. Anaconda weak point telegraph**
-Since the head is the only target and it moves fast, P2 needs a clear visual read. Consider a brief **glint/highlight on the head** once per pass (1s duration) that signals "shoot now" — especially useful during phase 3's fast passes. Without this, P3 may feel frustrating.
+**2. Anaconda weak point telegraph** ✓ *Confirmed — see Head Telegraph section above.*
+Pulsing yellow-white glow at all times; shifts red-orange during exposed window; reticle present in phases 1–2, removed in phase 3 for difficulty; motion-blur trail in phase 3 to keep direction readable.
 
 **3. Python loot drops**
 Each destroyed Python segment has a 20% chance to drop a health pickup. Rewards focused fire on the Python and gives P1 a reason to path near dying Pythons rather than avoiding them.
