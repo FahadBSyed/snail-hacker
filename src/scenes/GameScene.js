@@ -426,6 +426,20 @@ export default class GameScene extends Phaser.Scene {
         });
         this.hud.updateAmmo(this.ammo);
         this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
+
+        // Ammo Boost II — passive bullet regen
+        if (this.upgradesList.some(u => u.type === 'AMMO_2')) {
+            this.time.addEvent({
+                delay:    Math.round(1000 / CONFIG.PLAYER.AMMO_2_REGEN_RATE),
+                loop:     true,
+                callback: () => {
+                    if (this.ammo < this.ammoMax) {
+                        this.ammo++;
+                        this.hud.updateAmmo(this.ammo);
+                    }
+                },
+            });
+        }
         this.hud.updateGrab(this.grabSystem.statusText, this.grabSystem.statusColor);
 
         // ── Wave Manager ──────────────────────────────────────────────────────

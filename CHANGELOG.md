@@ -2,6 +2,16 @@
 
 ## Session — 2026-03-14
 
+### Ammo Boost II — Tier II Passive
+
+Adds **AMMO_2**, offered on even waves once Ammo Boost is owned. Pure passive (no terminal). Starts a looping 1 s timer in `GameScene.create()` (after HUD init) that increments `this.ammo` by 1 and calls `hud.updateAmmo` whenever ammo is below max. Naturally caps at `ammoMax` and is paused automatically when the scene is paused (Phaser timer).
+
+**`src/config.js`**: Bumped `CONFIG_VERSION` to 19. Added `PLAYER.AMMO_2_REGEN_RATE: 1`.
+
+**`src/scenes/IntermissionScene.js`**: Added `AMMO_2` to `PASSIVE_UPGRADES`, `PASSIVE_POOL_T2`, `T2_PREREQS`, and `getUpgradeDefs()`.
+
+**`src/scenes/GameScene.js`**: After HUD setup, checks for `AMMO_2` ownership and registers a `time.addEvent` loop with `delay = 1000 / AMMO_2_REGEN_RATE`.
+
 ### Quick Grab II — Tier II Passive
 
 Adds **QUICK_GRAB_2**, offered on even waves once Quick Grab is owned. Pure passive (no terminal). Sets the grab cooldown to a flat **0.5 s** by computing the appropriate `cooldownMultiplier` from the base cooldown config. The T2 check runs after the T1 check so it always wins when both are owned.

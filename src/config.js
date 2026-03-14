@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 18;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 19;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -10,8 +10,9 @@ export const DEFAULTS = {
         SNAIL_SPEED:       40,    // px/s
         STARTING_AMMO:     35,
         MAX_AMMO:          35,
-        PROJECTILE_SPEED:  3200,  // px/s
-        PROJECTILE_RADIUS: 4,     // px
+        PROJECTILE_SPEED:    3200,  // px/s
+        PROJECTILE_RADIUS:   4,     // px
+        AMMO_2_REGEN_RATE:   1,     // bullets per second (Ammo Boost II passive)
     },
 
     SNAIL: {
