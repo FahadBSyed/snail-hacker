@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 22;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 23;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -148,12 +148,6 @@ export const DEFAULTS = {
             BLAST_RADIUS:      300, // px — 1.5× Tier I (200 px)
         },
 
-        // ── Tier II passive upgrades (terminal-activated) ──────────────────
-        SPEED_2: {
-            DURATION:         15000,  // ms — how long the speed burst lasts
-            COOLDOWN:         20000,  // ms — post-effect rest
-            SPEED_MULTIPLIER:     3,  // 3× base speed while active
-        },
     },
 
     EMP: {

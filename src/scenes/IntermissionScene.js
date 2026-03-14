@@ -82,7 +82,7 @@ function getUpgradeDefs() {
         LASER_2:      { label: 'HITSCAN LASER II', color: 0xff6666,
             desc: `Laser passes through\nsurviving enemies.\nAuto-aims near cursor.` },
         SPEED_2: { label: 'SPEED BOOST II', color: 0x00ffdd,
-            desc: `Activates a ${Math.round(CONFIG.TERMINALS.SPEED_2.DURATION / 1000)}s burst of\n${CONFIG.TERMINALS.SPEED_2.SPEED_MULTIPLIER}× base speed.\nNo minigame needed.` },
+            desc: `Skip the rhythm\nminigame on every\nterminal activation.` },
 
         // ── Tier II actives ───────────────────────────────────────────────
         CANNON_2:    { label: 'AUTO TURRET II',  color: 0xffaa66,

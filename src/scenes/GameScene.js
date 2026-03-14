@@ -299,7 +299,8 @@ export default class GameScene extends Phaser.Scene {
             this.grabSystem.cooldownMultiplier = CONFIG.GRAB.QUICK_GRAB_2_COOLDOWN / CONFIG.GRAB.COOLDOWN;
         }
         this._healthDropGravitate = this.upgradesList.some(u => u.type === 'HEALTH_2');
-        this._laser2 = this.upgradesList.some(u => u.type === 'LASER_2');
+        this._laser2  = this.upgradesList.some(u => u.type === 'LASER_2');
+        this._speed2  = this.upgradesList.some(u => u.type === 'SPEED_2');
         const hasRicochet2 = this.upgradesList.some(u => u.type === 'RICOCHET_2');
         this._ricochetFalloff      = hasRicochet2 ? CONFIG.RICOCHET_2.FALLOFF       : CONFIG.RICOCHET.FALLOFF;
         this._ricochetSearchRadius = hasRicochet2 ? CONFIG.RICOCHET_2.SEARCH_RADIUS : CONFIG.RICOCHET.SEARCH_RADIUS;
@@ -386,6 +387,13 @@ export default class GameScene extends Phaser.Scene {
 
         // ── Upgrade terminals (carried over from previous waves) ───────────────
         this._spawnUpgradeTerminals();
+
+        // Speed II — passive: replace rhythm launcher with instant on every terminal
+        if (this._speed2) {
+            for (const term of this.terminals) {
+                term.launchMinigame = this._instantLauncher;
+            }
+        }
 
         // ── E key: open hack OR activate nearby terminal ───────────────────────
         this.eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
@@ -883,23 +891,7 @@ export default class GameScene extends Phaser.Scene {
                     });
                     break;
 
-                // ── Tier II passives ───────────────────────────────────────
-                case 'SPEED_2':
-                    term = new Terminal(this, x, y, {
-                        label:          'SPEED II',
-                        effectDuration: CONFIG.TERMINALS.SPEED_2.DURATION,
-                        cooldown:       CONFIG.TERMINALS.SPEED_2.COOLDOWN,
-                        color:          0x00ffdd,
-                        launchMinigame: this._instantLauncher,
-                        onSuccess:      () => {
-                            const restoreSpeed = this.snail.speed;
-                            this.snail.speed = CONFIG.PLAYER.SNAIL_SPEED * CONFIG.TERMINALS.SPEED_2.SPEED_MULTIPLIER;
-                            this.time.delayedCall(CONFIG.TERMINALS.SPEED_2.DURATION, () => {
-                                if (this.snail?.active) this.snail.speed = restoreSpeed;
-                            });
-                        },
-                    });
-                    break;
+                // SPEED_2 is a pure passive — handled after _spawnUpgradeTerminals; no terminal.
 
                 default:
                     break;
