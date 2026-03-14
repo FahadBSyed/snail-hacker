@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 17;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 18;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -36,8 +36,9 @@ export const DEFAULTS = {
     GRAB: {
         MAX_PICKUP_DISTANCE: 24,   // px — cursor must be within this radius of the snail to grab
         MAX_SPEED:           400,  // px/s — max speed while carrying snail or battery
-        COOLDOWN:             7,   // s — cooldown after releasing (shared between snail and battery grabs)
-        MAX_CURSOR_DIST:     48,   // px — max distance cursor can stray from held object (= snail sprite width)
+        COOLDOWN:              7,   // s — cooldown after releasing (shared between snail and battery grabs)
+        QUICK_GRAB_2_COOLDOWN: 0.5, // s — cooldown when Quick Grab II is owned
+        MAX_CURSOR_DIST:      48,   // px — max distance cursor can stray from held object (= snail sprite width)
     },
 
     BATTERY: {

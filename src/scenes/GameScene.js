@@ -295,6 +295,9 @@ export default class GameScene extends Phaser.Scene {
         if (this.upgradesList.some(u => u.type === 'QUICK_GRAB')) {
             this.grabSystem.cooldownMultiplier = 0.5;
         }
+        if (this.upgradesList.some(u => u.type === 'QUICK_GRAB_2')) {
+            this.grabSystem.cooldownMultiplier = CONFIG.GRAB.QUICK_GRAB_2_COOLDOWN / CONFIG.GRAB.COOLDOWN;
+        }
 
         // Shoot listener registered AFTER grabSystem so grab's pointerdown fires first,
         // ensuring grabSystem.hovering is already up-to-date when this check runs.

@@ -2,6 +2,16 @@
 
 ## Session — 2026-03-14
 
+### Quick Grab II — Tier II Passive
+
+Adds **QUICK_GRAB_2**, offered on even waves once Quick Grab is owned. Pure passive (no terminal). Sets the grab cooldown to a flat **0.5 s** by computing the appropriate `cooldownMultiplier` from the base cooldown config. The T2 check runs after the T1 check so it always wins when both are owned.
+
+**`src/config.js`**: Bumped `CONFIG_VERSION` to 18. Added `GRAB.QUICK_GRAB_2_COOLDOWN: 0.5`.
+
+**`src/scenes/IntermissionScene.js`**: Added `QUICK_GRAB_2` to `PASSIVE_UPGRADES`, `PASSIVE_POOL_T2`, `T2_PREREQS`, and `getUpgradeDefs()`.
+
+**`src/scenes/GameScene.js`**: Added `QUICK_GRAB_2` check after the `QUICK_GRAB` check; sets `cooldownMultiplier = CONFIG.GRAB.QUICK_GRAB_2_COOLDOWN / CONFIG.GRAB.COOLDOWN`.
+
 ### Speed Boost II — First Tier II Passive Upgrade
 
 Adds **SPEED_2**, the first Tier II passive upgrade. Unlike T1 passives (which apply instantly and permanently), SPEED_2 spawns a terminal near the station that the player activates by pressing **E** — no minigame required. While active it triples Gerald's base speed for 15 s, then enters a 20 s cooldown.

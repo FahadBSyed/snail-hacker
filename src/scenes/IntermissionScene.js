@@ -14,7 +14,7 @@ const FLAVOR_TEXT = {
 };
 
 // Passive upgrades apply instantly on selection — no terminal is spawned.
-const PASSIVE_UPGRADES = new Set(['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET', 'QUICK_GRAB']);
+const PASSIVE_UPGRADES = new Set(['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET', 'QUICK_GRAB', 'QUICK_GRAB_2']);
 
 const ACTIVE_POOL  = ['CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR', 'DRONE', 'DECOY', 'EMP_MINES'];
 const PASSIVE_POOL = ['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET', 'QUICK_GRAB'];
@@ -29,11 +29,12 @@ const T2_PREREQS = {
     DRONE_2:     'DRONE',
     DECOY_2:     'DECOY',
     EMP_MINES_2: 'EMP_MINES',
-    // Tier II passives (spawn terminals, offered on even waves)
-    SPEED_2:     'SPEED_BOOST',
+    // Tier II passives (apply instantly, offered on even waves)
+    SPEED_2:      'SPEED_BOOST',
+    QUICK_GRAB_2: 'QUICK_GRAB',
 };
 const ACTIVE_POOL_T2  = ['CANNON_2', 'SHIELD_2', 'SLOWFIELD_2', 'REPAIR_2', 'DRONE_2', 'DECOY_2', 'EMP_MINES_2'];
-const PASSIVE_POOL_T2 = ['SPEED_2'];
+const PASSIVE_POOL_T2 = ['SPEED_2', 'QUICK_GRAB_2'];
 
 // No-terminal upgrades (excluded from orbital angle placement).
 const NO_TERMINAL_UPGRADES = new Set(['DRONE', 'DRONE_2', ...PASSIVE_UPGRADES]);
@@ -66,6 +67,8 @@ function getUpgradeDefs() {
         SPEED_BOOST:  { label: 'SPEED BOOST',    color: 0x44ffdd, desc: `Gerald moves\nat double speed.` },
 
         // ── Tier II passives ──────────────────────────────────────────────
+        QUICK_GRAB_2: { label: 'QUICK GRAB II',  color: 0xdd99ff,
+            desc: `Grab cooldown drops\nto just ${CONFIG.GRAB.QUICK_GRAB_2_COOLDOWN}s\nbetween grabs.` },
         SPEED_2: { label: 'SPEED BOOST II', color: 0x00ffdd,
             desc: `Activates a ${Math.round(CONFIG.TERMINALS.SPEED_2.DURATION / 1000)}s burst of\n${CONFIG.TERMINALS.SPEED_2.SPEED_MULTIPLIER}× base speed.\nNo minigame needed.` },
 
