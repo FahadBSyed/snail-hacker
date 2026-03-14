@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 19;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 20;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -16,8 +16,9 @@ export const DEFAULTS = {
     },
 
     SNAIL: {
-        MAX_HEALTH:       100,
-        INVINCIBILITY_MS: 3000,  // ms of i-frames after taking damage
+        MAX_HEALTH:           100,
+        INVINCIBILITY_MS:    3000,  // ms of i-frames after taking damage
+        HEALTH_2_REGEN_RATE:  0.5,  // HP/s — passive regen when Health Boost II is owned
     },
 
 
@@ -27,10 +28,11 @@ export const DEFAULTS = {
     },
 
     HEALTH_DROP: {
-        CHANCE:   0.3,    // probability per alien kill
-        AMOUNT:   25,     // HP restored on pickup
-        RADIUS:   12,     // px — pickup collision radius
-        LIFETIME: 8000,   // ms before auto-despawn
+        CHANCE:          0.3,   // probability per alien kill
+        AMOUNT:         25,     // HP restored on pickup
+        RADIUS:         12,     // px — pickup collision radius
+        LIFETIME:     8000,     // ms before auto-despawn
+        GRAVITATE_SPEED: 80,    // px/s — drops home toward snail when Health Boost II is owned
     },
 
 

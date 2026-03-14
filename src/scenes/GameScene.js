@@ -298,6 +298,7 @@ export default class GameScene extends Phaser.Scene {
         if (this.upgradesList.some(u => u.type === 'QUICK_GRAB_2')) {
             this.grabSystem.cooldownMultiplier = CONFIG.GRAB.QUICK_GRAB_2_COOLDOWN / CONFIG.GRAB.COOLDOWN;
         }
+        this._healthDropGravitate = this.upgradesList.some(u => u.type === 'HEALTH_2');
 
         // Shoot listener registered AFTER grabSystem so grab's pointerdown fires first,
         // ensuring grabSystem.hovering is already up-to-date when this check runs.
@@ -436,6 +437,24 @@ export default class GameScene extends Phaser.Scene {
                     if (this.ammo < this.ammoMax) {
                         this.ammo++;
                         this.hud.updateAmmo(this.ammo);
+                    }
+                },
+            });
+        }
+
+        // Health Boost II — passive HP regen
+        if (this._healthDropGravitate) {
+            this.time.addEvent({
+                delay:    1000,
+                loop:     true,
+                callback: () => {
+                    if (!this.snail?.active) return;
+                    if (this.snail.health < this.snail.maxHealth) {
+                        this.snail.health = Math.min(
+                            this.snail.maxHealth,
+                            this.snail.health + CONFIG.SNAIL.HEALTH_2_REGEN_RATE,
+                        );
+                        this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
                     }
                 },
             });
@@ -2426,9 +2445,10 @@ export default class GameScene extends Phaser.Scene {
         // Collision checks (projectile vs alien)
         checkProjectileCollisions(this);
 
-        // Health drop pickups
+        // Health drop pickups (+ gravitation when Health Boost II is owned)
         this.healthDrops = this.healthDrops.filter(drop => {
             if (!drop.active) return false;
+            if (this._healthDropGravitate) drop.gravitate(this.snail.x, this.snail.y, delta);
             if (drop.checkPickup(this.snail.x, this.snail.y)) {
                 const healed = Math.min(
                     CONFIG.HEALTH_DROP.AMOUNT,

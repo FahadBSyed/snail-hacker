@@ -2,6 +2,21 @@
 
 ## Session — 2026-03-14
 
+### Health Boost II — Tier II Passive
+
+Adds **HEALTH_2**, offered on even waves once Health Boost is owned. Pure passive with two simultaneous effects:
+
+1. **Passive regen** — 0.5 HP/s via a 1 s Phaser timer that adds `HEALTH_2_REGEN_RATE` HP per tick (caps at `maxHealth`). Pauses automatically with the scene.
+2. **Drop gravitation** — health drops home toward the snail each frame at `GRAVITATE_SPEED` (80 px/s). Uses a new `HealthDrop.gravitate()` method and a cached `this._healthDropGravitate` flag to avoid per-frame `.some()` calls.
+
+**`src/config.js`**: Bumped `CONFIG_VERSION` to 20. Added `SNAIL.HEALTH_2_REGEN_RATE: 0.5` and `HEALTH_DROP.GRAVITATE_SPEED: 80`.
+
+**`src/entities/HealthDrop.js`**: Added `gravitate(snailX, snailY, delta)` method.
+
+**`src/scenes/IntermissionScene.js`**: Added `HEALTH_2` to `PASSIVE_UPGRADES`, `PASSIVE_POOL_T2`, `T2_PREREQS`, and `getUpgradeDefs()`.
+
+**`src/scenes/GameScene.js`**: Caches `this._healthDropGravitate` flag in `create()`; starts regen timer after HUD init; calls `drop.gravitate()` each frame in the health drop update loop when flag is set.
+
 ### Ammo Boost II — Tier II Passive
 
 Adds **AMMO_2**, offered on even waves once Ammo Boost is owned. Pure passive (no terminal). Starts a looping 1 s timer in `GameScene.create()` (after HUD init) that increments `this.ammo` by 1 and calls `hud.updateAmmo` whenever ammo is below max. Naturally caps at `ammoMax` and is paused automatically when the scene is paused (Phaser timer).
