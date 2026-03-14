@@ -329,7 +329,10 @@ export default class GameScene extends Phaser.Scene {
             this.activeTerminalMinigame = mg;
         };
         // Store launcher so _spawnUpgradeTerminals can use it.
-        this._rhythmLauncher   = rhythmLauncher;
+        this._rhythmLauncher  = rhythmLauncher;
+
+        // Instant launcher — no minigame; pressing E succeeds immediately.
+        this._instantLauncher = (_term, onSuccess, _onFailure) => { onSuccess(); };
 
         // RELOAD — orbits the hacking station at a fixed radius; relocates on each success.
         // Picks an angle that won't overlap existing upgrade terminals.
@@ -631,6 +634,7 @@ export default class GameScene extends Phaser.Scene {
         const T2_TO_T1 = {
             CANNON_2: 'CANNON', SHIELD_2: 'SHIELD', SLOWFIELD_2: 'SLOWFIELD',
             REPAIR_2: 'REPAIR', DRONE_2: 'DRONE', DECOY_2: 'DECOY', EMP_MINES_2: 'EMP_MINES',
+            SPEED_2: 'SPEED_BOOST',
         };
 
         for (const upgrade of this.upgradesList) {
@@ -838,6 +842,25 @@ export default class GameScene extends Phaser.Scene {
                         onSuccess:      () => this._activateEmpMines2(),
                     });
                     break;
+
+                // ── Tier II passives ───────────────────────────────────────
+                case 'SPEED_2':
+                    term = new Terminal(this, x, y, {
+                        label:          'SPEED II',
+                        effectDuration: CONFIG.TERMINALS.SPEED_2.DURATION,
+                        cooldown:       CONFIG.TERMINALS.SPEED_2.COOLDOWN,
+                        color:          0x00ffdd,
+                        launchMinigame: this._instantLauncher,
+                        onSuccess:      () => {
+                            const restoreSpeed = this.snail.speed;
+                            this.snail.speed = CONFIG.PLAYER.SNAIL_SPEED * CONFIG.TERMINALS.SPEED_2.SPEED_MULTIPLIER;
+                            this.time.delayedCall(CONFIG.TERMINALS.SPEED_2.DURATION, () => {
+                                if (this.snail?.active) this.snail.speed = restoreSpeed;
+                            });
+                        },
+                    });
+                    break;
+
                 default:
                     break;
             }

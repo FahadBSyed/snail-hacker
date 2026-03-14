@@ -29,8 +29,11 @@ const T2_PREREQS = {
     DRONE_2:     'DRONE',
     DECOY_2:     'DECOY',
     EMP_MINES_2: 'EMP_MINES',
+    // Tier II passives (spawn terminals, offered on even waves)
+    SPEED_2:     'SPEED_BOOST',
 };
-const ACTIVE_POOL_T2 = Object.keys(T2_PREREQS);
+const ACTIVE_POOL_T2  = ['CANNON_2', 'SHIELD_2', 'SLOWFIELD_2', 'REPAIR_2', 'DRONE_2', 'DECOY_2', 'EMP_MINES_2'];
+const PASSIVE_POOL_T2 = ['SPEED_2'];
 
 // No-terminal upgrades (excluded from orbital angle placement).
 const NO_TERMINAL_UPGRADES = new Set(['DRONE', 'DRONE_2', ...PASSIVE_UPGRADES]);
@@ -62,6 +65,10 @@ function getUpgradeDefs() {
         LASER:        { label: 'HITSCAN LASER',  color: 0xff3333, desc: `Replaces bullets with\na piercing laser beam\nthat hits all enemies.` },
         SPEED_BOOST:  { label: 'SPEED BOOST',    color: 0x44ffdd, desc: `Gerald moves\nat double speed.` },
 
+        // ── Tier II passives ──────────────────────────────────────────────
+        SPEED_2: { label: 'SPEED BOOST II', color: 0x00ffdd,
+            desc: `Activates a ${Math.round(CONFIG.TERMINALS.SPEED_2.DURATION / 1000)}s burst of\n${CONFIG.TERMINALS.SPEED_2.SPEED_MULTIPLIER}× base speed.\nNo minigame needed.` },
+
         // ── Tier II actives ───────────────────────────────────────────────
         CANNON_2:    { label: 'AUTO TURRET II',  color: 0xffaa66,
             desc: `2× fire rate, 1.5× duration.\nIgnores alien shields.` },
@@ -80,6 +87,8 @@ function getUpgradeDefs() {
     };
 }
 
+const ALL_T2 = new Set([...ACTIVE_POOL_T2, ...PASSIVE_POOL_T2]);
+
 /**
  * Build the offered-card list from an available pool.
  * T2 upgrades are always included when present; remaining slots are filled
@@ -87,8 +96,8 @@ function getUpgradeDefs() {
  */
 function buildOffered(available) {
     const limit = CONFIG.UPGRADES.CARDS_OFFERED;
-    const t2s   = available.filter(t =>  ACTIVE_POOL_T2.includes(t));
-    const t1s   = available.filter(t => !ACTIVE_POOL_T2.includes(t));
+    const t2s   = available.filter(t =>  ALL_T2.has(t));
+    const t1s   = available.filter(t => !ALL_T2.has(t));
     const guaranteed = Phaser.Utils.Array.Shuffle(t2s.slice());  // shuffle if > limit
     const filler     = Phaser.Utils.Array.Shuffle(t1s.slice()).slice(0, limit - guaranteed.length);
     return [...guaranteed, ...filler].slice(0, limit);
@@ -143,6 +152,7 @@ export default class IntermissionScene extends Phaser.Scene {
             const available = [
                 ...UPGRADE_POOL.filter(t => !startupOwned.has(t)),
                 ...ACTIVE_POOL_T2.filter(t => startupOwned.has(T2_PREREQS[t]) && !startupOwned.has(t)),
+                ...PASSIVE_POOL_T2.filter(t => startupOwned.has(T2_PREREQS[t]) && !startupOwned.has(t)),
             ];
             this._buildStartupUpgradeLayout(cx, available);
             return;
@@ -156,7 +166,7 @@ export default class IntermissionScene extends Phaser.Scene {
         // Odd waves offer actives (+ any Tier II whose Tier I is owned); even waves offer passives.
         const ownedTypes = new Set(this.upgrades.map(u => u.type));
         const pool = this.wave % 2 === 0 ? PASSIVE_POOL : ACTIVE_POOL;
-        const t2Pool = this.wave % 2 === 0 ? [] : ACTIVE_POOL_T2;
+        const t2Pool = this.wave % 2 === 0 ? PASSIVE_POOL_T2 : ACTIVE_POOL_T2;
         const available = [
             ...pool.filter(t => !ownedTypes.has(t)),
             ...t2Pool.filter(t => ownedTypes.has(T2_PREREQS[t]) && !ownedTypes.has(t)),

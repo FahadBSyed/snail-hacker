@@ -1,5 +1,28 @@
 # SNAIL HACKER — Changelog
 
+## Session — 2026-03-14
+
+### Speed Boost II — First Tier II Passive Upgrade
+
+Adds **SPEED_2**, the first Tier II passive upgrade. Unlike T1 passives (which apply instantly and permanently), SPEED_2 spawns a terminal near the station that the player activates by pressing **E** — no minigame required. While active it triples Gerald's base speed for 15 s, then enters a 20 s cooldown.
+
+**`src/config.js`**:
+- Bumped `CONFIG_VERSION` to 17.
+- Added `TERMINALS.SPEED_2: { DURATION, COOLDOWN, SPEED_MULTIPLIER }`.
+
+**`src/scenes/IntermissionScene.js`**:
+- Added `SPEED_2: 'SPEED_BOOST'` to `T2_PREREQS`.
+- Extracted `ACTIVE_POOL_T2` from `Object.keys(T2_PREREQS)` so it stays active-only; introduced `PASSIVE_POOL_T2 = ['SPEED_2']`.
+- Added `ALL_T2` set (union of both pools) used in `buildOffered` so passive T2s are also guaranteed when available.
+- Even-wave `available` selection now uses `PASSIVE_POOL_T2` (was hardcoded `[]`).
+- Startup mode now also includes passive T2s in the available pool.
+- Added `SPEED_2` entry to `getUpgradeDefs()`.
+
+**`src/scenes/GameScene.js`**:
+- Added `this._instantLauncher` — calls `onSuccess()` directly without spawning a minigame.
+- Added `SPEED_2: 'SPEED_BOOST'` to the local `T2_TO_T1` map in `_spawnUpgradeTerminals`.
+- Added `case 'SPEED_2'` terminal: uses `_instantLauncher`, captures current snail speed as `restoreSpeed`, bumps to `3× SNAIL_SPEED` for the effect duration, then restores via `delayedCall`.
+
 ## Session — 2026-03-13
 
 ### Terminal Active-Phase State + Cooldown Sequencing Fix
