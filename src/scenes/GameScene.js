@@ -2311,15 +2311,20 @@ export default class GameScene extends Phaser.Scene {
             const status = alien.update(time, delta);
 
             if (status === 'reached_decoy') {
-                const bx = alien.x, by = alien.y;
-                const burstColor = BURST_COLORS[alien.alienType] || 0xff4444;
-                alien.destroy();
-                spawnDeathBurst(this, bx, by, burstColor,
-                    () => this.spawnFrogEscape(bx, by));
+                // Deal damage first (Decoy II's takeDamage is a no-op — it's invulnerable)
+                const dx = this.decoy ? this.decoy.x : alien.x;
+                const dy = this.decoy ? this.decoy.y : alien.y;
                 if (this.decoy && this.decoy.active) {
                     this.decoy.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
+                    this.soundSynth.play('shieldReflect');
                 }
-                return false;
+                // Bounce away from the decoy for 3 s, then resume targeting normally
+                const bounceAngle = Phaser.Math.Angle.Between(dx, dy, alien.x, alien.y);
+                const bounceSpeed = alien.speed * 2;
+                alien._bounceVx    = Math.cos(bounceAngle) * bounceSpeed;
+                alien._bounceVy    = Math.sin(bounceAngle) * bounceSpeed;
+                alien._bounceUntil = time + 3000;
+                return true;
             }
 
             if (status === 'reached_snail' && !this.boardingShip) {

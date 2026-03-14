@@ -2,6 +2,10 @@
 
 ## Session — 2026-03-14
 
+### Decoy bounce on contact (Decoy I & II)
+
+Aliens no longer die when they reach the decoy. Instead they bounce away (identical to the Shield I mechanic): the decoy takes damage (`ALIEN_HIT_SNAIL`), a `shieldReflect` sound plays, and the alien is pushed away at `speed × 2` for 3 s. After the bounce timer expires it resumes normal targeting and approaches again. Decoy II remains invulnerable (its `takeDamage` override is a no-op), so only the bounce occurs. `src/scenes/GameScene.js` — replaced `alien.destroy()` + `spawnDeathBurst` in the `reached_decoy` block with bounce-angle + `_bounceUntil` assignment, caching decoy coords before calling `takeDamage` so the bounce angle is correct even if the decoy expires.
+
 ### Hitscan Laser II — Tier II Passive
 
 Adds **LASER_2**, offered on even waves once Laser is owned. Pure passive with two improvements over T1:
