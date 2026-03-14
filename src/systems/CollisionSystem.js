@@ -47,12 +47,14 @@ function _leadIntercept(fromX, fromY, targetX, targetY, tvx, tvy, speed) {
  * Returns true if the ricochet happened (caller should NOT destroy proj).
  */
 export function tryRicochetBullet(proj, scene, hitAlien, bx, by) {
-    const chance = CONFIG.RICOCHET.BASE_CHANCE * (CONFIG.RICOCHET.FALLOFF ** proj.ricochetBounces);
+    const falloff      = scene._ricochetFalloff      ?? CONFIG.RICOCHET.FALLOFF;
+    const searchRadius = scene._ricochetSearchRadius ?? CONFIG.RICOCHET.SEARCH_RADIUS;
+    const chance = CONFIG.RICOCHET.BASE_CHANCE * (falloff ** proj.ricochetBounces);
     if (Math.random() > chance) return false;
 
     // Find nearest valid alien
     let nearest = null;
-    let nearestDist = CONFIG.RICOCHET.SEARCH_RADIUS;
+    let nearestDist = searchRadius;
     for (const a of scene.aliens) {
         if (!a.active || a._dying || a.shielded || a === hitAlien) continue;
         const d = Phaser.Math.Distance.Between(bx, by, a.x, a.y);

@@ -2,6 +2,23 @@
 
 ## Session — 2026-03-14
 
+### Ricochet II — Tier II Passive
+
+Adds **RICOCHET_2**, offered on even waves once Ricochet is owned. Pure passive with two improvements over T1:
+
+1. **No chance falloff** — `FALLOFF` stays at `1.0` so every bounce fires at the full 80% `BASE_CHANCE` rather than halving each hop.
+2. **Double search radius** — 480 px instead of 240 px, letting bounces reach across the arena.
+
+Both the laser (`_fireLaserRicochet`) and projectile (`tryRicochetBullet`) code paths now read from scene-level fields `_ricochetFalloff` and `_ricochetSearchRadius` set in `create()`. This keeps CONFIG immutable while letting T2 override both values cleanly; `??` fallbacks in `CollisionSystem` ensure safety if the scene fields are ever absent.
+
+**`src/config.js`**: Bumped `CONFIG_VERSION` to 21. Added `RICOCHET_2: { FALLOFF: 1.0, SEARCH_RADIUS: 480 }`.
+
+**`src/scenes/IntermissionScene.js`**: Added `RICOCHET_2` to `PASSIVE_UPGRADES`, `PASSIVE_POOL_T2`, `T2_PREREQS`, and `getUpgradeDefs()`.
+
+**`src/scenes/GameScene.js`**: Caches `_ricochetFalloff` and `_ricochetSearchRadius` in `create()`; `_fireLaserRicochet` reads from those instead of CONFIG directly.
+
+**`src/systems/CollisionSystem.js`**: `tryRicochetBullet` reads `scene._ricochetFalloff` and `scene._ricochetSearchRadius` with CONFIG fallbacks.
+
 ### Health Boost II — Tier II Passive
 
 Adds **HEALTH_2**, offered on even waves once Health Boost is owned. Pure passive with two simultaneous effects:

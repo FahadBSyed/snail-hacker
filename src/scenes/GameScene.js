@@ -299,6 +299,9 @@ export default class GameScene extends Phaser.Scene {
             this.grabSystem.cooldownMultiplier = CONFIG.GRAB.QUICK_GRAB_2_COOLDOWN / CONFIG.GRAB.COOLDOWN;
         }
         this._healthDropGravitate = this.upgradesList.some(u => u.type === 'HEALTH_2');
+        const hasRicochet2 = this.upgradesList.some(u => u.type === 'RICOCHET_2');
+        this._ricochetFalloff      = hasRicochet2 ? CONFIG.RICOCHET_2.FALLOFF       : CONFIG.RICOCHET.FALLOFF;
+        this._ricochetSearchRadius = hasRicochet2 ? CONFIG.RICOCHET_2.SEARCH_RADIUS : CONFIG.RICOCHET.SEARCH_RADIUS;
 
         // Shoot listener registered AFTER grabSystem so grab's pointerdown fires first,
         // ensuring grabSystem.hovering is already up-to-date when this check runs.
@@ -1458,12 +1461,12 @@ export default class GameScene extends Phaser.Scene {
      * alien not already in hitSet. Chains with halving probability.
      */
     _fireLaserRicochet(fromX, fromY, bounces, hitSet) {
-        const chance = CONFIG.RICOCHET.BASE_CHANCE * (CONFIG.RICOCHET.FALLOFF ** bounces);
+        const chance = CONFIG.RICOCHET.BASE_CHANCE * (this._ricochetFalloff ** bounces);
         if (Math.random() > chance) return;
 
         // Find nearest valid alien not already hit, within search radius
         let nearest = null;
-        let nearestDist = CONFIG.RICOCHET.SEARCH_RADIUS;
+        let nearestDist = this._ricochetSearchRadius;
         for (const a of this.aliens) {
             if (!a.active || a._dying || a.shielded || hitSet.has(a)) continue;
             const d = Phaser.Math.Distance.Between(fromX, fromY, a.x, a.y);

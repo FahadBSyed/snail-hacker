@@ -14,7 +14,7 @@ const FLAVOR_TEXT = {
 };
 
 // Passive upgrades apply instantly on selection — no terminal is spawned.
-const PASSIVE_UPGRADES = new Set(['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET', 'QUICK_GRAB', 'QUICK_GRAB_2', 'AMMO_2', 'HEALTH_2']);
+const PASSIVE_UPGRADES = new Set(['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET', 'QUICK_GRAB', 'QUICK_GRAB_2', 'AMMO_2', 'HEALTH_2', 'RICOCHET_2']);
 
 const ACTIVE_POOL  = ['CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR', 'DRONE', 'DECOY', 'EMP_MINES'];
 const PASSIVE_POOL = ['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET', 'QUICK_GRAB'];
@@ -34,9 +34,10 @@ const T2_PREREQS = {
     QUICK_GRAB_2: 'QUICK_GRAB',
     AMMO_2:       'AMMO_BOOST',
     HEALTH_2:     'HEALTH_BOOST',
+    RICOCHET_2:   'RICOCHET',
 };
 const ACTIVE_POOL_T2  = ['CANNON_2', 'SHIELD_2', 'SLOWFIELD_2', 'REPAIR_2', 'DRONE_2', 'DECOY_2', 'EMP_MINES_2'];
-const PASSIVE_POOL_T2 = ['SPEED_2', 'QUICK_GRAB_2', 'AMMO_2', 'HEALTH_2'];
+const PASSIVE_POOL_T2 = ['SPEED_2', 'QUICK_GRAB_2', 'AMMO_2', 'HEALTH_2', 'RICOCHET_2'];
 
 // No-terminal upgrades (excluded from orbital angle placement).
 const NO_TERMINAL_UPGRADES = new Set(['DRONE', 'DRONE_2', ...PASSIVE_UPGRADES]);
@@ -75,6 +76,8 @@ function getUpgradeDefs() {
             desc: `Bullets slowly regenerate\nat ${CONFIG.PLAYER.AMMO_2_REGEN_RATE}/s.\nNo reload wait.` },
         HEALTH_2:     { label: 'HEALTH BOOST II', color: 0xff8888,
             desc: `Passively regen ${CONFIG.SNAIL.HEALTH_2_REGEN_RATE} HP/s.\nHealth drops home\ntoward you.` },
+        RICOCHET_2:   { label: 'RICOCHET II',      color: 0x88ffff,
+            desc: `Ricochet chance never\nreduces. Search radius\ndoubled to ${CONFIG.RICOCHET_2.SEARCH_RADIUS}px.` },
         SPEED_2: { label: 'SPEED BOOST II', color: 0x00ffdd,
             desc: `Activates a ${Math.round(CONFIG.TERMINALS.SPEED_2.DURATION / 1000)}s burst of\n${CONFIG.TERMINALS.SPEED_2.SPEED_MULTIPLIER}× base speed.\nNo minigame needed.` },
 
