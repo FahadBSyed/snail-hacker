@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 32;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 33;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -284,9 +284,9 @@ export const DEFAULTS = {
         },
 
         PYTHON: {
-            HEALTH:            100,   // total (10 × 10 per segment)
+            HEALTH:            150,   // total (15 × 10 per segment)
             HP_PER_SEGMENT:     10,
-            SEGMENT_COUNT:      10,   // total body segments after head (excludes head)
+            SEGMENT_COUNT:      15,   // total body segments after head (excludes head)
             SPEED:              40,   // px/s
             RADIUS:             10,   // head collision radius
             BODY_RADIUS:        12,   // per body-segment hit radius (for body-only intercept)
@@ -312,11 +312,11 @@ export const DEFAULTS = {
             SPEED:               60,   // px/s — kiting movement speed
             PREFERRED_MIN:      350,   // px — backs away if Gerald is closer than this
             PREFERRED_MAX:      500,   // px — approaches if Gerald is farther than this
-            SPIT_COOLDOWN:     2500,   // ms between acid glob shots
+            SPIT_COOLDOWN:    10000,   // ms between acid glob shots (4× slower fire rate)
             HIDE_DURATION:     6000,   // ms hiding after taking any damage
             GLOB_SPEED:          80,   // px/s — acid glob projectile speed
             GLOB_DAMAGE:          8,   // HP damage to Gerald on hit
-            GLOB_RADIUS:          7,   // px — glob collision radius
+            GLOB_RADIUS:         28,   // px — glob collision radius (4× base size)
             PUDDLE_DURATION:   4000,   // ms before acid puddle disappears
             PUDDLE_RADIUS:       40,   // px — puddle area
             PUDDLE_SLOW_MULT:   0.3,   // fraction of normal snail speed while inside puddle
