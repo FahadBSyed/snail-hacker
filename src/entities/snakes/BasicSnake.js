@@ -29,7 +29,8 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         this._stunMs      = 0;
         this._hideTimer   = 0;
 
-        this._bushAnimTimers = [];   // pending delayedCall refs for hide/reveal sequences
+        this._fadedParts  = new Set();   // parts currently at alpha 0 (inside a bush)
+        this._lastBushPos = null;        // cached on exit; used for position-based reveal
 
         this._state      = 'HUNT';
         this._targetBush = null;
@@ -70,42 +71,47 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         this._tailImg.setOrigin(0.5, 0.5).setDepth(this.depth - 2);
     }
 
-    /** Set alpha on the container (head) AND all world-space segment images (instant). */
+    /** Instant alpha set on all parts (used by flush). Also clears the faded-parts set. */
     _setBodyAlpha(alpha) {
+        this._fadedParts.clear();
         this.setAlpha(alpha);
         for (const img of this._bodyImgs) img.setAlpha(alpha);
         if (this._tailImg) this._tailImg.setAlpha(alpha);
     }
 
-    /** Fade each part to 0 in sequence: head → body[0..n] → tail, 65 ms stagger. */
-    _startHideAnimation() {
-        this._cancelBushAnim();
-        const parts = [this, ...this._bodyImgs, this._tailImg].filter(Boolean);
-        parts.forEach((part, i) => {
-            const t = this.scene.time.delayedCall(i * 65, () => {
-                if (!this.active || !part.active) return;
-                this.scene.tweens.add({ targets: part, alpha: 0, duration: 150, ease: 'Sine.easeOut' });
-            });
-            this._bushAnimTimers.push(t);
-        });
+    /**
+     * Fade any part whose world-position is within OCCUPY_RADIUS of (bx,by).
+     * Called every frame while the snake is entering a bush.
+     */
+    _tickBushHide(bx, by) {
+        const r = CONFIG.BUSHES.OCCUPY_RADIUS;
+        for (const part of [this, ...this._bodyImgs, this._tailImg]) {
+            if (!part || this._fadedParts.has(part)) continue;
+            const px = (part === this) ? this.x : part.x;
+            const py = (part === this) ? this.y : part.y;
+            if (Phaser.Math.Distance.Between(px, py, bx, by) < r) {
+                this._fadedParts.add(part);
+                this.scene.tweens.add({ targets: part, alpha: 0, duration: 120, ease: 'Sine.easeOut' });
+            }
+        }
     }
 
-    /** Fade each part back to 1 in sequence: head → body[0..n] → tail, 65 ms stagger. */
-    _startRevealAnimation() {
-        this._cancelBushAnim();
-        const parts = [this, ...this._bodyImgs, this._tailImg].filter(Boolean);
-        parts.forEach((part, i) => {
-            const t = this.scene.time.delayedCall(i * 65, () => {
-                if (!this.active || !part.active) return;
-                this.scene.tweens.add({ targets: part, alpha: 1, duration: 150, ease: 'Sine.easeOut' });
-            });
-            this._bushAnimTimers.push(t);
-        });
-    }
-
-    _cancelBushAnim() {
-        for (const t of this._bushAnimTimers) t.remove(false);
-        this._bushAnimTimers = [];
+    /**
+     * Reveal any faded part that has moved outside OCCUPY_RADIUS of (bx,by).
+     * Called every frame after the snake exits a bush. Clears _lastBushPos when done.
+     */
+    _tickBushReveal(bx, by) {
+        const r = CONFIG.BUSHES.OCCUPY_RADIUS;
+        for (const part of [this, ...this._bodyImgs, this._tailImg]) {
+            if (!part || !this._fadedParts.has(part)) continue;
+            const px = (part === this) ? this.x : part.x;
+            const py = (part === this) ? this.y : part.y;
+            if (Phaser.Math.Distance.Between(px, py, bx, by) >= r) {
+                this._fadedParts.delete(part);
+                this.scene.tweens.add({ targets: part, alpha: 1, duration: 120, ease: 'Sine.easeOut' });
+            }
+        }
+        if (this._fadedParts.size === 0) this._lastBushPos = null;
     }
 
     takeDamage(amount) {
@@ -132,7 +138,7 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         if (this._state === 'HIDING') {
             this._hideTimer -= delta;
             if (this._hideTimer <= 0) {
-                // Auto-emerge after hide timer expires
+                // Bush.exit() caches position into _lastBushPos for reveal loop
                 if (this.currentBush) this.currentBush.exit(this);
                 this.hidingInBush = false;
                 this.currentBush  = null;
@@ -156,26 +162,36 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
 
                 const dist = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
                 if (dist < CONFIG.BUSHES.OCCUPY_RADIUS) {
-                    if (bush.enter(this)) {
-                        this.hidingInBush = true;
-                        this.currentBush  = bush;
-                        this._hideTimer   = Phaser.Math.Between(
-                            CONFIG.SNAKES.BASIC.HIDE_TIMER_MIN,
-                            CONFIG.SNAKES.BASIC.HIDE_TIMER_MAX,
-                        );
-                        this._startHideAnimation();
-                        this._state = 'HIDING';
-                        this._updateSegmentPositions();
-                        return 'alive';
-                    } else {
-                        this._targetBush = null;
-                        this._state = 'HUNT';
+                    if (!this.hidingInBush) {
+                        if (bush.enter(this)) {
+                            // Clear any leftover reveal from a previous bush
+                            if (this._fadedParts.size > 0) { this._setBodyAlpha(1); this._lastBushPos = null; }
+                            this.hidingInBush = true;
+                            this.currentBush  = bush;
+                            this._hideTimer   = Phaser.Math.Between(
+                                CONFIG.SNAKES.BASIC.HIDE_TIMER_MIN,
+                                CONFIG.SNAKES.BASIC.HIDE_TIMER_MAX,
+                            );
+                        } else {
+                            this._targetBush = null;
+                            this._state = 'HUNT';
+                        }
+                    }
+                    if (this.hidingInBush) {
+                        // Fade parts that have reached the bush; switch to HIDING once all gone
+                        this._tickBushHide(bush.x, bush.y);
+                        if (this._fadedParts.size >= 2 + this._bodyImgs.length) {
+                            this._state = 'HIDING';
+                        }
                     }
                 }
             }
         }
 
         if (this._state === 'HUNT') {
+            // Reveal parts that have physically exited the last bush
+            if (this._lastBushPos) this._tickBushReveal(this._lastBushPos.x, this._lastBushPos.y);
+
             const speedMult = this.scene.alienSpeedMultiplier || 1.0;
             const snail     = this.scene.snail;
             const toTarget  = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
@@ -212,10 +228,22 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
             }
         } else if (this._state === 'TO_BUSH') {
             const speedMult = this.scene.alienSpeedMultiplier || 1.0;
-            const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-            this.x += Math.cos(angle) * this.speed * speedMult * dt;
-            this.y += Math.sin(angle) * this.speed * speedMult * dt;
-            this._headImg.setRotation(angle);
+            if (this.hidingInBush) {
+                // Pull the trailing body into the bush at reduced speed
+                const bx = this.currentBush.x, by = this.currentBush.y;
+                const d  = Phaser.Math.Distance.Between(this.x, this.y, bx, by);
+                if (d > 2) {
+                    const pullAngle = Phaser.Math.Angle.Between(this.x, this.y, bx, by);
+                    this.x += Math.cos(pullAngle) * this.speed * 0.4 * speedMult * dt;
+                    this.y += Math.sin(pullAngle) * this.speed * 0.4 * speedMult * dt;
+                    this._headImg.setRotation(pullAngle);
+                }
+            } else {
+                const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
+                this.x += Math.cos(angle) * this.speed * speedMult * dt;
+                this.y += Math.sin(angle) * this.speed * speedMult * dt;
+                this._headImg.setRotation(angle);
+            }
         }
 
         this._pushHistory(time);
@@ -280,7 +308,7 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
 
     destroy(fromScene) {
         if (this.currentBush && this.currentBush.active) this.currentBush.exit(this);
-        this._cancelBushAnim();
+        this._fadedParts.clear();
         for (const img of this._bodyImgs) { if (img && img.active) img.destroy(); }
         this._bodyImgs = [];
         if (this._tailImg && this._tailImg.active) { this._tailImg.destroy(); this._tailImg = null; }

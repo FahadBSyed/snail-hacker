@@ -71,7 +71,8 @@ export default class Bush extends Phaser.GameObjects.Container {
         const idx = this.occupants.indexOf(snake);
         if (idx === -1) return;
         this.occupants.splice(idx, 1);
-        if (snake && snake.active) snake._startRevealAnimation?.();
+        // Cache position so the snake can reveal parts as they physically exit the radius
+        if (snake && snake.active) snake._lastBushPos = { x: this.x, y: this.y };
         if (this.occupants.length === 0) this._stopRustle();
     }
 

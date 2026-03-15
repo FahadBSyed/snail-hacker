@@ -32,7 +32,8 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         this._targetBush  = null;
         this._stunMs      = 0;
 
-        this._bushAnimTimers = [];   // pending delayedCall refs for hide/reveal sequences
+        this._fadedParts  = new Set();
+        this._lastBushPos = null;
 
         // Jitter — same side-to-side slither as BasicSnake, applied during ATTACK
         this._jitterMs       = 0;
@@ -128,9 +129,32 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         }
 
         if (this._state === 'ENTERING' || this._state === 'DASHING') {
-            const spd = this._state === 'ENTERING'
+            const spd  = this._state === 'ENTERING'
                 ? CONFIG.SNAKES.SIDEWINDER.SPEED_SLOW
                 : CONFIG.SNAKES.SIDEWINDER.SPEED_DASH;
+            const mult = this.scene.alienSpeedMultiplier || 1.0;
+
+            // ── Entry phase: body still entering the bush ──
+            if (this.hidingInBush) {
+                this._tickBushHide(this.currentBush.x, this.currentBush.y);
+                if (this._fadedParts.size >= 2 + this._bodyImgs.length) {
+                    this._state = 'HIDING';
+                } else {
+                    const bx = this.currentBush.x, by = this.currentBush.y;
+                    const d  = Phaser.Math.Distance.Between(this.x, this.y, bx, by);
+                    if (d > 2) {
+                        const pullAngle = Phaser.Math.Angle.Between(this.x, this.y, bx, by);
+                        this.x += Math.cos(pullAngle) * spd * 0.5 * mult * dt;
+                        this.y += Math.sin(pullAngle) * spd * 0.5 * mult * dt;
+                    }
+                }
+                this._pushHistory(time);
+                this._updateSegments();
+                return 'alive';
+            }
+
+            // Reveal parts still fading out from the previous bush
+            if (this._lastBushPos) this._tickBushReveal(this._lastBushPos.x, this._lastBushPos.y);
 
             if (!this._targetBush || !this._targetBush.active) {
                 this._targetBush = this._nearestFreeBush();
@@ -143,18 +167,41 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                 );
                 if (dist < CONFIG.BUSHES.OCCUPY_RADIUS) {
                     if (this._targetBush.enter(this)) {
+                        if (this._fadedParts.size > 0) { this._setBodyAlpha(1); this._lastBushPos = null; }
                         this.hidingInBush = true;
                         this.currentBush  = this._targetBush;
                         this._targetBush  = null;
-                        this._startHideAnimation();
-                        this._state       = 'HIDING';
+                        // Stay in ENTERING/DASHING — entry phase handles the rest
                     } else {
                         // Scorched — try a different bush
                         this._targetBush = this._nearestFreeBush();
                         if (!this._targetBush) this._state = 'ATTACK';
                     }
                 } else {
-                    this._moveToward(this._targetBush, spd, dt);
+                    // Approach with jitter
+                    const toTarget = Phaser.Math.Angle.Between(this.x, this.y, this._targetBush.x, this._targetBush.y);
+                    let moveAngle;
+                    if (this._jitterMs > 0) {
+                        this._jitterMs -= delta;
+                        moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+                        if (this._jitterMs <= 0) {
+                            this._jitterCooldown = Phaser.Math.Between(
+                                CONFIG.SNAKES.JITTER_COOLDOWN_MIN, CONFIG.SNAKES.JITTER_COOLDOWN_MAX,
+                            );
+                        }
+                    } else {
+                        if (this._jitterCooldown > 0) this._jitterCooldown -= delta;
+                        if (this._jitterCooldown <= 0) {
+                            this._jitterMs  = CONFIG.SNAKES.JITTER_DURATION;
+                            this._jitterDir = Math.random() < 0.5 ? 1 : -1;
+                            moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+                        } else {
+                            moveAngle = toTarget;
+                        }
+                    }
+                    this.x += Math.cos(moveAngle) * spd * mult * dt;
+                    this.y += Math.sin(moveAngle) * spd * mult * dt;
+                    this._headImg.setRotation(moveAngle);
                 }
             }
             this._pushHistory(time);
@@ -164,6 +211,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
 
         // ATTACK — direct fast dash at Gerald, with jitter
         if (this._state === 'ATTACK') {
+            if (this._lastBushPos) this._tickBushReveal(this._lastBushPos.x, this._lastBushPos.y);
             const snail    = this.scene.snail;
             const mult     = this.scene.alienSpeedMultiplier || 1.0;
             const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
@@ -240,38 +288,37 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
     }
 
     _setBodyAlpha(alpha) {
+        this._fadedParts.clear();
         this.setAlpha(alpha);
         for (const img of this._bodyImgs) img.setAlpha(alpha);
         if (this._tailImg) this._tailImg.setAlpha(alpha);
     }
 
-    _startHideAnimation() {
-        this._cancelBushAnim();
-        const parts = [this, ...this._bodyImgs, this._tailImg].filter(Boolean);
-        parts.forEach((part, i) => {
-            const t = this.scene.time.delayedCall(i * 65, () => {
-                if (!this.active || !part.active) return;
-                this.scene.tweens.add({ targets: part, alpha: 0, duration: 150, ease: 'Sine.easeOut' });
-            });
-            this._bushAnimTimers.push(t);
-        });
+    _tickBushHide(bx, by) {
+        const r = CONFIG.BUSHES.OCCUPY_RADIUS;
+        for (const part of [this, ...this._bodyImgs, this._tailImg]) {
+            if (!part || this._fadedParts.has(part)) continue;
+            const px = (part === this) ? this.x : part.x;
+            const py = (part === this) ? this.y : part.y;
+            if (Phaser.Math.Distance.Between(px, py, bx, by) < r) {
+                this._fadedParts.add(part);
+                this.scene.tweens.add({ targets: part, alpha: 0, duration: 120, ease: 'Sine.easeOut' });
+            }
+        }
     }
 
-    _startRevealAnimation() {
-        this._cancelBushAnim();
-        const parts = [this, ...this._bodyImgs, this._tailImg].filter(Boolean);
-        parts.forEach((part, i) => {
-            const t = this.scene.time.delayedCall(i * 65, () => {
-                if (!this.active || !part.active) return;
-                this.scene.tweens.add({ targets: part, alpha: 1, duration: 150, ease: 'Sine.easeOut' });
-            });
-            this._bushAnimTimers.push(t);
-        });
-    }
-
-    _cancelBushAnim() {
-        for (const t of this._bushAnimTimers) t.remove(false);
-        this._bushAnimTimers = [];
+    _tickBushReveal(bx, by) {
+        const r = CONFIG.BUSHES.OCCUPY_RADIUS;
+        for (const part of [this, ...this._bodyImgs, this._tailImg]) {
+            if (!part || !this._fadedParts.has(part)) continue;
+            const px = (part === this) ? this.x : part.x;
+            const py = (part === this) ? this.y : part.y;
+            if (Phaser.Math.Distance.Between(px, py, bx, by) >= r) {
+                this._fadedParts.delete(part);
+                this.scene.tweens.add({ targets: part, alpha: 1, duration: 120, ease: 'Sine.easeOut' });
+            }
+        }
+        if (this._fadedParts.size === 0) this._lastBushPos = null;
     }
 
     _pushHistory(time) {
@@ -304,7 +351,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
 
     destroy(fromScene) {
         if (this.currentBush && this.currentBush.active) this.currentBush.exit(this);
-        this._cancelBushAnim();
+        this._fadedParts.clear();
         for (const img of this._bodyImgs) { if (img && img.active) img.destroy(); }
         this._bodyImgs = [];
         if (this._tailImg && this._tailImg.active) { this._tailImg.destroy(); this._tailImg = null; }

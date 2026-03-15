@@ -2,6 +2,27 @@
 
 ## Session — 2026-03-15
 
+### Position-based bush hide/reveal + Sidewinder jitter fix
+
+**BasicSnake, Sidewinder, Spitter** (`src/entities/snakes/`):
+- Replaced time-stagger animation (`i * 65 ms delayedCall`) with per-frame distance checks
+- `_tickBushHide(bx, by)`: fades any part whose world position crosses inside `OCCUPY_RADIUS`
+- `_tickBushReveal(bx, by)`: reveals any faded part that has moved outside `OCCUPY_RADIUS`
+- `_setBodyAlpha(alpha)` now also clears `_fadedParts` (used for instant flush restore)
+- `_bushAnimTimers` / `_startHideAnimation` / `_startRevealAnimation` / `_cancelBushAnim` removed
+- Snake continues moving slowly toward the bush center after `bush.enter()` fires (0.4–0.5× speed)
+  so that trailing body segments and the tail physically enter the bush before it switches to HIDING
+- On exit, Bush caches its position into `snake._lastBushPos`; HUNT/KITE/DASHING/ATTACK states
+  call `_tickBushReveal` each frame until `_fadedParts` empties
+
+**Sidewinder** — jitter now active during ENTERING and DASHING:
+- Bush-approach movement replaced with jitter version (was a plain `_moveToward` call)
+- Jitter applies at both SPEED_SLOW (ENTERING) and SPEED_DASH (DASHING) toward the target bush
+- Previously jitter only fired during ATTACK, which is rarely reached
+
+**Bush** (`src/entities/Bush.js`):
+- `exit(snake)` now writes `snake._lastBushPos = { x, y }` instead of calling reveal animation
+
 ### Sequential hide/reveal animation when snakes enter or exit a bush
 
 **Bush** (`src/entities/Bush.js`):

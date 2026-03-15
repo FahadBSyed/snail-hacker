@@ -31,7 +31,8 @@ export default class Spitter extends Phaser.GameObjects.Container {
         this._hideTimer    = 0;
         this._stunMs       = 0;
 
-        this._bushAnimTimers = [];   // pending delayedCall refs for hide/reveal sequences
+        this._fadedParts  = new Set();
+        this._lastBushPos = null;
 
         // Jitter — same side-to-side slither as BasicSnake, applied when closing in
         this._jitterMs       = 0;
@@ -69,38 +70,37 @@ export default class Spitter extends Phaser.GameObjects.Container {
     }
 
     _setBodyAlpha(alpha) {
+        this._fadedParts.clear();
         this.setAlpha(alpha);
         for (const img of this._bodyImgs) img.setAlpha(alpha);
         if (this._tailImg) this._tailImg.setAlpha(alpha);
     }
 
-    _startHideAnimation() {
-        this._cancelBushAnim();
-        const parts = [this, ...this._bodyImgs, this._tailImg].filter(Boolean);
-        parts.forEach((part, i) => {
-            const t = this.scene.time.delayedCall(i * 65, () => {
-                if (!this.active || !part.active) return;
-                this.scene.tweens.add({ targets: part, alpha: 0, duration: 150, ease: 'Sine.easeOut' });
-            });
-            this._bushAnimTimers.push(t);
-        });
+    _tickBushHide(bx, by) {
+        const r = CONFIG.BUSHES.OCCUPY_RADIUS;
+        for (const part of [this, ...this._bodyImgs, this._tailImg]) {
+            if (!part || this._fadedParts.has(part)) continue;
+            const px = (part === this) ? this.x : part.x;
+            const py = (part === this) ? this.y : part.y;
+            if (Phaser.Math.Distance.Between(px, py, bx, by) < r) {
+                this._fadedParts.add(part);
+                this.scene.tweens.add({ targets: part, alpha: 0, duration: 120, ease: 'Sine.easeOut' });
+            }
+        }
     }
 
-    _startRevealAnimation() {
-        this._cancelBushAnim();
-        const parts = [this, ...this._bodyImgs, this._tailImg].filter(Boolean);
-        parts.forEach((part, i) => {
-            const t = this.scene.time.delayedCall(i * 65, () => {
-                if (!this.active || !part.active) return;
-                this.scene.tweens.add({ targets: part, alpha: 1, duration: 150, ease: 'Sine.easeOut' });
-            });
-            this._bushAnimTimers.push(t);
-        });
-    }
-
-    _cancelBushAnim() {
-        for (const t of this._bushAnimTimers) t.remove(false);
-        this._bushAnimTimers = [];
+    _tickBushReveal(bx, by) {
+        const r = CONFIG.BUSHES.OCCUPY_RADIUS;
+        for (const part of [this, ...this._bodyImgs, this._tailImg]) {
+            if (!part || !this._fadedParts.has(part)) continue;
+            const px = (part === this) ? this.x : part.x;
+            const py = (part === this) ? this.y : part.y;
+            if (Phaser.Math.Distance.Between(px, py, bx, by) >= r) {
+                this._fadedParts.delete(part);
+                this.scene.tweens.add({ targets: part, alpha: 1, duration: 120, ease: 'Sine.easeOut' });
+            }
+        }
+        if (this._fadedParts.size === 0) this._lastBushPos = null;
     }
 
     takeDamage(amount) {
@@ -151,6 +151,27 @@ export default class Spitter extends Phaser.GameObjects.Container {
 
         // ── FLEEING → approach target bush ──
         if (this._state === 'FLEEING') {
+            const mult = this.scene.alienSpeedMultiplier || 1.0;
+
+            // Entry phase: body still entering the bush
+            if (this.hidingInBush) {
+                this._tickBushHide(this.currentBush.x, this.currentBush.y);
+                if (this._fadedParts.size >= 2 + this._bodyImgs.length) {
+                    this._state = 'HIDING';
+                } else {
+                    const bx = this.currentBush.x, by = this.currentBush.y;
+                    const d  = Phaser.Math.Distance.Between(this.x, this.y, bx, by);
+                    if (d > 2) {
+                        const pullAngle = Phaser.Math.Angle.Between(this.x, this.y, bx, by);
+                        this.x += Math.cos(pullAngle) * cfg.SPEED * mult * dt;
+                        this.y += Math.sin(pullAngle) * cfg.SPEED * mult * dt;
+                    }
+                }
+                this._pushHistory(time);
+                this._updateSegments();
+                return 'alive';
+            }
+
             if (!this._targetBush || !this._targetBush.active) {
                 this._state = 'KITE';
             } else {
@@ -159,12 +180,12 @@ export default class Spitter extends Phaser.GameObjects.Container {
                 );
                 if (dist < CONFIG.BUSHES.OCCUPY_RADIUS) {
                     if (this._targetBush.enter(this)) {
+                        if (this._fadedParts.size > 0) { this._setBodyAlpha(1); this._lastBushPos = null; }
                         this.hidingInBush = true;
                         this.currentBush  = this._targetBush;
                         this._targetBush  = null;
-                        this._startHideAnimation();
-                        this._state       = 'HIDING';
                         this._hideTimer   = cfg.HIDE_DURATION;
+                        // Stay in FLEEING — entry phase handles the rest
                     } else {
                         this._state = 'KITE';   // bush scorched — resume kiting
                     }
@@ -178,6 +199,8 @@ export default class Spitter extends Phaser.GameObjects.Container {
         }
 
         // ── KITE ──
+        if (this._lastBushPos) this._tickBushReveal(this._lastBushPos.x, this._lastBushPos.y);
+
         const snail = this.scene.snail;
         const dist  = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
         const mult  = this.scene.alienSpeedMultiplier || 1.0;
@@ -294,7 +317,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
 
     destroy(fromScene) {
         if (this.currentBush && this.currentBush.active) this.currentBush.exit(this);
-        this._cancelBushAnim();
+        this._fadedParts.clear();
         for (const img of this._bodyImgs) { if (img && img.active) img.destroy(); }
         this._bodyImgs = [];
         if (this._tailImg && this._tailImg.active) { this._tailImg.destroy(); this._tailImg = null; }
