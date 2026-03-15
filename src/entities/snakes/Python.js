@@ -1,5 +1,5 @@
 import { CONFIG } from '../../config.js';
-import { applyHitReaction, tickHitWiggle, applyWiggleToSegments, ensureRedTexture } from './snakeHitReaction.js';
+import { applyHitReaction, tickHitWiggle, applyWiggleToSegments } from './snakeHitReaction.js';
 
 const PYTHON_RED_SEGS = 3;  // last N body segments are always red and targetable
 
@@ -78,37 +78,42 @@ export default class Python extends Phaser.GameObjects.Container {
         this._tailImg.setOrigin(0.5, 0.5).setScale(1.69).setDepth(this.depth - 2);
     }
 
-    /** Rebuild `_bodyHitboxes` / `_tailHitboxes` from current segment positions. */
-    _rebuildBodyHitboxes() {
-        const bodyR          = CONFIG.SNAKES.PYTHON.BODY_RADIUS;
-        const redCount       = Math.min(PYTHON_RED_SEGS, this._segCount);
-        const protectedCount = this._segCount - redCount;
-
-        // Non-red segments: block projectiles, no damage
-        this._bodyHitboxes = [];
-        for (let i = 0; i < protectedCount; i++) {
-            const img = this._bodyImgs[i];
-            if (img && img.active) this._bodyHitboxes.push({ x: img.x, y: img.y, r: bodyR });
+    /**
+     * Returns a Set of body-segment indices that are "exposed" weak points.
+     * Indices are spread evenly across the current segment count so the three
+     * spitter-textured segments are always visually distributed along the body.
+     */
+    _getRedIndices() {
+        const n       = Math.min(PYTHON_RED_SEGS, this._segCount);
+        const indices = new Set();
+        for (let k = 0; k < n; k++) {
+            indices.add(Math.floor((k + 1) * this._segCount / (n + 1)));
         }
-
-        // Red segments: always targetable, deal damage on hit
-        this._tailHitboxes = [];
-        for (let i = protectedCount; i < this._segCount; i++) {
-            const img = this._bodyImgs[i];
-            if (img && img.active) this._tailHitboxes.push({ x: img.x, y: img.y, r: bodyR });
-        }
+        return indices;
     }
 
-    /** Apply red tint to the last PYTHON_RED_SEGS body segments; normal texture to the rest. */
-    _applySegmentColors() {
-        const bodyKey  = 'snake-python-body';
-        const redKey   = `${bodyKey}-hit-red`;
-        ensureRedTexture(this.scene, bodyKey);
-        const redStart = Math.max(0, this._segCount - PYTHON_RED_SEGS);
+    /** Rebuild `_bodyHitboxes` / `_tailHitboxes` from current segment positions. */
+    _rebuildBodyHitboxes() {
+        const bodyR      = CONFIG.SNAKES.PYTHON.BODY_RADIUS;
+        const redIndices = this._getRedIndices();
+        this._bodyHitboxes = [];
+        this._tailHitboxes = [];
         for (let i = 0; i < this._segCount; i++) {
             const img = this._bodyImgs[i];
             if (!img || !img.active) continue;
-            img.setTexture(i >= redStart ? redKey : bodyKey);
+            const box = { x: img.x, y: img.y, r: bodyR };
+            if (redIndices.has(i)) this._tailHitboxes.push(box);
+            else                   this._bodyHitboxes.push(box);
+        }
+    }
+
+    /** Texture exposed segments with the spitter body sprite; rest get the normal python body. */
+    _applySegmentColors() {
+        const redIndices = this._getRedIndices();
+        for (let i = 0; i < this._segCount; i++) {
+            const img = this._bodyImgs[i];
+            if (!img || !img.active) continue;
+            img.setTexture(redIndices.has(i) ? 'snake-spitter-body' : 'snake-python-body');
         }
     }
 

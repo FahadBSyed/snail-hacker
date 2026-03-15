@@ -2451,7 +2451,16 @@ export default class GameScene extends Phaser.Scene {
                     alien._bounceUntil = time + 3000;
                     return true;
                 } else {
-                    alien.destroy();
+                    // Snakes bounce away instead of despawning
+                    if (SNAKE_TYPES.has(alien.alienType)) {
+                        const bounceAngle = Phaser.Math.Angle.Between(this.snail.x, this.snail.y, bx, by);
+                        const bounceSpeed = alien.speed * 2;
+                        alien._bounceVx    = Math.cos(bounceAngle) * bounceSpeed;
+                        alien._bounceVy    = Math.sin(bounceAngle) * bounceSpeed;
+                        alien._bounceUntil = time + 3000;
+                    } else {
+                        alien.destroy();
+                    }
                     const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                     this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
                     this.soundSynth.play('damage');
@@ -2463,7 +2472,7 @@ export default class GameScene extends Phaser.Scene {
                         this.scene.start('GameOverScene', { wave: this.wave, score: this.score, world: this.world });
                         return false;
                     }
-                    return false;
+                    return SNAKE_TYPES.has(alien.alienType); // snakes persist; others removed
                 }
             }
             return true;
