@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 33;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 34;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -258,6 +258,7 @@ export const DEFAULTS = {
         // consecutive body segments; effective pixel gap ≈ BODY_SPACING × 2 px.
         BODY_SPACING:         10,  // history entries between consecutive body segments (~20 px)
         HIDE_SEEK_DIST:      200,  // px — snake starts moving toward a bush when this close
+        MAX_SNAKES:           15,  // hard cap on total simultaneous live snakes
         // Jitter: snakes periodically veer orthogonally to produce a slithering S-curve
         JITTER_DURATION:     700,  // ms of orthogonal movement per jitter burst
         JITTER_COOLDOWN_MIN: 400,  // ms between jitter bursts (min)

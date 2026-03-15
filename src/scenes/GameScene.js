@@ -2187,6 +2187,12 @@ export default class GameScene extends Phaser.Scene {
     }
 
     spawnAlien(type = 'basic', spawnX, spawnY) {
+        // Hard cap on total simultaneous snakes
+        if (SNAKE_TYPES.has(type)) {
+            const snakeCount = this.aliens.filter(a => a.active && SNAKE_TYPES.has(a.alienType)).length;
+            if (snakeCount >= CONFIG.SNAKES.MAX_SNAKES) return;
+        }
+
         // Cap concurrent spitters
         if (type === 'spitter') {
             const spitterCount = this.aliens.filter(a => a.active && a.alienType === 'spitter').length;
