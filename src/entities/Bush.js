@@ -3,16 +3,18 @@ import { CONFIG } from '../config.js';
 /**
  * Bush — a prop that snakes can hide inside for invulnerability.
  *
+ * Multiple snakes can share the same bush simultaneously.
+ *
  * States:
  *   normal   — lush green; available to occupy
- *   occupied — snake is hiding inside; rustling tween plays
+ *   occupied — one or more snakes hiding inside; rustling tween plays
  *   scorched — charred; no longer provides cover
  *
- * Public API (called by BasicSnake, GameScene, CollisionSystem):
- *   enter(snake)  — snake requests entry; returns false if occupied or scorched
- *   exit()        — snake leaves voluntarily
- *   flush()       — force-eject occupant (e.g., Gerald walks through, or BURNER fires)
- *   burn()        — scorch the bush; ejects occupant if any
+ * Public API (called by snake classes, GameScene, CollisionSystem):
+ *   enter(snake)   — snake requests entry; returns false only if scorched
+ *   exit(snake)    — specific snake leaves voluntarily
+ *   flush()        — force-eject ALL occupants (e.g., Gerald walks through, or BURNER fires)
+ *   burn()         — scorch the bush; ejects all occupants
  */
 export default class Bush extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
@@ -20,8 +22,7 @@ export default class Bush extends Phaser.GameObjects.Container {
         scene.add.existing(this);
         this.setDepth(30);
 
-        this.isOccupied = false;
-        this.occupant   = null;
+        this.occupants  = [];   // all snakes currently hiding here
         this._scorched  = false;
 
         // Sprite child — swaps between 'bush' and 'bush-scorched' textures
@@ -41,54 +42,64 @@ export default class Bush extends Phaser.GameObjects.Container {
         this._rustleTween = null;
     }
 
+    // ── Backward-compat getters ─────────────────────────────────────────────
+
+    get isOccupied() { return this.occupants.length > 0; }
+    /** Returns the first occupant, or null (legacy single-occupant callers). */
+    get occupant()   { return this.occupants[0] ?? null; }
+
     // ── Public API ──────────────────────────────────────────────────────────
 
     /**
      * A snake tries to enter the bush.
-     * @returns {boolean} true if entry was accepted.
+     * Multiple snakes may occupy the same bush.
+     * @returns {boolean} true if entry was accepted (false only if scorched).
      */
     enter(snake) {
-        if (this._scorched || this.isOccupied) return false;
+        if (this._scorched) return false;
 
-        this.isOccupied = true;
-        this.occupant   = snake;
-
-        this._playRustle();
+        this.occupants.push(snake);
+        if (this.occupants.length === 1) this._playRustle();
         return true;
     }
 
-    /** The snake leaves voluntarily (e.g., hunting again). */
-    exit() {
-        const snake = this.occupant;
-        this.isOccupied = false;
-        this.occupant   = null;
-        this._stopRustle();
+    /**
+     * A specific snake leaves voluntarily (e.g., resuming hunt).
+     * Rustle stops only when the last occupant exits.
+     */
+    exit(snake) {
+        const idx = this.occupants.indexOf(snake);
+        if (idx === -1) return;
+        this.occupants.splice(idx, 1);
         if (snake && snake.active) snake._setBodyAlpha?.(1);
+        if (this.occupants.length === 0) this._stopRustle();
     }
 
     /**
-     * Force-eject the occupant (BURNER terminal or Gerald walks through).
-     * The ejected snake is briefly stunned.
+     * Force-eject ALL occupants (BURNER terminal or Gerald walks through).
+     * Every ejected snake is briefly stunned.
      */
     flush() {
-        if (!this.isOccupied) return;
+        if (this.occupants.length === 0) return;
 
-        const snake = this.occupant;
-        this.exit();
+        const toEject  = this.occupants.slice();
+        this.occupants = [];
+        this._stopRustle();
 
-        if (snake && snake.active) {
-            snake.hidingInBush = false;
-            snake.currentBush  = null;
-            snake._stunMs      = CONFIG.BUSHES.FLUSH_STUN_MS;
-            snake._setBodyAlpha?.(1);
-            // Brief white flash on the bush to signal the flush
-            this._doFlash(0.5, 200);
+        for (const snake of toEject) {
+            if (snake && snake.active) {
+                snake.hidingInBush = false;
+                snake.currentBush  = null;
+                snake._stunMs      = CONFIG.BUSHES.FLUSH_STUN_MS;
+                snake._setBodyAlpha?.(1);
+            }
         }
+        this._doFlash(0.5, 200);
     }
 
     /**
      * Scorch the bush (BURNER terminal activated for this wave).
-     * Ejects any occupant, changes sprite, permanently disables cover.
+     * Ejects all occupants, changes sprite, permanently disables cover.
      */
     burn() {
         if (this.isOccupied) this.flush();

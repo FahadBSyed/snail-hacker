@@ -33,6 +33,13 @@ export default class Burrower extends Phaser.GameObjects.Container {
         this._stateTimer   = cfg.SURFACE_DURATION;   // ms until next transition
         this._stunMs       = 0;
 
+        // Jitter — same side-to-side slither as BasicSnake, applied while chasing
+        this._jitterMs       = 0;
+        this._jitterDir      = 1;
+        this._jitterCooldown = Phaser.Math.Between(
+            CONFIG.SNAKES.JITTER_COOLDOWN_MIN, CONFIG.SNAKES.JITTER_COOLDOWN_MAX,
+        );
+
         // History for body segments
         this._spacing  = CONFIG.SNAKES.BODY_SPACING;
         const segCount = cfg.SEGMENT_COUNT;
@@ -93,12 +100,33 @@ export default class Burrower extends Phaser.GameObjects.Container {
 
         if (this._state === 'SURFACE') {
             this._setVisible(true);
-            const snail = this.scene.snail;
-            const mult  = this.scene.alienSpeedMultiplier || 1.0;
-            const angle = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
-            this.x += Math.cos(angle) * cfg.SPEED_SURFACE * mult * dt;
-            this.y += Math.sin(angle) * cfg.SPEED_SURFACE * mult * dt;
-            this._headImg.setRotation(angle);
+            const snail    = this.scene.snail;
+            const mult     = this.scene.alienSpeedMultiplier || 1.0;
+            const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+            let moveAngle;
+
+            if (this._jitterMs > 0) {
+                this._jitterMs -= delta;
+                moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+                if (this._jitterMs <= 0) {
+                    this._jitterCooldown = Phaser.Math.Between(
+                        CONFIG.SNAKES.JITTER_COOLDOWN_MIN, CONFIG.SNAKES.JITTER_COOLDOWN_MAX,
+                    );
+                }
+            } else {
+                if (this._jitterCooldown > 0) this._jitterCooldown -= delta;
+                if (this._jitterCooldown <= 0) {
+                    this._jitterMs  = CONFIG.SNAKES.JITTER_DURATION;
+                    this._jitterDir = Math.random() < 0.5 ? 1 : -1;
+                    moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+                } else {
+                    moveAngle = toTarget;
+                }
+            }
+
+            this.x += Math.cos(moveAngle) * cfg.SPEED_SURFACE * mult * dt;
+            this.y += Math.sin(moveAngle) * cfg.SPEED_SURFACE * mult * dt;
+            this._headImg.setRotation(moveAngle);
 
             const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
             if (dist < this.radius + 20) {
@@ -124,11 +152,32 @@ export default class Burrower extends Phaser.GameObjects.Container {
         } else if (this._state === 'UNDERGROUND') {
             this._setVisible(false);
             this.setAlpha(1);
-            const snail = this.scene.snail;
-            const mult  = this.scene.alienSpeedMultiplier || 1.0;
-            const angle = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
-            this.x += Math.cos(angle) * cfg.SPEED_UNDERGROUND * mult * dt;
-            this.y += Math.sin(angle) * cfg.SPEED_UNDERGROUND * mult * dt;
+            const snail    = this.scene.snail;
+            const mult     = this.scene.alienSpeedMultiplier || 1.0;
+            const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+            let moveAngle;
+
+            if (this._jitterMs > 0) {
+                this._jitterMs -= delta;
+                moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+                if (this._jitterMs <= 0) {
+                    this._jitterCooldown = Phaser.Math.Between(
+                        CONFIG.SNAKES.JITTER_COOLDOWN_MIN, CONFIG.SNAKES.JITTER_COOLDOWN_MAX,
+                    );
+                }
+            } else {
+                if (this._jitterCooldown > 0) this._jitterCooldown -= delta;
+                if (this._jitterCooldown <= 0) {
+                    this._jitterMs  = CONFIG.SNAKES.JITTER_DURATION;
+                    this._jitterDir = Math.random() < 0.5 ? 1 : -1;
+                    moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+                } else {
+                    moveAngle = toTarget;
+                }
+            }
+
+            this.x += Math.cos(moveAngle) * cfg.SPEED_UNDERGROUND * mult * dt;
+            this.y += Math.sin(moveAngle) * cfg.SPEED_UNDERGROUND * mult * dt;
 
             // Animate ground ripple
             this._drawRipple(this.x, this.y, time);

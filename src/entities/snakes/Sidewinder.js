@@ -32,6 +32,13 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         this._targetBush  = null;
         this._stunMs      = 0;
 
+        // Jitter — same side-to-side slither as BasicSnake, applied during ATTACK
+        this._jitterMs       = 0;
+        this._jitterDir      = 1;
+        this._jitterCooldown = Phaser.Math.Between(
+            CONFIG.SNAKES.JITTER_COOLDOWN_MIN, CONFIG.SNAKES.JITTER_COOLDOWN_MAX,
+        );
+
         // Distance-based history: push only when moved ≥ 2 px
         this._spacing = CONFIG.SNAKES.BODY_SPACING;
         this._history = [{ x, y }];
@@ -101,7 +108,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                 const nextBush = this._nextBushCloserToStation();
                 if (nextBush) {
                     // Exit current bush
-                    if (this.currentBush) this.currentBush.exit();
+                    if (this.currentBush) this.currentBush.exit(this);
                     this.hidingInBush = false;
                     this.currentBush  = null;
                     this._setBodyAlpha(1);
@@ -109,7 +116,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                     this._state       = 'DASHING';
                 } else {
                     // No closer bush — attack
-                    if (this.currentBush) this.currentBush.exit();
+                    if (this.currentBush) this.currentBush.exit(this);
                     this.hidingInBush = false;
                     this.currentBush  = null;
                     this._setBodyAlpha(1);
@@ -142,7 +149,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                         this._setBodyAlpha(0.2);
                         this._state       = 'HIDING';
                     } else {
-                        // Occupied — try a different bush
+                        // Scorched — try a different bush
                         this._targetBush = this._nearestFreeBush();
                         if (!this._targetBush) this._state = 'ATTACK';
                     }
@@ -155,12 +162,37 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
             return 'alive';
         }
 
-        // ATTACK — direct fast dash at Gerald
+        // ATTACK — direct fast dash at Gerald, with jitter
         if (this._state === 'ATTACK') {
-            this._moveToward(this.scene.snail, CONFIG.SNAKES.SIDEWINDER.SPEED_DASH, dt);
-            const dist = Phaser.Math.Distance.Between(
-                this.x, this.y, this.scene.snail.x, this.scene.snail.y,
-            );
+            const snail    = this.scene.snail;
+            const mult     = this.scene.alienSpeedMultiplier || 1.0;
+            const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+            let moveAngle;
+
+            if (this._jitterMs > 0) {
+                this._jitterMs -= delta;
+                moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+                if (this._jitterMs <= 0) {
+                    this._jitterCooldown = Phaser.Math.Between(
+                        CONFIG.SNAKES.JITTER_COOLDOWN_MIN, CONFIG.SNAKES.JITTER_COOLDOWN_MAX,
+                    );
+                }
+            } else {
+                if (this._jitterCooldown > 0) this._jitterCooldown -= delta;
+                if (this._jitterCooldown <= 0) {
+                    this._jitterMs  = CONFIG.SNAKES.JITTER_DURATION;
+                    this._jitterDir = Math.random() < 0.5 ? 1 : -1;
+                    moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+                } else {
+                    moveAngle = toTarget;
+                }
+            }
+
+            this.x += Math.cos(moveAngle) * CONFIG.SNAKES.SIDEWINDER.SPEED_DASH * mult * dt;
+            this.y += Math.sin(moveAngle) * CONFIG.SNAKES.SIDEWINDER.SPEED_DASH * mult * dt;
+            this._headImg.setRotation(moveAngle);
+
+            const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
             this._pushHistory(time);
             this._updateSegments();
             if (dist < this.radius + 20) return 'reached_snail';
@@ -182,7 +214,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         if (!bushes) return null;
         let best = null, bestDist = Infinity;
         for (const b of bushes) {
-            if (!b.active || b._scorched || b.isOccupied) continue;
+            if (!b.active || b._scorched) continue;
             const d = Phaser.Math.Distance.Between(this.x, this.y, b.x, b.y);
             if (d < bestDist) { bestDist = d; best = b; }
         }
@@ -198,7 +230,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
             : Infinity;
         let best = null, bestDist = Infinity;
         for (const b of bushes) {
-            if (!b.active || b._scorched || b.isOccupied || b === this.currentBush) continue;
+            if (!b.active || b._scorched || b === this.currentBush) continue;
             const d2station = Phaser.Math.Distance.Between(b.x, b.y, sx, sy);
             if (d2station >= curDist) continue;   // not closer to station
             const d2self = Phaser.Math.Distance.Between(this.x, this.y, b.x, b.y);
@@ -243,7 +275,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
 
     destroy(fromScene) {
         if (this.currentBush && this.currentBush.active && this.currentBush.isOccupied) {
-            this.currentBush.exit();
+            this.currentBush.exit(this);
         }
         for (const img of this._bodyImgs) { if (img && img.active) img.destroy(); }
         this._bodyImgs = [];

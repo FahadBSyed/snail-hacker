@@ -31,6 +31,13 @@ export default class Spitter extends Phaser.GameObjects.Container {
         this._hideTimer    = 0;
         this._stunMs       = 0;
 
+        // Jitter — same side-to-side slither as BasicSnake, applied when closing in
+        this._jitterMs       = 0;
+        this._jitterDir      = 1;
+        this._jitterCooldown = Phaser.Math.Between(
+            CONFIG.SNAKES.JITTER_COOLDOWN_MIN, CONFIG.SNAKES.JITTER_COOLDOWN_MAX,
+        );
+
         // History for body segments
         this._spacing  = CONFIG.SNAKES.BODY_SPACING;
         const segCount = cfg.SEGMENT_COUNT;
@@ -100,7 +107,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
         if (this._state === 'HIDING') {
             this._hideTimer -= delta;
             if (this._hideTimer <= 0) {
-                if (this.currentBush) this.currentBush.exit();
+                if (this.currentBush) this.currentBush.exit(this);
                 this.hidingInBush = false;
                 this.currentBush  = null;
                 this._setBodyAlpha(1);
@@ -129,7 +136,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
                         this._state       = 'HIDING';
                         this._hideTimer   = cfg.HIDE_DURATION;
                     } else {
-                        this._state = 'KITE';   // bush occupied
+                        this._state = 'KITE';   // bush scorched — resume kiting
                     }
                 } else {
                     this._moveToward(this._targetBush, cfg.SPEED * 2, dt);
@@ -152,8 +159,32 @@ export default class Spitter extends Phaser.GameObjects.Container {
             this.y += Math.sin(angle) * cfg.SPEED * mult * dt;
             this._headImg.setRotation(angle + Math.PI);
         } else if (dist > cfg.PREFERRED_MAX) {
-            // Too far — close in
-            this._moveToward(snail, cfg.SPEED * mult, dt);
+            // Too far — close in with jitter
+            const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+            let moveAngle;
+
+            if (this._jitterMs > 0) {
+                this._jitterMs -= delta;
+                moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+                if (this._jitterMs <= 0) {
+                    this._jitterCooldown = Phaser.Math.Between(
+                        CONFIG.SNAKES.JITTER_COOLDOWN_MIN, CONFIG.SNAKES.JITTER_COOLDOWN_MAX,
+                    );
+                }
+            } else {
+                if (this._jitterCooldown > 0) this._jitterCooldown -= delta;
+                if (this._jitterCooldown <= 0) {
+                    this._jitterMs  = CONFIG.SNAKES.JITTER_DURATION;
+                    this._jitterDir = Math.random() < 0.5 ? 1 : -1;
+                    moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+                } else {
+                    moveAngle = toTarget;
+                }
+            }
+
+            this.x += Math.cos(moveAngle) * cfg.SPEED * mult * dt;
+            this.y += Math.sin(moveAngle) * cfg.SPEED * mult * dt;
+            this._headImg.setRotation(moveAngle);
         } else {
             // In preferred range — strafe (perpendicular to snail direction)
             const toSnail = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
@@ -196,7 +227,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
         if (!bushes) return null;
         let best = null, bestDist = Infinity;
         for (const b of bushes) {
-            if (!b.active || b._scorched || b.isOccupied) continue;
+            if (!b.active || b._scorched) continue;
             const d = Phaser.Math.Distance.Between(this.x, this.y, b.x, b.y);
             if (d < bestDist) { bestDist = d; best = b; }
         }
@@ -233,7 +264,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
 
     destroy(fromScene) {
         if (this.currentBush && this.currentBush.active && this.currentBush.isOccupied) {
-            this.currentBush.exit();
+            this.currentBush.exit(this);
         }
         for (const img of this._bodyImgs) { if (img && img.active) img.destroy(); }
         this._bodyImgs = [];

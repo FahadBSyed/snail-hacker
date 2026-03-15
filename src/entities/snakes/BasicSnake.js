@@ -100,7 +100,7 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
             this._hideTimer -= delta;
             if (this._hideTimer <= 0) {
                 // Auto-emerge after hide timer expires
-                if (this.currentBush) this.currentBush.exit();
+                if (this.currentBush) this.currentBush.exit(this);
                 this.hidingInBush = false;
                 this.currentBush  = null;
                 this._setBodyAlpha(1);
@@ -233,14 +233,13 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         if (
             this._targetBush &&
             this._targetBush.active &&
-            !this._targetBush._scorched &&
-            (!this._targetBush.isOccupied || this._targetBush.occupant === this)
+            !this._targetBush._scorched
         ) {
             return this._targetBush;
         }
         let best = null, bestDist = Infinity;
         for (const b of bushes) {
-            if (!b.active || b._scorched || b.isOccupied) continue;
+            if (!b.active || b._scorched) continue;
             const d = Phaser.Math.Distance.Between(this.x, this.y, b.x, b.y);
             if (d < bestDist) { bestDist = d; best = b; }
         }
@@ -249,7 +248,7 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
 
     destroy(fromScene) {
         if (this.currentBush && this.currentBush.active && this.currentBush.isOccupied) {
-            this.currentBush.exit();
+            this.currentBush.exit(this);
         }
         for (const img of this._bodyImgs) { if (img && img.active) img.destroy(); }
         this._bodyImgs = [];

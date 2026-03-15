@@ -2,6 +2,28 @@
 
 ## Session — 2026-03-15
 
+### Multi-occupancy bushes + jitter for all snake types
+
+**Bush** (`src/entities/Bush.js`):
+- `isOccupied` / `occupant` converted to getters backed by a new `occupants[]` array
+- `enter(snake)` no longer rejects occupied bushes — only rejects scorched ones; multiple snakes can now share the same bush simultaneously
+- `exit(snake)` takes the departing snake as an argument; rustle tween stops only when the last occupant leaves; each exiting snake has its alpha restored individually
+- `flush()` ejects and stuns every occupant in the array (was single-occupant only)
+- All bush-finding helpers in BasicSnake, Sidewinder, Spitter updated to drop the `isOccupied` filter; `_pickOrKeepBush` in BasicSnake simplified to only reject scorched bushes
+
+**Jitter inherited by Sidewinder, Spitter, Burrower**:
+- All three now initialise `_jitterMs`, `_jitterDir`, `_jitterCooldown` from `CONFIG.SNAKES.JITTER_*` (same shared config as BasicSnake)
+- Sidewinder: jitter applied during ATTACK state (direct dash at Gerald)
+- Spitter: jitter applied during KITE state when closing in (dist > PREFERRED_MAX)
+- Burrower: jitter applied during both SURFACE and UNDERGROUND chase phases
+- `exit()` call sites updated to pass `this` as the snake argument
+
+**Snake head sprites** (`scripts/generate-snake-sprites.js`):
+- Replaced space-suit visor + alien eyes + antennae with top-down snake anatomy:
+  - Two small eyes on opposite sides (top/bottom of sprite), with iris, vertical slit pupil, specular highlight
+  - Forked red tongue extending from snout tip
+- SVG width widened by 10 px to accommodate tongue prongs
+
 ### World 2 — Phase 2 enemies: Sidewinder, Python, Burrower, Spitter (W2-5 through W2-8)
 
 **Config additions** (`CONFIG_VERSION` → 27):
