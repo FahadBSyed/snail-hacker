@@ -1,61 +1,51 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" width="64" height="48">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 74 48" width="74" height="48">
 
   <!-- Ground shadow -->
-  <ellipse cx="35" cy="43" rx="25" ry="6" fill="#000000" opacity="0.22"/>
+  <ellipse cx="34" cy="44" rx="23" ry="5" fill="#000000" opacity="0.20"/>
 
-  <!-- Neck / collar (metallic ring at left) -->
+  <!-- Neck / collar -->
   <rect x="1" y="12" width="14" height="24" rx="4" fill="#485838" stroke="#303824" stroke-width="1"/>
-  <!-- Collar highlight edge -->
   <line x1="6" y1="13" x2="6" y2="35" stroke="#607848" stroke-width="1.2" opacity="0.7"/>
-  <!-- Collar ring bolts -->
   <circle cx="7" cy="13" r="2" fill="#303824" stroke="#607848" stroke-width="0.7"/>
   <circle cx="7" cy="35" r="2" fill="#303824" stroke="#607848" stroke-width="0.7"/>
   
 
-  <!-- Main head body -->
-  <ellipse cx="33" cy="24" rx="27" ry="17" fill="#3a5228" stroke="#223018" stroke-width="1.2"/>
-  <!-- Snout bulge -->
-  <ellipse cx="56" cy="24" rx="9" ry="10" fill="#4e6e34" stroke="#223018" stroke-width="1"/>
+  <!-- Main head -->
+  <ellipse cx="32" cy="24" rx="26" ry="17" fill="#3a5228" stroke="#223018" stroke-width="1.2"/>
+  <!-- Snout -->
+  <ellipse cx="54" cy="24" rx="9" ry="11" fill="#4e6e34" stroke="#223018" stroke-width="1"/>
 
-  <!-- Scale texture (diagonal stroke lines across head) -->
-  <line x1="19" y1="7" x2="25" y2="41" stroke="#2a3e1c" stroke-width="1.1" opacity="0.55"/>
-  <line x1="28" y1="7" x2="34" y2="41" stroke="#2a3e1c" stroke-width="1.1" opacity="0.55"/>
-  <line x1="37" y1="7" x2="43" y2="41" stroke="#2a3e1c" stroke-width="1.1" opacity="0.55"/>
-  <line x1="45" y1="7" x2="51" y2="41" stroke="#2a3e1c" stroke-width="1.1" opacity="0.55"/>
-  <!-- Cross hatching on snout -->
-  <line x1="49" y1="14" x2="59" y2="29" stroke="#223018" stroke-width="0.8" opacity="0.5"/>
+  <!-- Scale lines -->
+  <line x1="19" y1="6" x2="24" y2="42" stroke="#2a3e1c" stroke-width="1" opacity="0.50"/>
+  <line x1="28" y1="6" x2="33" y2="42" stroke="#2a3e1c" stroke-width="1" opacity="0.50"/>
+  <line x1="37" y1="6" x2="42" y2="42" stroke="#2a3e1c" stroke-width="1" opacity="0.50"/>
+  <line x1="45" y1="6" x2="50" y2="42" stroke="#2a3e1c" stroke-width="1" opacity="0.50"/>
 
-  <!-- Head highlight (dorsal ridge) -->
-  <ellipse cx="33" cy="12" rx="16" ry="5" fill="#4e6e34" opacity="0.45"/>
+  <!-- Dorsal ridge highlight -->
+  <ellipse cx="32" cy="11" rx="14" ry="4" fill="#4e6e34" opacity="0.38"/>
 
-  <!-- Visor dome (space helmet glass) -->
-  <ellipse cx="28" cy="21" rx="13" ry="11" fill="rgba(80,200,80,0.30)" stroke="#78cc78" stroke-width="1.4"/>
-  <!-- Visor interior depth -->
-  <ellipse cx="28" cy="21" rx="11" ry="9" fill="#a0ee88" opacity="0.12"/>
-  <!-- Visor glare (top-left) -->
-  <ellipse cx="22" cy="16" rx="4" ry="2" fill="white" opacity="0.22" transform="rotate(-20,22,16)"/>
+  <!-- Forked tongue -->
+  <line x1="62" y1="24" x2="66" y2="24" stroke="#ff3344" stroke-width="2" stroke-linecap="round"/>
+  <line x1="66" y1="24" x2="71" y2="17" stroke="#ff3344" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="66" y1="24" x2="71" y2="31" stroke="#ff3344" stroke-width="1.4" stroke-linecap="round"/>
 
-  <!-- Alien eyes (through visor) -->
-  <ellipse cx="23" cy="21" rx="3" ry="5" fill="#ccff44"/>
-  <ellipse cx="33" cy="21" rx="3" ry="5" fill="#ccff44"/>
-  <!-- Slit pupils -->
-  <ellipse cx="23" cy="21" rx="1" ry="4" fill="#111100"/>
-  <ellipse cx="33" cy="21" rx="1" ry="4" fill="#111100"/>
-  <!-- Eye glow -->
-  <ellipse cx="23" cy="21" rx="5" ry="7" fill="#ccff44" opacity="0.28"/>
-  <ellipse cx="33" cy="21" rx="5" ry="7" fill="#ccff44" opacity="0.28"/>
+  <!-- Eye — top side -->
+  <circle cx="35" cy="7" r="5.5" fill="#4e6e34" stroke="#223018" stroke-width="0.8"/>
+  <circle cx="35" cy="7" r="4" fill="#ccff44"/>
+  <ellipse cx="35" cy="7" rx="1.2" ry="3" fill="#111100"/>
+  <circle cx="34" cy="6" r="1" fill="white" opacity="0.65"/>
+  
 
-  <!-- Antennae -->
-  <line x1="20" y1="11" x2="18" y2="2" stroke="#8ab44a" stroke-width="1.3" stroke-linecap="round"/>
-  <circle cx="18" cy="2" r="2" fill="#8ab44a"/>
-  <circle cx="18" cy="2" r="3.5" fill="#8ab44a" opacity="0.25"/>
-  <line x1="28" y1="11" x2="32" y2="2" stroke="#8ab44a" stroke-width="1.3" stroke-linecap="round"/>
-  <circle cx="32" cy="2" r="2" fill="#8ab44a"/>
-  <circle cx="32" cy="2" r="3.5" fill="#8ab44a" opacity="0.25"/>
+  <!-- Eye — bottom side -->
+  <circle cx="35" cy="41" r="5.5" fill="#4e6e34" stroke="#223018" stroke-width="0.8"/>
+  <circle cx="35" cy="41" r="4" fill="#ccff44"/>
+  <ellipse cx="35" cy="41" rx="1.2" ry="3" fill="#111100"/>
+  <circle cx="34" cy="40" r="1" fill="white" opacity="0.65"/>
+  
 
-  <!-- Nostril dots on snout -->
-  <circle cx="58" cy="18" r="1.3" fill="#223018" opacity="0.8"/>
-  <circle cx="58" cy="30" r="1.3" fill="#223018" opacity="0.8"/>
+  <!-- Nostril dots -->
+  <circle cx="57" cy="18" r="1.2" fill="#223018" opacity="0.8"/>
+  <circle cx="57" cy="30" r="1.2" fill="#223018" opacity="0.8"/>
 
   
 </svg>

@@ -144,114 +144,99 @@ const PALETTES = {
 };
 
 // ── Head sprite ───────────────────────────────────────────────────────────────
-// W×H canvas. Snout points RIGHT. Neck/collar at LEFT.
+// Sprite faces RIGHT. Snout/tongue at right edge, neck at left.
+// SVG is W+10 wide to give the forked tongue room beyond the snout.
+// Top-down view: two small eyes sit on opposite sides (top & bottom of sprite).
 function buildHead(W, H, pal, isBoss = false) {
     const {
         headBase, headMid, headDark, scaleLines,
         collar, collarLight, collarDark,
-        visorFill, visorRim, visorGlow,
-        eyeColor, accent, gold,
+        eyeColor, gold,
     } = pal;
 
-    const cx = W / 2, cy = H / 2;
+    const TW = W + 10;  // actual SVG width (extra for tongue)
+    const cy = H / 2;
 
-    // Layout constants proportional to canvas
-    const collarW  = Math.round(W * 0.22);
-    const headRX   = Math.round(W * 0.42);
-    const headRY   = Math.round(H * 0.36);
-    const headCX   = Math.round(W * 0.52);  // offset right to leave room for collar
-    const headCY   = cy;
-    const snoutCX  = Math.round(W * 0.88);
-    const snoutRX  = Math.round(W * 0.14);
-    const snoutRY  = Math.round(H * 0.20);
+    // Layout
+    const collarW = Math.round(W * 0.22);
+    const headRX  = Math.round(W * 0.40);
+    const headRY  = Math.round(H * 0.36);
+    const headCX  = Math.round(W * 0.50);
+    const headCY  = cy;
+    const snoutCX = Math.round(W * 0.84);
+    const snoutRX = Math.round(W * 0.14);
+    const snoutRY = Math.round(H * 0.22);
 
-    // Visor centered slightly left-of-head-center (the "face" area)
-    const visCX    = Math.round(W * 0.44);
-    const visCY    = Math.round(H * 0.44);
-    const visRX    = Math.round(W * 0.20);
-    const visRY    = Math.round(H * 0.22);
+    // Eyes on opposite sides (top and bottom of head in top-down view)
+    // Placed roughly 55% from left, right at the head surface edge
+    const eyeX    = Math.round(W * 0.55);
+    const eyeTopY = Math.round(H * 0.14);   // resting on top surface
+    const eyeBotY = Math.round(H * 0.86);   // resting on bottom surface
+    const eyeR    = isBoss ? 5 : 4;
+    // Slit pupil (vertical — narrow across, tall up-down for top-down slit)
+    const slitRX  = isBoss ? 1.5 : 1.2;
+    const slitRY  = isBoss ? 4   : 3;
 
-    // Eyes (inside visor)
-    const eyeOff   = Math.round(W * 0.08);
-    const eyeRX    = Math.round(W * 0.04);
-    const eyeRY    = Math.round(H * 0.10);
-    const eyeY     = Math.round(H * 0.43);
-
-    // Antennae base (top of head)
-    const antBase  = Math.round(W * 0.38);
-    const antTop1  = Math.round(W * 0.28);
-    const antTop2  = Math.round(W * 0.50);
-    const antTopY  = 2;
-    const antBaseY = Math.round(H * 0.22);
+    // Forked tongue: emerges from snout tip, splits into two prongs
+    const tBase  = snoutCX + snoutRX - 1;  // mouth opening x
+    const tFork  = tBase + Math.round(W * 0.07);  // where the fork splits
+    const tTipX  = W + 7;                  // prong tips (inside extended canvas)
+    const tSpread = Math.round(H * 0.14);  // vertical spread of prong tips
 
     const bossGold = isBoss ? gold : null;
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${TW} ${H}" width="${TW}" height="${H}">
 
   <!-- Ground shadow -->
-  <ellipse cx="${headCX+2}" cy="${H-5}" rx="${headRX-2}" ry="${Math.round(H*0.12)}" fill="#000000" opacity="0.22"/>
+  <ellipse cx="${headCX+2}" cy="${H-4}" rx="${headRX-3}" ry="${Math.round(H*0.11)}" fill="#000000" opacity="0.20"/>
 
-  <!-- Neck / collar (metallic ring at left) -->
+  <!-- Neck / collar -->
   <rect x="1" y="${Math.round(H*0.25)}" width="${collarW}" height="${Math.round(H*0.50)}" rx="4" fill="${collar}" stroke="${collarDark}" stroke-width="1"/>
-  <!-- Collar highlight edge -->
   <line x1="${Math.round(collarW*0.45)}" y1="${Math.round(H*0.27)}" x2="${Math.round(collarW*0.45)}" y2="${Math.round(H*0.73)}" stroke="${collarLight}" stroke-width="1.2" opacity="0.7"/>
-  <!-- Collar ring bolts -->
   <circle cx="${Math.round(collarW*0.5)}" cy="${Math.round(H*0.28)}" r="2" fill="${collarDark}" stroke="${collarLight}" stroke-width="0.7"/>
   <circle cx="${Math.round(collarW*0.5)}" cy="${Math.round(H*0.72)}" r="2" fill="${collarDark}" stroke="${collarLight}" stroke-width="0.7"/>
-  ${bossGold ? `<!-- Boss gold collar trim -->
-  <rect x="1" y="${Math.round(H*0.25)}" width="${collarW}" height="2" fill="${bossGold}" opacity="0.8"/>
+  ${bossGold ? `<rect x="1" y="${Math.round(H*0.25)}" width="${collarW}" height="2" fill="${bossGold}" opacity="0.8"/>
   <rect x="1" y="${Math.round(H*0.73)}" width="${collarW}" height="2" fill="${bossGold}" opacity="0.8"/>` : ''}
 
-  <!-- Main head body -->
+  <!-- Main head -->
   <ellipse cx="${headCX}" cy="${headCY}" rx="${headRX}" ry="${headRY}" fill="${headBase}" stroke="${headDark}" stroke-width="1.2"/>
-  <!-- Snout bulge -->
+  <!-- Snout -->
   <ellipse cx="${snoutCX}" cy="${headCY}" rx="${snoutRX}" ry="${snoutRY}" fill="${headMid}" stroke="${headDark}" stroke-width="1"/>
 
-  <!-- Scale texture (diagonal stroke lines across head) -->
+  <!-- Scale lines -->
   ${[0.30, 0.44, 0.58, 0.70].map(xf => {
       const lx = Math.round(W * xf);
-      return `<line x1="${lx}" y1="${Math.round(H*0.14)}" x2="${lx+6}" y2="${Math.round(H*0.86)}" stroke="${scaleLines}" stroke-width="1.1" opacity="0.55"/>`;
+      return `<line x1="${lx}" y1="${Math.round(H*0.12)}" x2="${lx+5}" y2="${Math.round(H*0.88)}" stroke="${scaleLines}" stroke-width="1" opacity="0.50"/>`;
   }).join('\n  ')}
-  <!-- Cross hatching on snout -->
-  <line x1="${Math.round(W*0.76)}" y1="${Math.round(H*0.30)}" x2="${Math.round(W*0.92)}" y2="${Math.round(H*0.60)}" stroke="${headDark}" stroke-width="0.8" opacity="0.5"/>
 
-  <!-- Head highlight (dorsal ridge) -->
-  <ellipse cx="${headCX}" cy="${Math.round(H*0.24)}" rx="${Math.round(headRX*0.6)}" ry="${Math.round(headRY*0.3)}" fill="${headMid}" opacity="0.45"/>
+  <!-- Dorsal ridge highlight -->
+  <ellipse cx="${headCX}" cy="${Math.round(H*0.22)}" rx="${Math.round(headRX*0.55)}" ry="${Math.round(headRY*0.26)}" fill="${headMid}" opacity="0.38"/>
 
-  <!-- Visor dome (space helmet glass) -->
-  <ellipse cx="${visCX}" cy="${visCY}" rx="${visRX}" ry="${visRY}" fill="${visorFill}" stroke="${visorRim}" stroke-width="1.4"/>
-  <!-- Visor interior depth -->
-  <ellipse cx="${visCX}" cy="${visCY}" rx="${visRX-2}" ry="${visRY-2}" fill="${visorGlow}" opacity="0.12"/>
-  <!-- Visor glare (top-left) -->
-  <ellipse cx="${Math.round(visCX - visRX*0.45)}" cy="${Math.round(visCY - visRY*0.45)}" rx="${Math.round(visRX*0.28)}" ry="${Math.round(visRY*0.22)}" fill="white" opacity="0.22" transform="rotate(-20,${Math.round(visCX - visRX*0.45)},${Math.round(visCY - visRY*0.45)})"/>
+  <!-- Forked tongue -->
+  <line x1="${tBase}" y1="${cy}" x2="${tFork}" y2="${cy}" stroke="#ff3344" stroke-width="2" stroke-linecap="round"/>
+  <line x1="${tFork}" y1="${cy}" x2="${tTipX}" y2="${cy - tSpread}" stroke="#ff3344" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="${tFork}" y1="${cy}" x2="${tTipX}" y2="${cy + tSpread}" stroke="#ff3344" stroke-width="1.4" stroke-linecap="round"/>
 
-  <!-- Alien eyes (through visor) -->
-  <ellipse cx="${visCX - eyeOff}" cy="${eyeY}" rx="${eyeRX}" ry="${eyeRY}" fill="${eyeColor}"/>
-  <ellipse cx="${visCX + eyeOff}" cy="${eyeY}" rx="${eyeRX}" ry="${eyeRY}" fill="${eyeColor}"/>
-  <!-- Slit pupils -->
-  <ellipse cx="${visCX - eyeOff}" cy="${eyeY}" rx="${Math.max(1,Math.round(eyeRX*0.35))}" ry="${Math.round(eyeRY*0.85)}" fill="#111100"/>
-  <ellipse cx="${visCX + eyeOff}" cy="${eyeY}" rx="${Math.max(1,Math.round(eyeRX*0.35))}" ry="${Math.round(eyeRY*0.85)}" fill="#111100"/>
-  <!-- Eye glow -->
-  <ellipse cx="${visCX - eyeOff}" cy="${eyeY}" rx="${eyeRX+2}" ry="${eyeRY+2}" fill="${eyeColor}" opacity="0.28"/>
-  <ellipse cx="${visCX + eyeOff}" cy="${eyeY}" rx="${eyeRX+2}" ry="${eyeRY+2}" fill="${eyeColor}" opacity="0.28"/>
+  <!-- Eye — top side -->
+  <circle cx="${eyeX}" cy="${eyeTopY}" r="${eyeR + 1.5}" fill="${headMid}" stroke="${headDark}" stroke-width="0.8"/>
+  <circle cx="${eyeX}" cy="${eyeTopY}" r="${eyeR}" fill="${eyeColor}"/>
+  <ellipse cx="${eyeX}" cy="${eyeTopY}" rx="${slitRX}" ry="${slitRY}" fill="#111100"/>
+  <circle cx="${eyeX - Math.round(eyeR*0.35)}" cy="${eyeTopY - Math.round(eyeR*0.35)}" r="1" fill="white" opacity="0.65"/>
+  ${bossGold ? `<circle cx="${eyeX}" cy="${eyeTopY}" r="${eyeR + 3.5}" fill="none" stroke="${bossGold}" stroke-width="0.8" opacity="0.45"/>` : ''}
 
-  <!-- Antennae -->
-  <line x1="${antBase-4}" y1="${antBaseY}" x2="${antTop1}" y2="${antTopY}" stroke="${accent}" stroke-width="1.3" stroke-linecap="round"/>
-  <circle cx="${antTop1}" cy="${antTopY}" r="${isBoss ? 3 : 2}" fill="${accent}"/>
-  <circle cx="${antTop1}" cy="${antTopY}" r="${isBoss ? 5 : 3.5}" fill="${accent}" opacity="0.25"/>
-  <line x1="${antBase+4}" y1="${antBaseY}" x2="${antTop2}" y2="${antTopY}" stroke="${accent}" stroke-width="1.3" stroke-linecap="round"/>
-  <circle cx="${antTop2}" cy="${antTopY}" r="${isBoss ? 3 : 2}" fill="${accent}"/>
-  <circle cx="${antTop2}" cy="${antTopY}" r="${isBoss ? 5 : 3.5}" fill="${accent}" opacity="0.25"/>
+  <!-- Eye — bottom side -->
+  <circle cx="${eyeX}" cy="${eyeBotY}" r="${eyeR + 1.5}" fill="${headMid}" stroke="${headDark}" stroke-width="0.8"/>
+  <circle cx="${eyeX}" cy="${eyeBotY}" r="${eyeR}" fill="${eyeColor}"/>
+  <ellipse cx="${eyeX}" cy="${eyeBotY}" rx="${slitRX}" ry="${slitRY}" fill="#111100"/>
+  <circle cx="${eyeX - Math.round(eyeR*0.35)}" cy="${eyeBotY - Math.round(eyeR*0.35)}" r="1" fill="white" opacity="0.65"/>
+  ${bossGold ? `<circle cx="${eyeX}" cy="${eyeBotY}" r="${eyeR + 3.5}" fill="none" stroke="${bossGold}" stroke-width="0.8" opacity="0.45"/>` : ''}
 
-  <!-- Nostril dots on snout -->
-  <circle cx="${Math.round(W*0.91)}" cy="${Math.round(H*0.38)}" r="1.3" fill="${headDark}" opacity="0.8"/>
-  <circle cx="${Math.round(W*0.91)}" cy="${Math.round(H*0.62)}" r="1.3" fill="${headDark}" opacity="0.8"/>
+  <!-- Nostril dots -->
+  <circle cx="${Math.round(W*0.89)}" cy="${Math.round(H*0.37)}" r="1.2" fill="${headDark}" opacity="0.8"/>
+  <circle cx="${Math.round(W*0.89)}" cy="${Math.round(H*0.63)}" r="1.2" fill="${headDark}" opacity="0.8"/>
 
-  ${bossGold ? `<!-- Boss crown / crest detail -->
-  <path d="M${Math.round(W*0.32)},${Math.round(H*0.10)} L${Math.round(W*0.36)},${Math.round(H*0.04)} L${Math.round(W*0.40)},${Math.round(H*0.10)} L${Math.round(W*0.44)},${Math.round(H*0.04)} L${Math.round(W*0.48)},${Math.round(H*0.10)}" fill="none" stroke="${bossGold}" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
-  <!-- Boss eye glow rings -->
-  <ellipse cx="${visCX - eyeOff}" cy="${eyeY}" rx="${eyeRX+4}" ry="${eyeRY+4}" fill="none" stroke="${bossGold}" stroke-width="0.8" opacity="0.4"/>
-  <ellipse cx="${visCX + eyeOff}" cy="${eyeY}" rx="${eyeRX+4}" ry="${eyeRY+4}" fill="none" stroke="${bossGold}" stroke-width="0.8" opacity="0.4"/>` : ''}
+  ${bossGold ? `<!-- Boss crown -->
+  <path d="M${Math.round(W*0.34)},${eyeTopY+eyeR+2} L${Math.round(W*0.38)},${eyeTopY-3} L${Math.round(W*0.42)},${eyeTopY+eyeR+2} L${Math.round(W*0.46)},${eyeTopY-3} L${Math.round(W*0.50)},${eyeTopY+eyeR+2}" fill="none" stroke="${bossGold}" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>` : ''}
 </svg>`;
 }
 
