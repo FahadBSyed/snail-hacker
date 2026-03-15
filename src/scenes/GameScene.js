@@ -2187,6 +2187,12 @@ export default class GameScene extends Phaser.Scene {
     }
 
     spawnAlien(type = 'basic', spawnX, spawnY) {
+        // Cap concurrent spitters
+        if (type === 'spitter') {
+            const spitterCount = this.aliens.filter(a => a.active && a.alienType === 'spitter').length;
+            if (spitterCount >= 3) return;
+        }
+
         const pos = (spawnX !== undefined)
             ? { x: spawnX, y: spawnY }
             : this._randomEdgePosition();
