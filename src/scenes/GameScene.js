@@ -2360,6 +2360,9 @@ export default class GameScene extends Phaser.Scene {
                     const dt = delta / 1000;
                     alien.x += alien._bounceVx * dt;
                     alien.y += alien._bounceVy * dt;
+                    // Keep body segments in sync during bounce
+                    alien._pushHistory?.(time);
+                    alien._updateSegmentPositions?.() ?? alien._updateSegments?.();
                     return true;
                 }
                 delete alien._bounceUntil;
