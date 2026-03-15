@@ -28,7 +28,8 @@ export default class Spitter extends Phaser.GameObjects.Container {
         this.currentBush  = null;
 
         this._state        = 'KITE';
-        this._spitCooldown = cfg.SPIT_COOLDOWN * (0.5 + Math.random() * 0.5);  // offset spawns
+        this._spitCooldown = cfg.SPIT_COOLDOWN;  // first spit after on-screen delay + cooldown
+        this._onScreenMs   = 0;                  // accumulated on-screen time; must reach 10 000 ms before spitting
         this._hideTimer    = 0;
         this._stunMs       = 0;
 
@@ -258,11 +259,17 @@ export default class Spitter extends Phaser.GameObjects.Container {
             this._headImg.setRotation(toSnail);
         }
 
-        // Spit cooldown
-        this._spitCooldown -= delta;
-        if (this._spitCooldown <= 0) {
-            this._spitCooldown = cfg.SPIT_COOLDOWN;
-            this._fireGlob();
+        // Only spit while on-screen, and only after being on-screen for 10 s total
+        const onScreen = this.x > 0 && this.x < 1280 && this.y > 0 && this.y < 720;
+        if (onScreen) {
+            this._onScreenMs = Math.min(this._onScreenMs + delta, 10000);
+            if (this._onScreenMs >= 10000) {
+                this._spitCooldown -= delta;
+                if (this._spitCooldown <= 0) {
+                    this._spitCooldown = cfg.SPIT_COOLDOWN;
+                    this._fireGlob();
+                }
+            }
         }
 
         this._pushHistory(time);
