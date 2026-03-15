@@ -34,6 +34,8 @@ import Decoy from '../entities/Decoy.js';
 import EmpMine from '../entities/EmpMine.js';
 import HUD from './HUD.js';
 import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions, BURST_COLORS } from '../systems/CollisionSystem.js';
+import { spawnSnakeDeathAnimation } from '../entities/snakes/snakeHitReaction.js';
+const SNAKE_TYPES = new Set(['basic-snake', 'sidewinder', 'spitter', 'burrower', 'python']);
 import { PROP_PALETTES } from '../data/propPalettes.js';
 import { ASSET_MANIFEST } from '../data/assetManifest.js';
 
@@ -1185,18 +1187,27 @@ export default class GameScene extends Phaser.Scene {
             if (died) {
                 this.score++;
                 this.hud.updateScore(this.score);
-                const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
                 alien._dying = true;
-                this.time.delayedCall(200, () => {
-                    if (!alien.active) return;
-                    spawnDeathBurst(this, bx, by, burstColor,
-                        () => this.spawnFrogEscape(bx, by));
+                if (SNAKE_TYPES.has(alien.alienType)) {
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
-                        this.healthDrops.push(new HealthDrop(this, bx, by));
+                        this.time.delayedCall(120, () => {
+                            this.healthDrops.push(new HealthDrop(this, bx, by));
+                        });
                     }
-                    if (isBomber) checkBomberBlast(this, bx, by);
-                    alien.destroy();
-                });
+                    spawnSnakeDeathAnimation(this, alien);
+                } else {
+                    const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
+                    this.time.delayedCall(200, () => {
+                        if (!alien.active) return;
+                        spawnDeathBurst(this, bx, by, burstColor,
+                            () => this.spawnFrogEscape(bx, by));
+                        if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                            this.healthDrops.push(new HealthDrop(this, bx, by));
+                        }
+                        if (isBomber) checkBomberBlast(this, bx, by);
+                        alien.destroy();
+                    });
+                }
             }
         }
 
