@@ -2,6 +2,12 @@
 
 ## Session — 2026-03-15
 
+### Sidewinder search speed + concentric bush layout
+
+- Added `SPEED_SEARCH: 140` to `CONFIG.SNAKES.SIDEWINDER` (4× the old slow approach speed of 35 px/s); `CONFIG_VERSION` bumped to 32
+- Sidewinder ENTERING and DASHING states now both use `SPEED_SEARCH` — zooms to target bushes 4× faster; `SPEED_DASH` is now exclusively for the ATTACK dash at Gerald
+- Replaced `_spawnBushes` random rejection sampler with fixed concentric clock positions: ring 1 at r=350px (10/3/7 o'clock), ring 2 at r=250px (1/9/5 o'clock), slot 7 at r=310px (11 o'clock); sidewinders naturally hop inward ring 1 → ring 2 → attack
+
 ### Scale all snakes up by 130%
 
 - Head images: `setScale(0.5 → 0.65)` on all 5 snake types

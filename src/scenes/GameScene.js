@@ -591,52 +591,40 @@ export default class GameScene extends Phaser.Scene {
 
     /**
      * Spawn World 2 bushes for the current wave.
-     * Clears previous bushes first, then places `count` bushes using rejection
-     * sampling to avoid the station center, screen edges, and each other.
+     * Places bushes at fixed concentric clock positions around the station:
+     *   Ring 1 (r=350): 10 o'clock, 3 o'clock, 7 o'clock
+     *   Ring 2 (r=250): 1 o'clock, 9 o'clock, 5 o'clock
+     *   Slot 7  (r=310): 11 o'clock (used only when count ≥ 7)
+     * Sidewinders naturally hop inward from ring 1 → ring 2 → attack.
      */
     _spawnBushes(count) {
         for (const b of this.bushes) { if (b.active) b.destroy(); }
         this.bushes = [];
         if (!count) return;
 
-        const W = 1280, H = 720;
-        const MARGIN   = 80;
-        const CLEAR_R  = 260;  // keep away from station center (640,360)
-        const TERM_R   = 100;  // keep away from terminals
-        const MIN_GAP  = 90;   // minimum between bushes
-        const MAX_TRIES = 60;
+        const CX = 640, CY = 360;
+        // Pre-defined positions: [radius, angleDeg]
+        // Angles: 0=right, clockwise positive (Phaser convention, Y-down)
+        const SLOTS = [
+            // Ring 1 — outer (r=350)
+            [350, 210],   // 10 o'clock
+            [350,   0],   // 3  o'clock
+            [350, 120],   // 7  o'clock
+            // Ring 2 — inner (r=250)
+            [250, 300],   // 1  o'clock
+            [250, 180],   // 9  o'clock
+            [250,  60],   // 5  o'clock
+            // Slot 7 — mid (r=310)
+            [310, 240],   // 11 o'clock
+        ];
 
-        let seed = this.wave * 2_000_003 + 99;
-        const rng = () => {
-            seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-            let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-            return ((t ^ t >>> 14) >>> 0) / 4_294_967_296;
-        };
-
-        const placed = [];
-        for (let i = 0; i < count; i++) {
-            let tries = 0;
-            while (tries < MAX_TRIES) {
-                tries++;
-                const x = MARGIN + rng() * (W - MARGIN * 2);
-                const y = MARGIN + rng() * (H - MARGIN * 2);
-                const dx = x - 640, dy = y - 360;
-                if (dx * dx + dy * dy < CLEAR_R * CLEAR_R) continue;
-                const nearTerm = this.terminals.some(t => {
-                    const tx = t.x - x, ty = t.y - y;
-                    return tx * tx + ty * ty < TERM_R * TERM_R;
-                });
-                if (nearTerm) continue;
-                const tooClose = placed.some(p => {
-                    const px = p.x - x, py = p.y - y;
-                    return px * px + py * py < MIN_GAP * MIN_GAP;
-                });
-                if (tooClose) continue;
-                placed.push({ x, y });
-                this.bushes.push(new Bush(this, x, y));
-                break;
-            }
+        const n = Math.min(count, SLOTS.length);
+        for (let i = 0; i < n; i++) {
+            const [r, deg] = SLOTS[i];
+            const rad = deg * Math.PI / 180;
+            const x = CX + r * Math.cos(rad);
+            const y = CY + r * Math.sin(rad);
+            this.bushes.push(new Bush(this, x, y));
         }
     }
 

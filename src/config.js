@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 31;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 32;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -275,8 +275,9 @@ export const DEFAULTS = {
 
         SIDEWINDER: {
             HEALTH:        10,
-            SPEED_SLOW:    35,   // px/s while cursor is watching (suppressed)
-            SPEED_DASH:   220,   // px/s when cursor looks away (bush hop)
+            SPEED_SLOW:    35,   // px/s while cursor is watching (suppressed creep)
+            SPEED_SEARCH: 140,   // px/s while dashing to a target bush (4× SPEED_SLOW)
+            SPEED_DASH:   220,   // px/s during ATTACK dash at Gerald
             RADIUS:         8,
             SEGMENT_COUNT:  3,
             WATCH_RADIUS:  200,  // px — cursor distance from bush that suppresses a dash

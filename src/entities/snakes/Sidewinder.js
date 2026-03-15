@@ -131,9 +131,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         }
 
         if (this._state === 'ENTERING' || this._state === 'DASHING') {
-            const spd  = this._state === 'ENTERING'
-                ? CONFIG.SNAKES.SIDEWINDER.SPEED_SLOW
-                : CONFIG.SNAKES.SIDEWINDER.SPEED_DASH;
+            const spd  = CONFIG.SNAKES.SIDEWINDER.SPEED_SEARCH;
             const mult = this.scene.alienSpeedMultiplier || 1.0;
 
             // ── Entry phase: slither through the bush so the whole body follows ──
