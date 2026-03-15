@@ -2,6 +2,14 @@
 
 ## Session — 2026-03-15
 
+### Snake hit reaction — red flash + freeze + body wiggle
+
+New shared module `src/entities/snakes/snakeHitReaction.js`:
+- `applyHitReaction(snake)` — on a non-lethal hit: generates red-tinted texture copies via Canvas-2D multiply + destination-in (same as rock/mushroom colorisation), swaps head/body/tail to red, freezes for 130 ms, then runs 220 ms of lateral body-wiggle (sinusoidal cascade, smooth envelope). Generation counter handles rapid hits cleanly. Original textures restored afterward.
+- `tickHitWiggle` / `applyWiggleToSegments` wired into all five snake `update()` + `_updateSegments()` methods.
+- Python: added missing `_stunMs` stun block.
+- All five `takeDamage` methods call `applyHitReaction` when snake survives.
+
 ### Sidewinder search speed + concentric bush layout
 
 - Added `SPEED_SEARCH: 140` to `CONFIG.SNAKES.SIDEWINDER` (4× the old slow approach speed of 35 px/s); `CONFIG_VERSION` bumped to 32

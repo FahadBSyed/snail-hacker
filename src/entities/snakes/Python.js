@@ -1,4 +1,5 @@
 import { CONFIG } from '../../config.js';
+import { applyHitReaction, tickHitWiggle, applyWiggleToSegments } from './snakeHitReaction.js';
 
 /**
  * Python — World 2 multi-segment snake.
@@ -34,6 +35,12 @@ export default class Python extends Phaser.GameObjects.Container {
 
         this._segCount    = cfg.SEGMENT_COUNT;  // current number of body segments
         this._spacing     = cfg.BODY_SPACING;
+
+        this._stunMs           = 0;
+        this._hitReacting      = false;
+        this._hitGen           = 0;
+        this._hitWiggleMs      = 0;
+        this._hitWiggleElapsed = 0;
 
         this._history = [{ x, y }];
 
@@ -119,7 +126,9 @@ export default class Python extends Phaser.GameObjects.Container {
             this._rebuildBodyHitboxes();
         }
 
-        return this.health <= 0;
+        if (this.health <= 0) return true;
+        applyHitReaction(this);
+        return false;
     }
 
     takeDamageRaw(amount) {
@@ -128,6 +137,16 @@ export default class Python extends Phaser.GameObjects.Container {
 
     update(time, delta) {
         if (!this.active) return 'alive';
+
+        if (this._stunMs > 0) {
+            this._stunMs -= delta;
+            this._updateSegments();
+            this._rebuildBodyHitboxes();
+            return 'alive';
+        }
+
+        tickHitWiggle(this, delta);
+
         const dt    = delta / 1000;
         const mult  = this.scene.alienSpeedMultiplier || 1.0;
         const snail = this.scene.snail;
@@ -189,6 +208,7 @@ export default class Python extends Phaser.GameObjects.Container {
         const tpr = this._histAt(ti - sp);
         this._tailImg.setPosition(tp.x, tp.y);
         this._tailImg.setRotation(Math.atan2(tpr.y - tp.y, tpr.x - tp.x));
+        applyWiggleToSegments(this);
     }
 
     _histAt(i) {

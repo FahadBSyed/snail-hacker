@@ -1,5 +1,6 @@
 import { CONFIG } from '../../config.js';
 import AcidGlob from '../AcidGlob.js';
+import { applyHitReaction, tickHitWiggle, applyWiggleToSegments } from './snakeHitReaction.js';
 
 /**
  * Spitter — World 2 snake that kites Gerald and fires acid globs.
@@ -30,6 +31,11 @@ export default class Spitter extends Phaser.GameObjects.Container {
         this._spitCooldown = cfg.SPIT_COOLDOWN * (0.5 + Math.random() * 0.5);  // offset spawns
         this._hideTimer    = 0;
         this._stunMs       = 0;
+
+        this._hitReacting      = false;
+        this._hitGen           = 0;
+        this._hitWiggleMs      = 0;
+        this._hitWiggleElapsed = 0;
 
         this._fadedParts     = new Set();
         this._lastBushPos    = null;
@@ -108,7 +114,10 @@ export default class Spitter extends Phaser.GameObjects.Container {
     takeDamage(amount) {
         if (this.hidingInBush) return false;
         const died = (this.health -= amount) <= 0;
-        if (!died) this._fleeToHide();
+        if (!died) {
+            this._fleeToHide();
+            applyHitReaction(this);
+        }
         return died;
     }
 
@@ -135,6 +144,8 @@ export default class Spitter extends Phaser.GameObjects.Container {
             this._updateSegments();
             return 'alive';
         }
+
+        tickHitWiggle(this, delta);
 
         // ── HIDING ──
         if (this._state === 'HIDING') {
@@ -308,6 +319,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
         const tpr = this._histAt(ti - sp);
         this._tailImg.setPosition(tp.x, tp.y);
         this._tailImg.setRotation(Math.atan2(tpr.y - tp.y, tpr.x - tp.x));
+        applyWiggleToSegments(this);
     }
 
     _histAt(i) {

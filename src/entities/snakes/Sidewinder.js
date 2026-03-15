@@ -1,4 +1,5 @@
 import { CONFIG } from '../../config.js';
+import { applyHitReaction, tickHitWiggle, applyWiggleToSegments } from './snakeHitReaction.js';
 
 /**
  * Sidewinder — World 2 snake that hops between bushes when P2's cursor is not watching.
@@ -31,6 +32,11 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         this._state       = 'ENTERING';
         this._targetBush  = null;
         this._stunMs      = 0;
+
+        this._hitReacting      = false;
+        this._hitGen           = 0;
+        this._hitWiggleMs      = 0;
+        this._hitWiggleElapsed = 0;
 
         this._fadedParts     = new Set();
         this._lastBushPos    = null;
@@ -78,7 +84,9 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
     takeDamage(amount) {
         if (this.hidingInBush) return false;
         this.health -= amount;
-        return this.health <= 0;
+        if (this.health <= 0) return true;
+        applyHitReaction(this);
+        return false;
     }
 
     takeDamageRaw(amount) {
@@ -95,6 +103,8 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
             this._updateSegments();
             return 'alive';
         }
+
+        tickHitWiggle(this, delta);
 
         if (this._state === 'HIDING') {
             // Check if cursor is watching this bush
@@ -340,6 +350,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         const tpr  = this._histAt(ti - sp);
         this._tailImg.setPosition(tp.x, tp.y);
         this._tailImg.setRotation(Math.atan2(tpr.y - tp.y, tpr.x - tp.x));
+        applyWiggleToSegments(this);
     }
 
     _histAt(i) {

@@ -1,4 +1,5 @@
 import { CONFIG } from '../../config.js';
+import { applyHitReaction, tickHitWiggle, applyWiggleToSegments } from './snakeHitReaction.js';
 
 /**
  * BasicSnake — World 2 ground enemy.
@@ -28,6 +29,11 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         this.currentBush  = null;
         this._stunMs      = 0;
         this._hideTimer   = 0;
+
+        this._hitReacting      = false;
+        this._hitGen           = 0;
+        this._hitWiggleMs      = 0;
+        this._hitWiggleElapsed = 0;
 
         this._fadedParts      = new Set();   // parts currently at alpha 0 (inside a bush)
         this._lastBushPos     = null;        // cached on exit; used for position-based reveal
@@ -119,7 +125,9 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
     takeDamage(amount) {
         if (this.hidingInBush) return false;
         this.health -= amount;
-        return this.health <= 0;
+        if (this.health <= 0) return true;
+        applyHitReaction(this);
+        return false;
     }
 
     takeDamageRaw(amount) {
@@ -136,6 +144,8 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
             this._updateSegmentPositions();
             return 'alive';
         }
+
+        tickHitWiggle(this, delta);
 
         if (this._state === 'HIDING') {
             this._hideTimer -= delta;
@@ -277,6 +287,7 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         const tpr = this._histAt(Math.max(0, ti - sp));
         this._tailImg.setPosition(tp.x, tp.y);
         this._tailImg.setRotation(Math.atan2(tpr.y - tp.y, tpr.x - tp.x));
+        applyWiggleToSegments(this);
     }
 
     _histAt(i) {
