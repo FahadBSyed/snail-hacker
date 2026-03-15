@@ -1,5 +1,5 @@
 import { CONFIG } from '../../config.js';
-import { applyHitReaction, tickHitWiggle, applyWiggleToSegments } from './snakeHitReaction.js';
+import { applyHitReaction, tickHitWiggle, applyWiggleToSegments, spawnDustCloud } from './snakeHitReaction.js';
 
 /**
  * Burrower — World 2 snake that phases underground to become invulnerable.
@@ -156,7 +156,10 @@ export default class Burrower extends Phaser.GameObjects.Container {
             this.setAlpha(1 - progress * 0.5);
 
             if (this._stateTimer <= 0) {
-                this._spawnDustPuff(this.x, this.y);
+                // Going under — soil displaced outward and slightly upward
+                spawnDustCloud(this.scene, this.x, this.y, {
+                    count: 14, spreadX: 50, spreadY: 18, upBias: 18, duration: 500,
+                });
                 this._transition('UNDERGROUND');
             }
 
@@ -203,7 +206,10 @@ export default class Burrower extends Phaser.GameObjects.Container {
 
             if (this._stateTimer <= 0) {
                 this._ripple.setVisible(false);
-                this._spawnDustPuff(this.x, this.y);
+                // Emerging — soil erupts upward and outward more forcefully
+                spawnDustCloud(this.scene, this.x, this.y, {
+                    count: 18, spreadX: 58, spreadY: 22, upBias: 38, duration: 580,
+                });
                 this._setVisible(true);
                 this.setAlpha(1);
                 this._transition('SURFACE');
@@ -270,26 +276,6 @@ export default class Burrower extends Phaser.GameObjects.Container {
             g.moveTo(x + Math.cos(a) * r1, y + 4 + Math.sin(a) * r1 * 0.4);
             g.lineTo(x + Math.cos(a) * r2, y + 4 + Math.sin(a) * r2 * 0.4);
             g.strokePath();
-        }
-    }
-
-    _spawnDustPuff(x, y) {
-        for (let i = 0; i < 6; i++) {
-            const angle  = Math.random() * Math.PI * 2;
-            const speed  = 30 + Math.random() * 40;
-            const circle = this.scene.add.circle(x, y, 4 + Math.random() * 4, 0xbbaa88, 0.7)
-                .setDepth(46);
-            this.scene.tweens.add({
-                targets:  circle,
-                x:        x + Math.cos(angle) * speed,
-                y:        y + Math.sin(angle) * speed * 0.5,
-                alpha:    0,
-                scaleX:   0.1,
-                scaleY:   0.1,
-                duration: 400,
-                ease:     'Sine.easeOut',
-                onComplete: () => circle.destroy(),
-            });
         }
     }
 

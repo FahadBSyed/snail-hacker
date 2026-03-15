@@ -176,6 +176,61 @@ export function applyWiggleToSegments(snake) {
 // ── Death animation ───────────────────────────────────────────────────────────
 
 /**
+ * Spawn a billowing dust-cloud burst at (x, y).
+ * Used for the snake death burrow, the Burrower going underground, and the
+ * Burrower emerging.  Each puff circle expands as it drifts outward so the
+ * cloud feels like real displaced soil rather than just flying dots.
+ *
+ * @param {Phaser.Scene} scene
+ * @param {number}       x
+ * @param {number}       y
+ * @param {object}       [opts]
+ * @param {number}       [opts.count=16]      number of puff particles
+ * @param {number}       [opts.spreadX=54]    horizontal spread radius (px)
+ * @param {number}       [opts.spreadY=20]    vertical spread radius (px, ground is flat)
+ * @param {number}       [opts.upBias=22]     extra upward displacement (px)
+ * @param {number}       [opts.duration=560]  base fade duration (ms)
+ * @param {number}       [opts.depth=46]      render depth
+ */
+export function spawnDustCloud(scene, x, y, opts = {}) {
+    const COLORS   = [0xd4b483, 0xc8a06e, 0xbbaa88, 0xe0cc9a, 0x9e7c52];
+    const count    = opts.count    ?? 16;
+    const spreadX  = opts.spreadX  ?? 54;
+    const spreadY  = opts.spreadY  ?? 20;
+    const upBias   = opts.upBias   ?? 22;
+    const duration = opts.duration ?? 560;
+    const depth    = opts.depth    ?? 46;
+
+    for (let i = 0; i < count; i++) {
+        const angle  = Math.random() * Math.PI * 2;
+        const r      = 0.3 + Math.random() * 0.7;   // radial fraction 0.3–1.0
+        const size   = 3 + Math.random() * 11;       // 3–14 px radius
+        const color  = COLORS[i % COLORS.length];
+        const alpha  = 0.45 + Math.random() * 0.40;
+        const dur    = duration * (0.5 + Math.random() * 0.7);
+        const delay  = Math.random() * 80;           // stagger up to 80 ms
+
+        // Target: flat elliptical spread, biased upward
+        const tx = x + Math.cos(angle) * r * spreadX;
+        const ty = y + Math.sin(angle) * r * spreadY - upBias * r;
+
+        const puff = scene.add.circle(x, y, size, color, alpha).setDepth(depth);
+        scene.tweens.add({
+            targets:  puff,
+            x:        tx,
+            y:        ty,
+            alpha:    0,
+            scaleX:   1.2 + Math.random() * 1.0,   // clouds expand as they disperse
+            scaleY:   0.35 + Math.random() * 0.55,
+            duration: dur,
+            delay,
+            ease:     'Power1.easeOut',
+            onComplete: () => puff.destroy(),
+        });
+    }
+}
+
+/**
  * Play a cartoon snake-death sequence: cry tears → burrow underground.
  *
  *   t=0 ms   — slide-whistle sound, 4 blue tears shoot from the head
@@ -252,6 +307,16 @@ export function spawnSnakeDeathAnimation(scene, snake) {
 
     scene.time.delayedCall(80, () => {
         if (!snake.active) return;
+
+        // Dust cloud as the snake drives itself into the ground
+        spawnDustCloud(scene, hx, hy, {
+            count:    20,
+            spreadX:  60,
+            spreadY:  22,
+            upBias:   32,
+            duration: 600,
+            depth:    50,
+        });
 
         // Head container (also shrinks shadow inside it)
         scene.tweens.add({

@@ -2,6 +2,14 @@
 
 ## Session — 2026-03-15
 
+### Dust cloud particles for burrowing
+
+New export `spawnDustCloud(scene, x, y, opts)` in `snakeHitReaction.js`: 16 earthy-coloured puff circles (3–14 px) that expand as they drift outward in a flat elliptical spread with upward bias — puffs grow larger as they disperse for a realistic billowing look.
+- **Snake death**: dust cloud (count=20, upBias=32) fires at t=80ms coinciding with the burrow cascade start.
+- **Burrower going underground**: 14-puff cloud, low upBias (soil pushed outward).
+- **Burrower emerging**: 18-puff cloud, higher upBias=38 (soil erupts upward). Distinct from the going-under cloud.
+- Removed the old `_spawnDustPuff` from `Burrower.js` (replaced by shared function).
+
 ### Snake death animation — cry tears + burrow underground
 
 - `spawnSnakeDeathAnimation(scene, snake)` added to `snakeHitReaction.js`: plays `snakeDie` sound (cartoon slide-whistle whimper + muffled burrow thud), spawns 4 cyan teardrop graphics that arc upward then fall with gravity, then after 80 ms cascades the snake to scale 0 head-first with a dirt-ripple ellipse; calls `snake.destroy()` when the tail finishes shrinking.
