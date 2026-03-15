@@ -2,6 +2,12 @@
 
 ## Session — 2026-03-15
 
+### Snake death animation — cry tears + burrow underground
+
+- `spawnSnakeDeathAnimation(scene, snake)` added to `snakeHitReaction.js`: plays `snakeDie` sound (cartoon slide-whistle whimper + muffled burrow thud), spawns 4 cyan teardrop graphics that arc upward then fall with gravity, then after 80 ms cascades the snake to scale 0 head-first with a dirt-ripple ellipse; calls `snake.destroy()` when the tail finishes shrinking.
+- New `_snakeDie()` in `SoundSynth`: sine sweep 800→150 Hz (slide-whistle), soft harmonic layer, muffled low-freq thud at end.
+- `CollisionSystem.js`: both kill sites branch on `SNAKE_TYPES` — snakes use `spawnSnakeDeathAnimation`, other aliens keep `spawnDeathBurst`.
+
 ### Snake hit reaction — red flash + freeze + body wiggle
 
 New shared module `src/entities/snakes/snakeHitReaction.js`:

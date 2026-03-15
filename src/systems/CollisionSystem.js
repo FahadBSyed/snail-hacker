@@ -1,5 +1,9 @@
 import { CONFIG } from '../config.js';
 import HealthDrop from '../entities/HealthDrop.js';
+import { spawnSnakeDeathAnimation } from '../entities/snakes/snakeHitReaction.js';
+
+// Snake alienType values — these get their own death animation instead of the generic burst
+const SNAKE_TYPES = new Set(['basic-snake', 'sidewinder', 'spitter', 'burrower', 'python']);
 
 /**
  * Compute the lead-aim intercept point so a projectile travelling at `speed`
@@ -266,22 +270,32 @@ export function checkProjectileCollisions(scene) {
             if (died) {
                 scene.score++;
                 scene.hud.updateScore(scene.score);
-                const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
-
-                // Mark dying so update loop skips it; destroy after flash settles
                 alien._dying = true;
-                scene.time.delayedCall(200, () => {
-                    if (!alien.active) return;
-                    spawnDeathBurst(scene, bx, by, burstColor,
-                        () => scene.spawnFrogEscape?.(bx, by));
 
+                if (SNAKE_TYPES.has(alien.alienType)) {
+                    // Snakes cry, then burrow underground
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
-                        scene.healthDrops.push(new HealthDrop(scene, bx, by));
+                        scene.time.delayedCall(120, () => {
+                            scene.healthDrops.push(new HealthDrop(scene, bx, by));
+                        });
                     }
+                    spawnSnakeDeathAnimation(scene, alien);
+                } else {
+                    const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
+                    // Mark dying so update loop skips it; destroy after flash settles
+                    scene.time.delayedCall(200, () => {
+                        if (!alien.active) return;
+                        spawnDeathBurst(scene, bx, by, burstColor,
+                            () => scene.spawnFrogEscape?.(bx, by));
 
-                    if (isBomber) checkBomberBlast(scene, bx, by);
-                    alien.destroy();
-                });
+                        if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                            scene.healthDrops.push(new HealthDrop(scene, bx, by));
+                        }
+
+                        if (isBomber) checkBomberBlast(scene, bx, by);
+                        alien.destroy();
+                    });
+                }
             }
             break;  // one projectile hits one alien
         }
@@ -315,15 +329,25 @@ export function checkProjectileCollisions(scene) {
             if (died) {
                 scene.score++;
                 scene.hud.updateScore(scene.score);
-                const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
                 alien._dying = true;
-                scene.time.delayedCall(200, () => {
-                    if (!alien.active) return;
-                    spawnDeathBurst(scene, bx, by, burstColor, () => scene.spawnFrogEscape?.(bx, by));
-                    if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) scene.healthDrops.push(new HealthDrop(scene, bx, by));
-                    if (alien.alienType === 'bomber') checkBomberBlast(scene, bx, by);
-                    alien.destroy();
-                });
+
+                if (SNAKE_TYPES.has(alien.alienType)) {
+                    if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                        scene.time.delayedCall(120, () => {
+                            scene.healthDrops.push(new HealthDrop(scene, alien.x, alien.y));
+                        });
+                    }
+                    spawnSnakeDeathAnimation(scene, alien);
+                } else {
+                    const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
+                    scene.time.delayedCall(200, () => {
+                        if (!alien.active) return;
+                        spawnDeathBurst(scene, bx, by, burstColor, () => scene.spawnFrogEscape?.(bx, by));
+                        if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) scene.healthDrops.push(new HealthDrop(scene, bx, by));
+                        if (alien.alienType === 'bomber') checkBomberBlast(scene, bx, by);
+                        alien.destroy();
+                    });
+                }
             }
             break;
         }

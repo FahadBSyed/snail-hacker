@@ -172,3 +172,126 @@ export function applyWiggleToSegments(snake) {
     // Head: small rotation delta (movement code sets rotation earlier this frame)
     snake._headImg.rotation += Math.sin(elapsed * freq - 1.1) * env * 0.2;
 }
+
+// ── Death animation ───────────────────────────────────────────────────────────
+
+/**
+ * Play a cartoon snake-death sequence: cry tears → burrow underground.
+ *
+ *   t=0 ms   — slide-whistle sound, 4 blue tears shoot from the head
+ *   t=80 ms  — burrowing starts: head shrinks first, then body cascade, then tail
+ *   t=80+dur — snake fully underground; destroy() called
+ *
+ * Called by CollisionSystem immediately when a snake dies.  The snake must
+ * already have _dying = true so update() and collisions skip it.
+ *
+ * @param {Phaser.Scene} scene
+ * @param {object}       snake  Any of the five snake classes.
+ */
+export function spawnSnakeDeathAnimation(scene, snake) {
+    scene.soundSynth?.play('snakeDie');
+
+    const hx = snake.x;
+    const hy = snake.y;
+
+    // ── 1. Tears ─────────────────────────────────────────────────────────────
+    // Four tears in a fan above the head: far-left, left, right, far-right
+    const TEAR_ANGLES_DEG = [-120, -80, -100, -60];
+    for (let i = 0; i < TEAR_ANGLES_DEG.length; i++) {
+        const rad  = TEAR_ANGLES_DEG[i] * Math.PI / 180;
+        const dist = 28 + i * 8;
+
+        const tear = scene.add.graphics().setDepth(62);
+        tear.fillStyle(0x55ccff, 0.92);
+        tear.fillEllipse(0, 0, 5, 7);   // small teardrop oval
+        tear.setPosition(hx, hy);
+
+        // Phase 1: quick outward arc (fast, ease-out)
+        scene.tweens.add({
+            targets:  tear,
+            x:        hx + Math.cos(rad) * dist,
+            y:        hy + Math.sin(rad) * dist,
+            duration: 140,
+            ease:     'Power2.easeOut',
+            onComplete: () => {
+                if (!tear.active) return;
+                // Phase 2: gravity fall + fade
+                scene.tweens.add({
+                    targets:  tear,
+                    y:        tear.y + 35,
+                    alpha:    0,
+                    duration: 210,
+                    ease:     'Sine.easeIn',
+                    onComplete: () => tear.destroy(),
+                });
+            },
+        });
+    }
+
+    // ── 2. Dirt ripple at burrow point ───────────────────────────────────────
+    scene.time.delayedCall(75, () => {
+        const ripple = scene.add.graphics().setDepth(28);
+        ripple.fillStyle(0x886644, 0.55);
+        ripple.fillEllipse(0, 0, 40, 14);
+        ripple.setPosition(hx, hy);
+        scene.tweens.add({
+            targets:  ripple,
+            scaleX:   1.8,
+            scaleY:   0.3,
+            alpha:    0,
+            duration: 320,
+            ease:     'Power1.easeOut',
+            onComplete: () => ripple.destroy(),
+        });
+    });
+
+    // ── 3. Burrow cascade ────────────────────────────────────────────────────
+    // Head disappears first, then body segments in order, then tail.
+    const SEG_DELAY = 35;   // ms between each segment vanishing
+    const SEG_DUR   = 180;  // ms for each shrink tween
+
+    scene.time.delayedCall(80, () => {
+        if (!snake.active) return;
+
+        // Head container (also shrinks shadow inside it)
+        scene.tweens.add({
+            targets:  snake,
+            scaleX:   0,
+            scaleY:   0,
+            duration: SEG_DUR,
+            ease:     'Sine.easeIn',
+        });
+
+        // Body segments (cascade)
+        snake._bodyImgs.forEach((img, i) => {
+            if (!img || !img.active) return;
+            scene.tweens.add({
+                targets:  img,
+                scaleX:   0,
+                scaleY:   0,
+                duration: SEG_DUR,
+                delay:    (i + 1) * SEG_DELAY,
+                ease:     'Sine.easeIn',
+            });
+        });
+
+        // Tail — last to vanish; onComplete triggers final destroy
+        const tailDelay = (snake._bodyImgs.length + 1) * SEG_DELAY;
+        if (snake._tailImg && snake._tailImg.active) {
+            scene.tweens.add({
+                targets:  snake._tailImg,
+                scaleX:   0,
+                scaleY:   0,
+                duration: SEG_DUR,
+                delay:    tailDelay,
+                ease:     'Sine.easeIn',
+                onComplete: () => { if (snake.active) snake.destroy(); },
+            });
+        } else {
+            // No tail (shouldn't happen, but be safe)
+            scene.time.delayedCall(tailDelay + SEG_DUR, () => {
+                if (snake.active) snake.destroy();
+            });
+        }
+    });
+}
