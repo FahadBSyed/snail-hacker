@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 28;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 29;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -256,10 +256,12 @@ export const DEFAULTS = {
         // Body history is pushed when the head moves ≥ 2 px (distance-based, frame-rate
         // independent).  BODY_SPACING controls how many history entries to skip between
         // consecutive body segments; effective pixel gap ≈ BODY_SPACING × 2 px.
-        BODY_SPACING:    10,    // history entries between consecutive body segments (~20 px)
-        WIGGLE_AMP:       3,    // px — lateral sinusoidal wiggle amplitude
-        WIGGLE_FREQ:  0.003,    // rad/ms — wiggle cycle (full period ≈ 2094 ms)
-        HIDE_SEEK_DIST: 200,    // px — snake starts moving toward a bush when this close
+        BODY_SPACING:         10,  // history entries between consecutive body segments (~20 px)
+        HIDE_SEEK_DIST:      200,  // px — snake starts moving toward a bush when this close
+        // Jitter: snakes periodically veer orthogonally to produce a slithering S-curve
+        JITTER_DURATION:     700,  // ms of orthogonal movement per jitter burst
+        JITTER_COOLDOWN_MIN: 400,  // ms between jitter bursts (min)
+        JITTER_COOLDOWN_MAX: 1200, // ms between jitter bursts (max)
 
         BASIC: {
             SPEED:              55,   // px/s movement speed

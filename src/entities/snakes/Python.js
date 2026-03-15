@@ -37,6 +37,12 @@ export default class Python extends Phaser.GameObjects.Container {
 
         this._history = [{ x, y }];
 
+        // Jitter — side-to-side slither
+        const sc             = CONFIG.SNAKES;
+        this._jitterMs       = 0;
+        this._jitterDir      = 1;
+        this._jitterCooldown = Phaser.Math.Between(sc.JITTER_COOLDOWN_MIN, sc.JITTER_COOLDOWN_MAX);
+
         this._buildVisuals(scene, cfg.SEGMENT_COUNT);
         this._rebuildBodyHitboxes();
     }
@@ -125,10 +131,31 @@ export default class Python extends Phaser.GameObjects.Container {
         const mult  = this.scene.alienSpeedMultiplier || 1.0;
         const snail = this.scene.snail;
 
-        const angle = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
-        this.x += Math.cos(angle) * this.speed * mult * dt;
-        this.y += Math.sin(angle) * this.speed * mult * dt;
-        this._headImg.setRotation(angle);
+        const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+        let moveAngle;
+
+        if (this._jitterMs > 0) {
+            this._jitterMs -= delta;
+            moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+            if (this._jitterMs <= 0) {
+                this._jitterCooldown = Phaser.Math.Between(
+                    CONFIG.SNAKES.JITTER_COOLDOWN_MIN, CONFIG.SNAKES.JITTER_COOLDOWN_MAX,
+                );
+            }
+        } else {
+            if (this._jitterCooldown > 0) this._jitterCooldown -= delta;
+            if (this._jitterCooldown <= 0) {
+                this._jitterMs  = CONFIG.SNAKES.JITTER_DURATION;
+                this._jitterDir = Math.random() < 0.5 ? 1 : -1;
+                moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+            } else {
+                moveAngle = toTarget;
+            }
+        }
+
+        this.x += Math.cos(moveAngle) * this.speed * mult * dt;
+        this.y += Math.sin(moveAngle) * this.speed * mult * dt;
+        this._headImg.setRotation(moveAngle);
 
         this._pushHistory(time);
         this._updateSegments();

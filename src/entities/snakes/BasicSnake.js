@@ -32,6 +32,13 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         this._state      = 'HUNT';
         this._targetBush = null;
 
+        // Jitter — side-to-side slither
+        this._jitterMs       = 0;
+        this._jitterDir      = 1;
+        this._jitterCooldown = Phaser.Math.Between(
+            cfg.JITTER_COOLDOWN_MIN, cfg.JITTER_COOLDOWN_MAX,
+        );
+
         // Distance-based history: push only when moved ≥ 2 px
         this._spacing = cfg.BODY_SPACING;
         this._history = [{ x, y }];
@@ -139,10 +146,31 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         if (this._state === 'HUNT') {
             const speedMult = this.scene.alienSpeedMultiplier || 1.0;
             const snail     = this.scene.snail;
-            const angle = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
-            this.x += Math.cos(angle) * this.speed * speedMult * dt;
-            this.y += Math.sin(angle) * this.speed * speedMult * dt;
-            this._headImg.setRotation(angle);
+            const toTarget  = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+            let moveAngle;
+
+            if (this._jitterMs > 0) {
+                this._jitterMs -= delta;
+                moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+                if (this._jitterMs <= 0) {
+                    this._jitterCooldown = Phaser.Math.Between(
+                        CONFIG.SNAKES.JITTER_COOLDOWN_MIN, CONFIG.SNAKES.JITTER_COOLDOWN_MAX,
+                    );
+                }
+            } else {
+                if (this._jitterCooldown > 0) this._jitterCooldown -= delta;
+                if (this._jitterCooldown <= 0) {
+                    this._jitterMs  = CONFIG.SNAKES.JITTER_DURATION;
+                    this._jitterDir = Math.random() < 0.5 ? 1 : -1;
+                    moveAngle = toTarget + this._jitterDir * (Math.PI / 2);
+                } else {
+                    moveAngle = toTarget;
+                }
+            }
+
+            this.x += Math.cos(moveAngle) * this.speed * speedMult * dt;
+            this.y += Math.sin(moveAngle) * this.speed * speedMult * dt;
+            this._headImg.setRotation(moveAngle);
 
             const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
             if (dist < this.radius + 20) {
