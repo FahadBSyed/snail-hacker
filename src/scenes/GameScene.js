@@ -1387,16 +1387,23 @@ export default class GameScene extends Phaser.Scene {
                 this.score++;
                 this.hud.updateScore(this.score);
                 alien._dying = true;
-                this.time.delayedCall(200, () => {
-                    if (!alien.active) return;
-                    spawnDeathBurst(this, bx, by, BURST_COLORS[alien.alienType] || 0xffffff,
-                        () => this.spawnFrogEscape(bx, by));
+                if (SNAKE_TYPES.has(alien.alienType)) {
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                         this.healthDrops.push(new HealthDrop(this, bx, by));
                     }
-                    if (isBomber) checkBomberBlast(this, bx, by);
-                    alien.destroy();
-                });
+                    spawnSnakeDeathAnimation(this, alien);
+                } else {
+                    this.time.delayedCall(200, () => {
+                        if (!alien.active) return;
+                        spawnDeathBurst(this, bx, by, BURST_COLORS[alien.alienType] || 0xffffff,
+                            () => this.spawnFrogEscape(bx, by));
+                        if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                            this.healthDrops.push(new HealthDrop(this, bx, by));
+                        }
+                        if (isBomber) checkBomberBlast(this, bx, by);
+                        alien.destroy();
+                    });
+                }
                 // Beam continues through aliens that die
             } else if (!this._laser2) {
                 laserEnd = along;  // surviving alien blocks the beam (Laser II passes through)
