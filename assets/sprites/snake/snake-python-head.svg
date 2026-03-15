@@ -4,25 +4,25 @@
   <ellipse cx="34" cy="44" rx="23" ry="5" fill="#000000" opacity="0.20"/>
 
   <!-- Neck / collar -->
-  <rect x="1" y="12" width="14" height="24" rx="4" fill="#202e1e" stroke="#0e180e" stroke-width="1"/>
-  <line x1="6" y1="13" x2="6" y2="35" stroke="#30422a" stroke-width="1.2" opacity="0.7"/>
-  <circle cx="7" cy="13" r="2" fill="#0e180e" stroke="#30422a" stroke-width="0.7"/>
-  <circle cx="7" cy="35" r="2" fill="#0e180e" stroke="#30422a" stroke-width="0.7"/>
+  <rect x="1" y="12" width="14" height="24" rx="4" fill="#009900" stroke="#005500" stroke-width="1"/>
+  <line x1="6" y1="13" x2="6" y2="35" stroke="#00bb00" stroke-width="1.2" opacity="0.7"/>
+  <circle cx="7" cy="13" r="2" fill="#005500" stroke="#00bb00" stroke-width="0.7"/>
+  <circle cx="7" cy="35" r="2" fill="#005500" stroke="#00bb00" stroke-width="0.7"/>
   
 
   <!-- Main head -->
-  <ellipse cx="32" cy="24" rx="26" ry="17" fill="#1a2e18" stroke="#0e1e0e" stroke-width="1.2"/>
+  <ellipse cx="32" cy="24" rx="26" ry="17" fill="#00aa00" stroke="#006600" stroke-width="1.2"/>
   <!-- Snout -->
-  <ellipse cx="54" cy="24" rx="9" ry="11" fill="#263c22" stroke="#0e1e0e" stroke-width="1"/>
+  <ellipse cx="54" cy="24" rx="9" ry="11" fill="#00cc00" stroke="#006600" stroke-width="1"/>
 
   <!-- Scale lines -->
-  <line x1="19" y1="6" x2="24" y2="42" stroke="#142414" stroke-width="1" opacity="0.50"/>
-  <line x1="28" y1="6" x2="33" y2="42" stroke="#142414" stroke-width="1" opacity="0.50"/>
-  <line x1="37" y1="6" x2="42" y2="42" stroke="#142414" stroke-width="1" opacity="0.50"/>
-  <line x1="45" y1="6" x2="50" y2="42" stroke="#142414" stroke-width="1" opacity="0.50"/>
+  <line x1="19" y1="6" x2="24" y2="42" stroke="#008800" stroke-width="1" opacity="0.50"/>
+  <line x1="28" y1="6" x2="33" y2="42" stroke="#008800" stroke-width="1" opacity="0.50"/>
+  <line x1="37" y1="6" x2="42" y2="42" stroke="#008800" stroke-width="1" opacity="0.50"/>
+  <line x1="45" y1="6" x2="50" y2="42" stroke="#008800" stroke-width="1" opacity="0.50"/>
 
   <!-- Dorsal ridge highlight -->
-  <ellipse cx="32" cy="11" rx="14" ry="4" fill="#263c22" opacity="0.38"/>
+  <ellipse cx="32" cy="11" rx="14" ry="4" fill="#00cc00" opacity="0.38"/>
 
   <!-- Forked tongue -->
   <line x1="62" y1="24" x2="66" y2="24" stroke="#ff3344" stroke-width="2" stroke-linecap="round"/>
@@ -30,22 +30,22 @@
   <line x1="66" y1="24" x2="71" y2="31" stroke="#ff3344" stroke-width="1.4" stroke-linecap="round"/>
 
   <!-- Eye — top side -->
-  <circle cx="35" cy="7" r="5.5" fill="#263c22" stroke="#0e1e0e" stroke-width="0.8"/>
-  <circle cx="35" cy="7" r="4" fill="#44ff88"/>
+  <circle cx="35" cy="7" r="5.5" fill="#00cc00" stroke="#006600" stroke-width="0.8"/>
+  <circle cx="35" cy="7" r="4" fill="#ffff00"/>
   <ellipse cx="35" cy="7" rx="1.2" ry="3" fill="#111100"/>
   <circle cx="34" cy="6" r="1" fill="white" opacity="0.65"/>
   
 
   <!-- Eye — bottom side -->
-  <circle cx="35" cy="41" r="5.5" fill="#263c22" stroke="#0e1e0e" stroke-width="0.8"/>
-  <circle cx="35" cy="41" r="4" fill="#44ff88"/>
+  <circle cx="35" cy="41" r="5.5" fill="#00cc00" stroke="#006600" stroke-width="0.8"/>
+  <circle cx="35" cy="41" r="4" fill="#ffff00"/>
   <ellipse cx="35" cy="41" rx="1.2" ry="3" fill="#111100"/>
   <circle cx="34" cy="40" r="1" fill="white" opacity="0.65"/>
   
 
   <!-- Nostril dots -->
-  <circle cx="57" cy="18" r="1.2" fill="#0e1e0e" opacity="0.8"/>
-  <circle cx="57" cy="30" r="1.2" fill="#0e1e0e" opacity="0.8"/>
+  <circle cx="57" cy="18" r="1.2" fill="#006600" opacity="0.8"/>
+  <circle cx="57" cy="30" r="1.2" fill="#006600" opacity="0.8"/>
 
   
 </svg>

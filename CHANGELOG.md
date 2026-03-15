@@ -2,6 +2,20 @@
 
 ## Session — 2026-03-15
 
+### Snake colour repaints
+
+Updated palettes in `scripts/generate-snake-sprites.js` and regenerated all 15 snake SVGs:
+
+| Type | New colour |
+|------|-----------|
+| BasicSnake | Black (dark grey scale lines, red eyes) |
+| Sidewinder | Yellow (orange eyes) |
+| Python | Bright green (yellow eyes) |
+| Burrower | Blue (cyan eyes) |
+| Spitter | Red (orange eyes) |
+
+Anaconda (boss) palette unchanged. Updated `assets/sprites/PALETTE_SWAPS.md` with the new snake colour table.
+
 ### Snake heads halved; body joints now deal damage
 
 - All 5 snake heads scaled to 0.5 (`setScale(0.5)` on `_headImg`); head shadow ellipses halved to match
