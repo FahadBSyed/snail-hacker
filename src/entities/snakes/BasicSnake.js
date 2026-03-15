@@ -203,7 +203,7 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
             // Reveal parts that have physically exited the last bush
             if (this._lastBushPos) this._tickBushReveal(this._lastBushPos.x, this._lastBushPos.y);
 
-            const speedMult = this.scene.alienSpeedMultiplier || 1.0;
+            const speedMult = this.scene.enemySpeedMultiplier || 1.0;
             const snail     = this.scene.snail;
             const toTarget  = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
             let moveAngle;
@@ -238,7 +238,7 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
                 return 'reached_snail';
             }
         } else if (this._state === 'TO_BUSH') {
-            const speedMult = this.scene.alienSpeedMultiplier || 1.0;
+            const speedMult = this.scene.enemySpeedMultiplier || 1.0;
             if (this.hidingInBush) {
                 // Slither through the bush in the stored approach direction so
                 // the body follows the same path and all segments cross the radius

@@ -163,7 +163,7 @@ export default class Python extends Phaser.GameObjects.Container {
         tickHitWiggle(this, delta);
 
         const dt    = delta / 1000;
-        const mult  = this.scene.alienSpeedMultiplier || 1.0;
+        const mult  = this.scene.enemySpeedMultiplier || 1.0;
         const snail = this.scene.snail;
 
         const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);

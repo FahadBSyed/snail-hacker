@@ -44,34 +44,34 @@ function _leadIntercept(fromX, fromY, targetX, targetY, tvx, tvy, speed) {
 }
 
 /**
- * Attempt to ricochet `proj` after it hit `hitAlien` at (bx, by).
- * Finds the nearest valid (non-shielded, non-dead) alien within
+ * Attempt to ricochet `proj` after it hit `hitEnemy` at (bx, by).
+ * Finds the nearest valid (non-shielded, non-dead) enemy within
  * CONFIG.RICOCHET.SEARCH_RADIUS, aims with lead prediction, and
  * repositions the projectile to continue flying.
  * Returns true if the ricochet happened (caller should NOT destroy proj).
  */
-export function tryRicochetBullet(proj, scene, hitAlien, bx, by) {
+export function tryRicochetBullet(proj, scene, hitEnemy, bx, by) {
     const falloff      = scene._ricochetFalloff      ?? CONFIG.RICOCHET.FALLOFF;
     const searchRadius = scene._ricochetSearchRadius ?? CONFIG.RICOCHET.SEARCH_RADIUS;
     const chance = CONFIG.RICOCHET.BASE_CHANCE * (falloff ** proj.ricochetBounces);
     if (Math.random() > chance) return false;
 
-    // Find nearest valid alien
+    // Find nearest valid enemy
     let nearest = null;
     let nearestDist = searchRadius;
-    for (const a of scene.aliens) {
-        if (!a.active || a._dying || a.shielded || a === hitAlien) continue;
-        const d = Phaser.Math.Distance.Between(bx, by, a.x, a.y);
-        if (d < nearestDist) { nearest = a; nearestDist = d; }
+    for (const e of scene.enemies) {
+        if (!e.active || e._dying || e.shielded || e === hitEnemy) continue;
+        const d = Phaser.Math.Distance.Between(bx, by, e.x, e.y);
+        if (d < nearestDist) { nearest = e; nearestDist = d; }
     }
     if (!nearest) return false;
 
-    // Compute target alien velocity (it moves toward snail/decoy)
+    // Compute target enemy velocity (it moves toward snail/decoy)
     const atkTarget = (scene.decoy && scene.decoy.active) ? scene.decoy : scene.snail;
-    const alienAngle = Phaser.Math.Angle.Between(nearest.x, nearest.y, atkTarget.x, atkTarget.y);
-    const speedMult  = scene.alienSpeedMultiplier || 1.0;
-    const tvx = Math.cos(alienAngle) * nearest.speed * speedMult;
-    const tvy = Math.sin(alienAngle) * nearest.speed * speedMult;
+    const enemyAngle = Phaser.Math.Angle.Between(nearest.x, nearest.y, atkTarget.x, atkTarget.y);
+    const speedMult  = scene.enemySpeedMultiplier || 1.0;
+    const tvx = Math.cos(enemyAngle) * nearest.speed * speedMult;
+    const tvy = Math.sin(enemyAngle) * nearest.speed * speedMult;
 
     const bulletSpeed = Math.sqrt(proj.vx * proj.vx + proj.vy * proj.vy);
     const aim = _leadIntercept(bx, by, nearest.x, nearest.y, tvx, tvy, bulletSpeed);
@@ -178,24 +178,24 @@ export function checkBomberBlast(scene, bx, by) {
         }
     }
 
-    // Splash nearby aliens
-    for (const a of scene.aliens) {
-        if (!a.active || a._dying) continue;
-        if (Phaser.Math.Distance.Between(bx, by, a.x, a.y) < blastRadius) {
-            const killed = a.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_ALIEN);
+    // Splash nearby enemies
+    for (const e of scene.enemies) {
+        if (!e.active || e._dying) continue;
+        if (Phaser.Math.Distance.Between(bx, by, e.x, e.y) < blastRadius) {
+            const killed = e.takeDamage(CONFIG.DAMAGE.BOMBER_BLAST_ALIEN);
             if (killed) {
                 scene.score++;
                 scene.hud.updateScore(scene.score);
-                const ax = a.x, ay = a.y;
-                const burstColor = BURST_COLORS[a.alienType] || 0xff4444;
-                const wasChainBomber = a.alienType === 'bomber';
-                a._dying = true;
+                const ax = e.x, ay = e.y;
+                const burstColor = BURST_COLORS[e.alienType] || 0xff4444;
+                const wasChainBomber = e.alienType === 'bomber';
+                e._dying = true;
                 scene.time.delayedCall(120, () => {
-                    if (!a.active) return;
+                    if (!e.active) return;
                     spawnDeathBurst(scene, ax, ay, burstColor,
                         () => scene.spawnFrogEscape?.(ax, ay));
                     if (wasChainBomber) checkBomberBlast(scene, ax, ay);
-                    a.destroy();
+                    e.destroy();
                 });
             }
         }
@@ -222,16 +222,16 @@ export function checkBomberBlast(scene, bx, by) {
 export function checkProjectileCollisions(scene) {
     for (const proj of scene.projectiles) {
         if (!proj.active) continue;
-        for (const alien of scene.aliens) {
-            if (!alien.active) continue;
-            if (alien.hidingInBush) continue;   // World 2: invulnerable while hiding
-            const dist = Phaser.Math.Distance.Between(proj.x, proj.y, alien.x, alien.y);
-            if (dist >= alien.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) continue;
+        for (const enemy of scene.enemies) {
+            if (!enemy.active) continue;
+            if (enemy.hidingInBush) continue;   // World 2: invulnerable while hiding
+            const dist = Phaser.Math.Distance.Between(proj.x, proj.y, enemy.x, enemy.y);
+            if (dist >= enemy.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) continue;
 
-            // Shield check — deflect the projectile without damaging the alien
-            if (alien.shielded) {
+            // Shield check — deflect the projectile without damaging the enemy
+            if (enemy.shielded) {
                 proj.destroy();
-                alien.flashShield?.();
+                enemy.flashShield?.();
                 scene.soundSynth?.play('shieldReflect');
                 // Deflect spark at impact point
                 const sx = proj.x, sy = proj.y;
@@ -243,19 +243,19 @@ export function checkProjectileCollisions(scene) {
                 break;
             }
 
-            const isBomber = alien.alienType === 'bomber';
-            const bx = alien.x, by = alien.y;
+            const isBomber = enemy.alienType === 'bomber';
+            const bx = enemy.x, by = enemy.y;
 
             // Ricochet: attempt bounce before deciding whether to destroy
             const ricocheted = scene.ricochetEnabled && !proj.fromCannon
-                ? tryRicochetBullet(proj, scene, alien, bx, by)
+                ? tryRicochetBullet(proj, scene, enemy, bx, by)
                 : false;
             if (!ricocheted) proj.destroy();
 
-            const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+            const died = enemy.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
 
             // Red flash overlay (works in Canvas renderer unlike setTint)
-            const hitFlash = scene.add.arc(bx, by, alien.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
+            const hitFlash = scene.add.arc(bx, by, enemy.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
             scene.tweens.add({
                 targets: hitFlash, alpha: 0, duration: 200,
                 onComplete: () => hitFlash.destroy(),
@@ -263,28 +263,28 @@ export function checkProjectileCollisions(scene) {
 
             // Hit-stop wobble
             scene.tweens.add({
-                targets: alien, x: alien.x + 5,
+                targets: enemy, x: enemy.x + 5,
                 duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1,
             });
 
             if (died) {
                 scene.score++;
                 scene.hud.updateScore(scene.score);
-                alien._dying = true;
+                enemy._dying = true;
 
-                if (SNAKE_TYPES.has(alien.alienType)) {
-                    // Snakes cry, then burrow underground
+                if (SNAKE_TYPES.has(enemy.alienType)) {
+                    // Snakes: death animation
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                         scene.time.delayedCall(120, () => {
                             scene.healthDrops.push(new HealthDrop(scene, bx, by));
                         });
                     }
-                    spawnSnakeDeathAnimation(scene, alien);
+                    spawnSnakeDeathAnimation(scene, enemy);
                 } else {
-                    const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
+                    const burstColor = BURST_COLORS[enemy.alienType] || 0xffffff;
                     // Mark dying so update loop skips it; destroy after flash settles
                     scene.time.delayedCall(200, () => {
-                        if (!alien.active) return;
+                        if (!enemy.active) return;
                         spawnDeathBurst(scene, bx, by, burstColor,
                             () => scene.spawnFrogEscape?.(bx, by));
 
@@ -293,11 +293,11 @@ export function checkProjectileCollisions(scene) {
                         }
 
                         if (isBomber) checkBomberBlast(scene, bx, by);
-                        alien.destroy();
+                        enemy.destroy();
                     });
                 }
             }
-            break;  // one projectile hits one alien
+            break;  // one projectile hits one enemy
         }
 
         if (!proj.active) continue;
@@ -305,13 +305,13 @@ export function checkProjectileCollisions(scene) {
         // ── Snake body-joint damage (BasicSnake / Sidewinder / Spitter / Burrower) ──
         // Projectile still alive — check body segments of non-Python snakes.
         // Each segment that is hit deals full damage to the snake.
-        for (const alien of scene.aliens) {
-            if (!alien.active || alien.hidingInBush || alien._dying) continue;
-            if (alien._bodyHitboxes || !alien._bodyImgs) continue; // skip Python & non-snakes
+        for (const enemy of scene.enemies) {
+            if (!enemy.active || enemy.hidingInBush || enemy._dying) continue;
+            if (enemy._bodyHitboxes || !enemy._bodyImgs) continue; // skip Python & non-snakes
             let hitImg = null;
-            for (const img of alien._bodyImgs) {
+            for (const img of enemy._bodyImgs) {
                 if (Phaser.Math.Distance.Between(proj.x, proj.y, img.x, img.y)
-                        < alien.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
+                        < enemy.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
                     hitImg = img;
                     break;
                 }
@@ -320,32 +320,32 @@ export function checkProjectileCollisions(scene) {
 
             const bx = hitImg.x, by = hitImg.y;
             proj.destroy();
-            const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+            const died = enemy.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
 
-            const hitFlash = scene.add.arc(bx, by, alien.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
+            const hitFlash = scene.add.arc(bx, by, enemy.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
             scene.tweens.add({ targets: hitFlash, alpha: 0, duration: 200, onComplete: () => hitFlash.destroy() });
-            scene.tweens.add({ targets: alien, x: alien.x + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+            scene.tweens.add({ targets: enemy, x: enemy.x + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
 
             if (died) {
                 scene.score++;
                 scene.hud.updateScore(scene.score);
-                alien._dying = true;
+                enemy._dying = true;
 
-                if (SNAKE_TYPES.has(alien.alienType)) {
+                if (SNAKE_TYPES.has(enemy.alienType)) {
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                         scene.time.delayedCall(120, () => {
-                            scene.healthDrops.push(new HealthDrop(scene, alien.x, alien.y));
+                            scene.healthDrops.push(new HealthDrop(scene, enemy.x, enemy.y));
                         });
                     }
-                    spawnSnakeDeathAnimation(scene, alien);
+                    spawnSnakeDeathAnimation(scene, enemy);
                 } else {
-                    const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
+                    const burstColor = BURST_COLORS[enemy.alienType] || 0xffffff;
                     scene.time.delayedCall(200, () => {
-                        if (!alien.active) return;
+                        if (!enemy.active) return;
                         spawnDeathBurst(scene, bx, by, burstColor, () => scene.spawnFrogEscape?.(bx, by));
                         if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) scene.healthDrops.push(new HealthDrop(scene, bx, by));
-                        if (alien.alienType === 'bomber') checkBomberBlast(scene, bx, by);
-                        alien.destroy();
+                        if (enemy.alienType === 'bomber') checkBomberBlast(scene, bx, by);
+                        enemy.destroy();
                     });
                 }
             }
@@ -358,27 +358,27 @@ export function checkProjectileCollisions(scene) {
         // If projectile is still alive after the alien loop, check Python body
         // hitboxes.  A hit destroys the projectile with a spark but does NOT
         // damage the Python.  (Head hits are handled above in the normal loop.)
-        for (const alien of scene.aliens) {
-            if (!alien.active || !alien._bodyHitboxes) continue;
+        for (const enemy of scene.enemies) {
+            if (!enemy.active || !enemy._bodyHitboxes) continue;
             let blocked = false;
-            for (const seg of alien._bodyHitboxes) {
+            for (const seg of enemy._bodyHitboxes) {
                 const sd = Phaser.Math.Distance.Between(proj.x, proj.y, seg.x, seg.y);
                 if (sd < seg.r + CONFIG.PLAYER.PROJECTILE_RADIUS) {
                     blocked = true;
                     break;
                 }
             }
-            if (!blocked && alien._tailHitboxes) {
+            if (!blocked && enemy._tailHitboxes) {
                 // Exposed tail segments count as head → deal damage
-                for (const seg of alien._tailHitboxes) {
+                for (const seg of enemy._tailHitboxes) {
                     const sd = Phaser.Math.Distance.Between(proj.x, proj.y, seg.x, seg.y);
                     if (sd < seg.r + CONFIG.PLAYER.PROJECTILE_RADIUS) {
                         // Treat as a head hit — full normal damage path
                         const ricocheted = scene.ricochetEnabled && !proj.fromCannon
-                            ? tryRicochetBullet(proj, scene, alien, seg.x, seg.y)
+                            ? tryRicochetBullet(proj, scene, enemy, seg.x, seg.y)
                             : false;
                         if (!ricocheted) proj.destroy();
-                        alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                        enemy.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
                         blocked = true;
                         break;
                     }

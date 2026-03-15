@@ -165,7 +165,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
 
         // ── FLEEING → approach target bush ──
         if (this._state === 'FLEEING') {
-            const mult = this.scene.alienSpeedMultiplier || 1.0;
+            const mult = this.scene.enemySpeedMultiplier || 1.0;
 
             // Entry phase: slither through the bush so the whole body follows
             if (this.hidingInBush) {
@@ -215,7 +215,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
 
         const snail = this.scene.snail;
         const dist  = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
-        const mult  = this.scene.alienSpeedMultiplier || 1.0;
+        const mult  = this.scene.enemySpeedMultiplier || 1.0;
 
         if (dist < cfg.PREFERRED_MIN) {
             // Too close — back away
@@ -287,7 +287,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
 
     _moveToward(target, speed, dt) {
         const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
-        const mult  = this.scene.alienSpeedMultiplier || 1.0;
+        const mult  = this.scene.enemySpeedMultiplier || 1.0;
         this.x += Math.cos(angle) * speed * mult * dt;
         this.y += Math.sin(angle) * speed * mult * dt;
         this._headImg.setRotation(angle);

@@ -9,7 +9,7 @@ import { angleToDir } from './alienUtils.js';
  * drops when P1 completes CONFIG.BOSS.SHIELD_DROP_WORDS Frogger crossings,
  * then re-raises after CONFIG.BOSS.SHIELD_DOWN_DURATION ms.
  *
- * Every ATTACK_COOLDOWNS.ALIEN_BURST ms, fires 2 FastAliens via onAlienBurst.
+ * Every ATTACK_COOLDOWNS.ALIEN_BURST ms, fires 2 FastAliens via onEnemyBurst.
  *
  * Accumulates damage; on each PHASE_SHIFT_HP chunk it flies off-screen and
  * re-enters from a new edge (also re-raises shield if it was dropped).
@@ -36,7 +36,7 @@ export default class BossAlien extends Phaser.GameObjects.Container {
         this._empTimer          = 0;
         this._terminalLockTimer = 0;
 
-        this.onAlienBurst      = opts.onAlienBurst      || null;
+        this.onEnemyBurst      = opts.onEnemyBurst      || null;
         this.onBlackHole       = opts.onBlackHole       || null;
         this.onEMP             = opts.onEMP             || null;
         this.onTerminalLockEMP = opts.onTerminalLockEMP || null;
@@ -326,7 +326,7 @@ export default class BossAlien extends Phaser.GameObjects.Container {
         this._burstTimer += delta;
         if (this._burstTimer >= burstCd) {
             this._burstTimer = 0;
-            if (this.onAlienBurst) this.onAlienBurst(this.x, this.y);
+            if (this.onEnemyBurst) this.onEnemyBurst(this.x, this.y);
         }
 
         // Black hole attack

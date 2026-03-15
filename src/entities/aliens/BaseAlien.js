@@ -45,7 +45,7 @@ export default class BaseAlien extends Phaser.GameObjects.Container {
     /** Straight-line movement toward the decoy (if active) or snail. */
     update(time, delta) {
         const dt        = delta / 1000;
-        const speedMult = this.scene.alienSpeedMultiplier || 1.0;
+        const speedMult = this.scene.enemySpeedMultiplier || 1.0;
         const decoy     = this.scene.decoy;
         const target    = (decoy && decoy.active) ? decoy : this.scene.snail;
 

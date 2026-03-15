@@ -1,11 +1,11 @@
 import { CONFIG } from '../config.js';
 import Snail from '../entities/Snail.js';
 import Projectile from '../entities/Projectile.js';
-import BasicAlien from '../entities/aliens/BasicAlien.js';
-import FastAlien from '../entities/aliens/FastAlien.js';
-import TankAlien from '../entities/aliens/TankAlien.js';
-import BomberAlien from '../entities/aliens/BomberAlien.js';
-import ShieldAlien from '../entities/aliens/ShieldAlien.js';
+import BasicFrog from '../entities/aliens/BasicAlien.js';
+import FastFrog from '../entities/aliens/FastAlien.js';
+import TankFrog from '../entities/aliens/TankAlien.js';
+import BomberFrog from '../entities/aliens/BomberAlien.js';
+import ShieldFrog from '../entities/aliens/ShieldAlien.js';
 import BossAlien from '../entities/aliens/BossAlien.js';
 import BossProjectile from '../entities/BossProjectile.js';
 import HackingStation from '../entities/HackingStation.js';
@@ -182,8 +182,8 @@ export default class GameScene extends Phaser.Scene {
         this.boss            = null;
         this.bossProjectiles = [];
 
-        // ── Alien speed multiplier / slow field ───────────────────────────────
-        this.alienSpeedMultiplier = 1.0;
+        // ── Enemy speed multiplier / slow field ───────────────────────────────
+        this.enemySpeedMultiplier = 1.0;
         this.slowFieldActive = false;
 
         // ── Shooting system (Player 2 — left-click) ───────────────────────────
@@ -369,7 +369,7 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // ── Game state ────────────────────────────────────────────────────────
-        this.aliens      = [];
+        this.enemies      = [];
         this.bushes      = [];
         this.acidGlobs   = [];
         this.acidPuddles = [];
@@ -434,7 +434,7 @@ export default class GameScene extends Phaser.Scene {
         this.waveManager = new WaveManager(this, {
             world:     this.world,
             startWave: this.startWave,
-            onSpawn: (type) => this.spawnAlien(type),
+            onSpawn: (type) => this.spawnEnemy(type),
             onFormation: (formation) => this._spawnFormation(formation),
             onWaveStart: (wave) => {
                 this.wave          = wave;
@@ -706,8 +706,8 @@ export default class GameScene extends Phaser.Scene {
                 case 'CANNON': {
                     const cannon = new DefenseStation(this, x, y - 30, {
                         type:        'CANNON',
-                        getAliens:   () => this.aliens,
-                        alienFilter: (a) => !a.shielded,   // ignore shielded aliens
+                        getEnemies:   () => this.enemies,
+                        enemyFilter: (a) => !a.shielded,   // ignore shielded aliens
                     });
                     term = new Terminal(this, x, y + 25, {
                         label:          'TURRET',
@@ -782,8 +782,8 @@ export default class GameScene extends Phaser.Scene {
                 case 'CANNON_2': {
                     const cannon2 = new DefenseStation(this, x, y - 30, {
                         type:           'CANNON II',
-                        getAliens:      () => this.aliens,
-                        alienFilter:    (a) => !a.shielded,
+                        getEnemies:      () => this.enemies,
+                        enemyFilter:    (a) => !a.shielded,
                         fireInterval:   CONFIG.TERMINALS.CANNON_2.FIRE_INTERVAL,
                         activeDuration: CONFIG.TERMINALS.CANNON_2.DURATION,
                     });
@@ -1002,10 +1002,10 @@ export default class GameScene extends Phaser.Scene {
         this.slowFieldActive = true;
         this.soundSynth.play('slowActivate');
 
-        for (const alien of this.aliens) {
-            if (!alien.active || alien._dying) continue;
-            alien._origSpeed = alien._origSpeed || alien.speed;
-            alien.speed = alien._origSpeed * mult;
+        for (const enemy of this.enemies) {
+            if (!enemy.active || enemy._dying) continue;
+            enemy._origSpeed = enemy._origSpeed || enemy.speed;
+            enemy.speed = enemy._origSpeed * mult;
         }
 
         // Screen tint — purple overlay, fades in
@@ -1031,11 +1031,11 @@ export default class GameScene extends Phaser.Scene {
                 });
             }
 
-            for (const alien of this.aliens) {
-                if (!alien.active) continue;
-                if (alien._origSpeed !== undefined) {
-                    alien.speed = alien._origSpeed;
-                    delete alien._origSpeed;
+            for (const enemy of this.enemies) {
+                if (!enemy.active) continue;
+                if (enemy._origSpeed !== undefined) {
+                    enemy.speed = enemy._origSpeed;
+                    delete enemy._origSpeed;
                 }
             }
         });
@@ -1170,48 +1170,48 @@ export default class GameScene extends Phaser.Scene {
             duration: 280, onComplete: () => flash.destroy(),
         });
 
-        // Damage all aliens in blast radius — shields are bypassed
-        for (const alien of this.aliens) {
-            if (!alien.active || alien._dying) continue;
-            const dist = Phaser.Math.Distance.Between(x, y, alien.x, alien.y);
+        // Damage all enemies in blast radius — shields are bypassed
+        for (const enemy of this.enemies) {
+            if (!enemy.active || enemy._dying) continue;
+            const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
             if (dist >= blastRadius) continue;
 
-            // Green hit flash on each affected alien
-            const bx = alien.x, by = alien.y;
-            const hitFlash = this.add.arc(bx, by, alien.radius, 0, 360, false, 0x00ff88, 0.75).setDepth(58);
+            // Green hit flash on each affected enemy
+            const bx = enemy.x, by = enemy.y;
+            const hitFlash = this.add.arc(bx, by, enemy.radius, 0, 360, false, 0x00ff88, 0.75).setDepth(58);
             this.tweens.add({ targets: hitFlash, alpha: 0, duration: 240, onComplete: () => hitFlash.destroy() });
-            this.tweens.add({ targets: alien, x: bx + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+            this.tweens.add({ targets: enemy, x: bx + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
 
-            const isBomber = alien.alienType === 'bomber';
-            const died = alien.takeDamageRaw(CONFIG.EMP.MINE_DAMAGE); // bypasses shield override
+            const isBomber = enemy.alienType === 'bomber';
+            const died = enemy.takeDamageRaw(CONFIG.EMP.MINE_DAMAGE); // bypasses shield override
             if (died) {
                 this.score++;
                 this.hud.updateScore(this.score);
-                alien._dying = true;
-                if (SNAKE_TYPES.has(alien.alienType)) {
+                enemy._dying = true;
+                if (SNAKE_TYPES.has(enemy.alienType)) {
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                         this.time.delayedCall(120, () => {
                             this.healthDrops.push(new HealthDrop(this, bx, by));
                         });
                     }
-                    spawnSnakeDeathAnimation(this, alien);
+                    spawnSnakeDeathAnimation(this, enemy);
                 } else {
-                    const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
+                    const burstColor = BURST_COLORS[enemy.alienType] || 0xffffff;
                     this.time.delayedCall(200, () => {
-                        if (!alien.active) return;
+                        if (!enemy.active) return;
                         spawnDeathBurst(this, bx, by, burstColor,
                             () => this.spawnFrogEscape(bx, by));
                         if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                             this.healthDrops.push(new HealthDrop(this, bx, by));
                         }
                         if (isBomber) checkBomberBlast(this, bx, by);
-                        alien.destroy();
+                        enemy.destroy();
                     });
                 }
             }
         }
 
-        // Also damage the boss if in blast radius (boss is not in this.aliens)
+        // Also damage the boss if in blast radius (boss is not in this.enemies)
         if (this.boss && this.boss.active && !this.boss._dying) {
             const dist = Phaser.Math.Distance.Between(x, y, this.boss.x, this.boss.y);
             if (dist < blastRadius) {
@@ -1317,10 +1317,10 @@ export default class GameScene extends Phaser.Scene {
         // LASER_2: snap aim to the nearest alien within SNAP_RADIUS of the cursor
         if (this._laser2) {
             let nearest = null, nearestDist = CONFIG.LASER_2.SNAP_RADIUS;
-            for (const a of this.aliens) {
-                if (!a.active || a._dying || a.shielded) continue;
-                const d = Phaser.Math.Distance.Between(tx, ty, a.x, a.y);
-                if (d < nearestDist) { nearest = a; nearestDist = d; }
+            for (const e of this.enemies) {
+                if (!e.active || e._dying || e.shielded) continue;
+                const d = Phaser.Math.Distance.Between(tx, ty, e.x, e.y);
+                if (d < nearestDist) { nearest = e; nearestDist = d; }
             }
             if (nearest) { tx = nearest.x; ty = nearest.y; }
         }
@@ -1347,44 +1347,44 @@ export default class GameScene extends Phaser.Scene {
 
         // Collect candidates sorted nearest-first so blocking works correctly
         const candidates = [];
-        for (const alien of this.aliens) {
-            if (!alien.active || alien._dying) continue;
-            const rx = alien.x - sx;
-            const ry = alien.y - sy;
+        for (const enemy of this.enemies) {
+            if (!enemy.active || enemy._dying) continue;
+            const rx = enemy.x - sx;
+            const ry = enemy.y - sy;
             const along = rx * cos + ry * sin;
             if (along <= 0 || along > tMax) continue;
             if (Math.abs(rx * sin - ry * cos) > HIT_RADIUS) continue;
-            candidates.push({ alien, along });
+            candidates.push({ enemy, along });
         }
 
         // Add Python body/tail segment candidates.
         // Body segments deflect the beam; red tail segments deal damage.
-        for (const alien of this.aliens) {
-            if (!alien.active || alien._dying) continue;
-            for (const seg of (alien._bodyHitboxes || [])) {
+        for (const enemy of this.enemies) {
+            if (!enemy.active || enemy._dying) continue;
+            for (const seg of (enemy._bodyHitboxes || [])) {
                 const rx = seg.x - sx, ry = seg.y - sy;
                 const along = rx * cos + ry * sin;
                 if (along <= 0 || along > tMax) continue;
                 if (Math.abs(rx * sin - ry * cos) > HIT_RADIUS + seg.r) continue;
-                candidates.push({ alien, along, _pythonSeg: 'body', _seg: seg });
+                candidates.push({ enemy, along, _pythonSeg: 'body', _seg: seg });
             }
-            for (const seg of (alien._tailHitboxes || [])) {
+            for (const seg of (enemy._tailHitboxes || [])) {
                 const rx = seg.x - sx, ry = seg.y - sy;
                 const along = rx * cos + ry * sin;
                 if (along <= 0 || along > tMax) continue;
                 if (Math.abs(rx * sin - ry * cos) > HIT_RADIUS + seg.r) continue;
-                candidates.push({ alien, along, _pythonSeg: 'tail', _seg: seg });
+                candidates.push({ enemy, along, _pythonSeg: 'tail', _seg: seg });
             }
         }
 
         candidates.sort((a, b) => a.along - b.along);
 
         let laserEnd = tMax;  // beam travels to screen edge unless blocked
-        for (const { alien, along, _pythonSeg, _seg } of candidates) {
+        for (const { enemy, along, _pythonSeg, _seg } of candidates) {
             if (along > laserEnd) break;  // beam already blocked by an earlier entry
 
-            const bx = _seg ? _seg.x : alien.x;
-            const by = _seg ? _seg.y : alien.y;
+            const bx = _seg ? _seg.x : enemy.x;
+            const by = _seg ? _seg.y : enemy.y;
 
             // ── Python non-red body segment: deflect beam, no damage ──
             if (_pythonSeg === 'body') {
@@ -1396,7 +1396,7 @@ export default class GameScene extends Phaser.Scene {
 
             // ── Python red (tail) segment: deal damage same as head hit ──
             if (_pythonSeg === 'tail') {
-                hitSet.add(alien);
+                hitSet.add(enemy);
                 if (along > ricochetBestAlong) {
                     ricochetBestAlong = along;
                     ricochetOriginX = bx;
@@ -1404,16 +1404,16 @@ export default class GameScene extends Phaser.Scene {
                 }
                 const hitFlash = this.add.arc(bx, by, _seg.r, 0, 360, false, 0xff2222, 0.75).setDepth(58);
                 this.tweens.add({ targets: hitFlash, alpha: 0, duration: 200, onComplete: () => hitFlash.destroy() });
-                this.tweens.add({ targets: alien, x: alien.x + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
-                const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                this.tweens.add({ targets: enemy, x: enemy.x + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+                const died = enemy.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
                 if (died) {
                     this.score++;
                     this.hud.updateScore(this.score);
-                    alien._dying = true;
+                    enemy._dying = true;
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                         this.healthDrops.push(new HealthDrop(this, bx, by));
                     }
-                    spawnSnakeDeathAnimation(this, alien);
+                    spawnSnakeDeathAnimation(this, enemy);
                 } else if (!this._laser2) {
                     laserEnd = along;
                     break;
@@ -1421,14 +1421,14 @@ export default class GameScene extends Phaser.Scene {
                 continue;
             }
 
-            if (alien.shielded) {
-                alien.flashShield?.();
+            if (enemy.shielded) {
+                enemy.flashShield?.();
                 this.soundSynth.play('shieldReflect');
                 laserEnd = along;  // shield stops the beam here
                 break;
             }
 
-            hitSet.add(alien);
+            hitSet.add(enemy);
             if (along > ricochetBestAlong) {
                 ricochetBestAlong = along;
                 ricochetOriginX = bx;
@@ -1436,36 +1436,36 @@ export default class GameScene extends Phaser.Scene {
             }
 
             // Hit flash + wobble (same as projectile hit)
-            const hitFlash = this.add.arc(bx, by, alien.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
+            const hitFlash = this.add.arc(bx, by, enemy.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
             this.tweens.add({ targets: hitFlash, alpha: 0, duration: 200, onComplete: () => hitFlash.destroy() });
-            this.tweens.add({ targets: alien, x: alien.x + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+            this.tweens.add({ targets: enemy, x: enemy.x + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
 
-            const isBomber = alien.alienType === 'bomber';
-            const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+            const isBomber = enemy.alienType === 'bomber';
+            const died = enemy.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
             if (died) {
                 this.score++;
                 this.hud.updateScore(this.score);
-                alien._dying = true;
-                if (SNAKE_TYPES.has(alien.alienType)) {
+                enemy._dying = true;
+                if (SNAKE_TYPES.has(enemy.alienType)) {
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                         this.healthDrops.push(new HealthDrop(this, bx, by));
                     }
-                    spawnSnakeDeathAnimation(this, alien);
+                    spawnSnakeDeathAnimation(this, enemy);
                 } else {
                     this.time.delayedCall(200, () => {
-                        if (!alien.active) return;
-                        spawnDeathBurst(this, bx, by, BURST_COLORS[alien.alienType] || 0xffffff,
+                        if (!enemy.active) return;
+                        spawnDeathBurst(this, bx, by, BURST_COLORS[enemy.alienType] || 0xffffff,
                             () => this.spawnFrogEscape(bx, by));
                         if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                             this.healthDrops.push(new HealthDrop(this, bx, by));
                         }
                         if (isBomber) checkBomberBlast(this, bx, by);
-                        alien.destroy();
+                        enemy.destroy();
                     });
                 }
-                // Beam continues through aliens that die
+                // Beam continues through enemies that die
             } else if (!this._laser2) {
-                laserEnd = along;  // surviving alien blocks the beam (Laser II passes through)
+                laserEnd = along;  // surviving enemy blocks the beam (Laser II passes through)
                 break;
             }
         }
@@ -1565,10 +1565,10 @@ export default class GameScene extends Phaser.Scene {
         // Find nearest valid alien not already hit, within search radius
         let nearest = null;
         let nearestDist = this._ricochetSearchRadius;
-        for (const a of this.aliens) {
-            if (!a.active || a._dying || a.shielded || hitSet.has(a)) continue;
-            const d = Phaser.Math.Distance.Between(fromX, fromY, a.x, a.y);
-            if (d < nearestDist) { nearest = a; nearestDist = d; }
+        for (const e of this.enemies) {
+            if (!e.active || e._dying || e.shielded || hitSet.has(e)) continue;
+            const d = Phaser.Math.Distance.Between(fromX, fromY, e.x, e.y);
+            if (d < nearestDist) { nearest = e; nearestDist = d; }
         }
         if (!nearest) return;
 
@@ -1714,7 +1714,7 @@ export default class GameScene extends Phaser.Scene {
 
         // ── Create boss off-screen right, frozen until cutscene ends ──────────
         this.boss = new BossAlien(this, 1480, targetY, {
-            onAlienBurst: (bx, by) => {
+            onEnemyBurst: (bx, by) => {
                 const count  = CONFIG.BOSS.ALIEN_BURST_COUNT;
                 const spread = CONFIG.BOSS.ALIEN_BURST_SPREAD;
                 const toStation = Phaser.Math.Angle.Between(bx, by, 640, 360);
@@ -1722,10 +1722,10 @@ export default class GameScene extends Phaser.Scene {
                 const halfOff   = (count - 1) / 2;
                 for (let i = 0; i < count; i++) {
                     const off = (i - halfOff) * spread;
-                    this.spawnAlien('fast', bx + Math.cos(perp) * off, by + Math.sin(perp) * off);
+                    this.spawnEnemy('fast', bx + Math.cos(perp) * off, by + Math.sin(perp) * off);
                 }
                 this.soundSynth?.play('bossAlienBurst');
-                this.logDebug(`Boss fires alien burst! (${count} FastAliens)`);
+                this.logDebug(`Boss fires enemy burst! (${count} FastFrogs)`);
             },
             onBlackHole: (bx, by) => {
                 this.bossProjectiles.push(new BossProjectile(this, bx, by, 'blackhole'));
@@ -2002,16 +2002,16 @@ export default class GameScene extends Phaser.Scene {
         }
         this.snail.hackingActive = false;
 
-        // Stop alien spawning and clear remaining aliens
-        
+        // Stop enemy spawning and clear remaining enemies
+
         if (this.waveManager) this.waveManager.active = false;
-        for (const alien of this.aliens) {
-            if (!alien.active) continue;
-            const burstColor = { basic: 0xdd3333, fast: 0xaa44ff, tank: 0x7799aa, bomber: 0xff7722 }[alien.alienType] || 0xffffff;
-            spawnDeathBurst(this, alien.x, alien.y, burstColor);
-            alien.destroy();
+        for (const enemy of this.enemies) {
+            if (!enemy.active) continue;
+            const burstColor = { basic: 0xdd3333, fast: 0xaa44ff, tank: 0x7799aa, bomber: 0xff7722 }[enemy.alienType] || 0xffffff;
+            spawnDeathBurst(this, enemy.x, enemy.y, burstColor);
+            enemy.destroy();
         }
-        this.aliens = [];
+        this.enemies = [];
 
         // Destroy World 2 bushes + acid
         for (const bush of this.bushes)   { if (bush.active) bush.destroy(); }
@@ -2187,7 +2187,7 @@ export default class GameScene extends Phaser.Scene {
         const scheduleNext = () => {
             const delay = Phaser.Math.Between(3500, 9000);
             this._ribbetTimer = this.time.delayedCall(delay, () => {
-                if (this.aliens.some(a => a.active)) {
+                if (this.enemies.some(e => e.active)) {
                     this.soundSynth?.play('alienRibbet');
                 }
                 scheduleNext();
@@ -2206,10 +2206,10 @@ export default class GameScene extends Phaser.Scene {
         this.soundSynth.play('alienRibbet');
     }
 
-    // ── Alien spawning ─────────────────────────────────────────────────────────
+    // ── Enemy spawning ─────────────────────────────────────────────────────────
 
     /**
-     * Spawn a formation of aliens from a random screen edge.
+     * Spawn a formation of enemies from a random screen edge.
      *
      * Each member's world position is computed from:
      *   worldPos = anchor + member.perp * right + member.depth * forward
@@ -2254,7 +2254,7 @@ export default class GameScene extends Phaser.Scene {
                 if (!this.waveManager?.active) return;
                 const wx = anchor.x + member.perp * right.x + member.depth * forward.x;
                 const wy = anchor.y + member.perp * right.y + member.depth * forward.y;
-                this.spawnAlien(member.type, wx, wy);
+                this.spawnEnemy(member.type, wx, wy);
             });
         });
     }
@@ -2270,21 +2270,21 @@ export default class GameScene extends Phaser.Scene {
         return           { x: 1300, y: Phaser.Math.Between(50, maxY) };
     }
 
-    spawnAlien(type = 'basic', spawnX, spawnY) {
+    spawnEnemy(type = 'basic', spawnX, spawnY) {
         // Hard cap on total simultaneous snakes
         if (SNAKE_TYPES.has(type)) {
-            const snakeCount = this.aliens.filter(a => a.active && SNAKE_TYPES.has(a.alienType)).length;
+            const snakeCount = this.enemies.filter(e => e.active && SNAKE_TYPES.has(e.alienType)).length;
             if (snakeCount >= CONFIG.SNAKES.MAX_SNAKES) return;
         }
 
         // Cap concurrent spitters
         if (type === 'spitter') {
-            const spitterCount = this.aliens.filter(a => a.active && a.alienType === 'spitter').length;
+            const spitterCount = this.enemies.filter(e => e.active && e.alienType === 'spitter').length;
             if (spitterCount >= 3) return;
         }
         // Cap concurrent pythons
         if (type === 'python') {
-            const pythonCount = this.aliens.filter(a => a.active && a.alienType === 'python').length;
+            const pythonCount = this.enemies.filter(e => e.active && e.alienType === 'python').length;
             if (pythonCount >= 2) return;
         }
 
@@ -2292,24 +2292,24 @@ export default class GameScene extends Phaser.Scene {
             ? { x: spawnX, y: spawnY }
             : this._randomEdgePosition();
         const { x, y } = pos;
-        let alien;
+        let enemy;
         switch (type) {
-            case 'fast':         alien = new FastAlien(this, x, y);   break;
-            case 'tank':         alien = new TankAlien(this, x, y);   break;
-            case 'bomber':       alien = new BomberAlien(this, x, y); break;
-            case 'shield':       alien = new ShieldAlien(this, x, y); break;
-            case 'basic-snake':  alien = new BasicSnake(this, x, y);  break;
-            case 'sidewinder':   alien = new Sidewinder(this, x, y);  break;
-            case 'python':       alien = new Python(this, x, y);      break;
-            case 'burrower':     alien = new Burrower(this, x, y);    break;
-            case 'spitter':      alien = new Spitter(this, x, y);     break;
-            default:             alien = new BasicAlien(this, x, y);
+            case 'fast':         enemy = new FastFrog(this, x, y);    break;
+            case 'tank':         enemy = new TankFrog(this, x, y);    break;
+            case 'bomber':       enemy = new BomberFrog(this, x, y);  break;
+            case 'shield':       enemy = new ShieldFrog(this, x, y);  break;
+            case 'basic-snake':  enemy = new BasicSnake(this, x, y);  break;
+            case 'sidewinder':   enemy = new Sidewinder(this, x, y);  break;
+            case 'python':       enemy = new Python(this, x, y);      break;
+            case 'burrower':     enemy = new Burrower(this, x, y);    break;
+            case 'spitter':      enemy = new Spitter(this, x, y);     break;
+            default:             enemy = new BasicFrog(this, x, y);
         }
         if (this.slowFieldActive) {
-            alien._origSpeed = alien.speed;
-            alien.speed = alien.speed * CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER;
+            enemy._origSpeed = enemy.speed;
+            enemy.speed = enemy.speed * CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER;
         }
-        this.aliens.push(alien);
+        this.enemies.push(enemy);
 
         // Spawn sound: always for the first alien of a wave, 30% chance after
         if (!this._waveFirstAlienSpawned) {
@@ -2432,9 +2432,9 @@ export default class GameScene extends Phaser.Scene {
 
                 let triggered = false;
                 const triggerR = mine.blastRadius ?? CONFIG.EMP.BLAST_RADIUS;
-                for (const alien of this.aliens) {
-                    if (!alien.active || alien._dying) continue;
-                    const d = Phaser.Math.Distance.Between(mine.x, mine.y, alien.x, alien.y);
+                for (const enemy of this.enemies) {
+                    if (!enemy.active || enemy._dying) continue;
+                    const d = Phaser.Math.Distance.Between(mine.x, mine.y, enemy.x, enemy.y);
                     if (d < triggerR) { triggered = true; break; }
                 }
                 if (!triggered && this.boss && this.boss.active && !this.boss._dying) {
@@ -2451,81 +2451,81 @@ export default class GameScene extends Phaser.Scene {
             this.mines = surviving;
         }
 
-        // Aliens — move and check contact with snail or decoy
-        this.aliens = this.aliens.filter(alien => {
-            if (!alien.active || alien._dying) return false;
+        // Enemies — move and check contact with snail or decoy
+        this.enemies = this.enemies.filter(enemy => {
+            if (!enemy.active || enemy._dying) return false;
 
             // Shield bounce: move away from snail for 3 s, then resume normal behaviour
-            if (alien._bounceUntil) {
-                if (time < alien._bounceUntil) {
+            if (enemy._bounceUntil) {
+                if (time < enemy._bounceUntil) {
                     const dt = delta / 1000;
-                    alien.x += alien._bounceVx * dt;
-                    alien.y += alien._bounceVy * dt;
+                    enemy.x += enemy._bounceVx * dt;
+                    enemy.y += enemy._bounceVy * dt;
                     // Keep body segments in sync during bounce
-                    alien._pushHistory?.(time);
-                    alien._updateSegmentPositions?.() ?? alien._updateSegments?.();
+                    enemy._pushHistory?.(time);
+                    enemy._updateSegmentPositions?.() ?? enemy._updateSegments?.();
                     return true;
                 }
-                delete alien._bounceUntil;
-                delete alien._bounceVx;
-                delete alien._bounceVy;
+                delete enemy._bounceUntil;
+                delete enemy._bounceVx;
+                delete enemy._bounceVy;
             }
 
-            const status = alien.update(time, delta);
+            const status = enemy.update(time, delta);
 
             if (status === 'reached_decoy') {
                 // Deal damage first (Decoy II's takeDamage is a no-op — it's invulnerable)
-                const dx = this.decoy ? this.decoy.x : alien.x;
-                const dy = this.decoy ? this.decoy.y : alien.y;
+                const dx = this.decoy ? this.decoy.x : enemy.x;
+                const dy = this.decoy ? this.decoy.y : enemy.y;
                 if (this.decoy && this.decoy.active) {
                     this.decoy.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                     this.soundSynth.play('shieldReflect');
                 }
                 // Bounce away from the decoy for 3 s, then resume targeting normally
-                const bounceAngle = Phaser.Math.Angle.Between(dx, dy, alien.x, alien.y);
-                const bounceSpeed = alien.speed * 2;
-                alien._bounceVx    = Math.cos(bounceAngle) * bounceSpeed;
-                alien._bounceVy    = Math.sin(bounceAngle) * bounceSpeed;
-                alien._bounceUntil = time + 3000;
+                const bounceAngle = Phaser.Math.Angle.Between(dx, dy, enemy.x, enemy.y);
+                const bounceSpeed = enemy.speed * 2;
+                enemy._bounceVx    = Math.cos(bounceAngle) * bounceSpeed;
+                enemy._bounceVy    = Math.sin(bounceAngle) * bounceSpeed;
+                enemy._bounceUntil = time + 3000;
                 return true;
             }
 
             if (status === 'reached_snail' && !this.boardingShip) {
-                const isBomber = alien.alienType === 'bomber';
-                const bx = alien.x, by = alien.y;
-                const burstColor = BURST_COLORS[alien.alienType] || 0xff4444;
+                const isBomber = enemy.alienType === 'bomber';
+                const bx = enemy.x, by = enemy.y;
+                const burstColor = BURST_COLORS[enemy.alienType] || 0xff4444;
 
                 if (isBomber) {
-                    alien.destroy();
+                    enemy.destroy();
                     checkBomberBlast(this, bx, by);
                     return false;
                 } else if (this.snail.shielded) {
                     this.soundSynth.play('shieldReflect');
                     if (this._shieldLethal) {
-                        // Kill Shield (Tier II) — destroy the alien on contact
-                        alien.destroy();
+                        // Kill Shield (Tier II) — destroy the enemy on contact
+                        enemy.destroy();
                         spawnDeathBurst(this, bx, by, burstColor,
                             () => this.spawnFrogEscape(bx, by));
                         return false;
                     }
-                    // Standard shield — bounce the alien away for 3 s
+                    // Standard shield — bounce the enemy away for 3 s
                     const bounceAngle = Phaser.Math.Angle.Between(
                         this.snail.x, this.snail.y, bx, by);
-                    const bounceSpeed = alien.speed * 2;
-                    alien._bounceVx   = Math.cos(bounceAngle) * bounceSpeed;
-                    alien._bounceVy   = Math.sin(bounceAngle) * bounceSpeed;
-                    alien._bounceUntil = time + 3000;
+                    const bounceSpeed = enemy.speed * 2;
+                    enemy._bounceVx   = Math.cos(bounceAngle) * bounceSpeed;
+                    enemy._bounceVy   = Math.sin(bounceAngle) * bounceSpeed;
+                    enemy._bounceUntil = time + 3000;
                     return true;
                 } else {
                     // Snakes bounce away instead of despawning
-                    if (SNAKE_TYPES.has(alien.alienType)) {
+                    if (SNAKE_TYPES.has(enemy.alienType)) {
                         const bounceAngle = Phaser.Math.Angle.Between(this.snail.x, this.snail.y, bx, by);
-                        const bounceSpeed = alien.speed * 2;
-                        alien._bounceVx    = Math.cos(bounceAngle) * bounceSpeed;
-                        alien._bounceVy    = Math.sin(bounceAngle) * bounceSpeed;
-                        alien._bounceUntil = time + 3000;
+                        const bounceSpeed = enemy.speed * 2;
+                        enemy._bounceVx    = Math.cos(bounceAngle) * bounceSpeed;
+                        enemy._bounceVy    = Math.sin(bounceAngle) * bounceSpeed;
+                        enemy._bounceUntil = time + 3000;
                     } else {
-                        alien.destroy();
+                        enemy.destroy();
                     }
                     const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                     this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
@@ -2538,13 +2538,13 @@ export default class GameScene extends Phaser.Scene {
                         this.scene.start('GameOverScene', { wave: this.wave, score: this.score, world: this.world });
                         return false;
                     }
-                    return SNAKE_TYPES.has(alien.alienType); // snakes persist; others removed
+                    return SNAKE_TYPES.has(enemy.alienType); // snakes persist; others removed
                 }
             }
             return true;
         });
 
-        // Boss update + projectile collision (boss is NOT in this.aliens)
+        // Boss update + projectile collision (boss is NOT in this.enemies)
         if (this.boss && this.boss.active && !this.boss._dying) {
             this.boss.update(time, delta);
 
@@ -2684,7 +2684,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Cleanup
         this.projectiles     = this.projectiles.filter(p => p.active);
-        this.aliens          = this.aliens.filter(a => a.active && !a._dying);
+        this.enemies          = this.enemies.filter(e => e.active && !e._dying);
         this.healthDrops     = this.healthDrops.filter(d => d.active);
         this.bossProjectiles = this.bossProjectiles.filter(bp => bp.active);
     }

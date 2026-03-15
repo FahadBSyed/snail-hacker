@@ -25,7 +25,7 @@ export default class FastAlien extends BaseAlien {
     // Overrides BaseAlien.update — sinusoidal zigzag perpendicular to travel
     update(time, delta) {
         const dt        = delta / 1000;
-        const speedMult = this.scene.alienSpeedMultiplier || 1.0;
+        const speedMult = this.scene.enemySpeedMultiplier || 1.0;
         const decoy     = this.scene.decoy;
         const target    = (decoy && decoy.active) ? decoy : this.scene.snail;
         this.t += dt;

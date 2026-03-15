@@ -142,7 +142,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
 
         if (this._state === 'ENTERING' || this._state === 'DASHING') {
             const spd  = CONFIG.SNAKES.SIDEWINDER.SPEED_SEARCH;
-            const mult = this.scene.alienSpeedMultiplier || 1.0;
+            const mult = this.scene.enemySpeedMultiplier || 1.0;
 
             // ── Entry phase: slither through the bush so the whole body follows ──
             if (this.hidingInBush) {
@@ -221,7 +221,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         if (this._state === 'ATTACK') {
             if (this._lastBushPos) this._tickBushReveal(this._lastBushPos.x, this._lastBushPos.y);
             const snail    = this.scene.snail;
-            const mult     = this.scene.alienSpeedMultiplier || 1.0;
+            const mult     = this.scene.enemySpeedMultiplier || 1.0;
             const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
             let moveAngle;
 
@@ -259,7 +259,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
 
     _moveToward(target, speed, dt) {
         const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
-        const mult  = this.scene.alienSpeedMultiplier || 1.0;
+        const mult  = this.scene.enemySpeedMultiplier || 1.0;
         this.x += Math.cos(angle) * speed * mult * dt;
         this.y += Math.sin(angle) * speed * mult * dt;
         this._headImg.setRotation(angle);
