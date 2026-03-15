@@ -2192,6 +2192,11 @@ export default class GameScene extends Phaser.Scene {
             const spitterCount = this.aliens.filter(a => a.active && a.alienType === 'spitter').length;
             if (spitterCount >= 3) return;
         }
+        // Cap concurrent pythons
+        if (type === 'python') {
+            const pythonCount = this.aliens.filter(a => a.active && a.alienType === 'python').length;
+            if (pythonCount >= 2) return;
+        }
 
         const pos = (spawnX !== undefined)
             ? { x: spawnX, y: spawnY }
