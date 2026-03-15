@@ -1404,6 +1404,24 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
+        // Destroy any acid globs the beam passes through
+        if (this.acidGlobs) {
+            for (let gi = this.acidGlobs.length - 1; gi >= 0; gi--) {
+                const glob = this.acidGlobs[gi];
+                if (!glob.active) continue;
+                const rx = glob.x - sx;
+                const ry = glob.y - sy;
+                const along = rx * cos + ry * sin;
+                if (along <= 0 || along > laserEnd) continue;
+                if (Math.abs(rx * sin - ry * cos) > glob.radius + HIT_RADIUS) continue;
+                glob.destroy();
+                this.acidGlobs.splice(gi, 1);
+                // Small pop effect
+                const pop = this.add.arc(glob.x, glob.y, 10, 0, 360, false, 0x99ee00, 0.7).setDepth(55);
+                this.tweens.add({ targets: pop, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 180, onComplete: () => pop.destroy() });
+            }
+        }
+
         const ex = sx + cos * laserEnd;
         const ey = sy + sin * laserEnd;
 
