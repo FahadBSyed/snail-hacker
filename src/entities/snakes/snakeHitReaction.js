@@ -31,6 +31,8 @@ function _redKey(key) { return `${key}-hit-red`; }
  * Uses the same Canvas-2D multiply-then-destination-in technique as
  * GameScene._colorisePropTexture() for rocks and mushrooms.
  */
+export function ensureRedTexture(scene, key) { return _ensureRed(scene, key); }
+
 function _ensureRed(scene, key) {
     const rk = _redKey(key);
     if (scene.textures.exists(rk)) return;
@@ -117,6 +119,9 @@ export function applyHitReaction(snake) {
             if (img.visible) img.setTexture(snake._origBodyKey);
         }
         if (snake._tailImg) snake._tailImg.setTexture(snake._origTailKey);
+
+        // Let the snake re-apply any persistent per-segment colouring (e.g. Python's red end segments)
+        snake._onHitReactionEnd?.();
     });
 }
 

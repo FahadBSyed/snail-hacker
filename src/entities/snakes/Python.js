@@ -1,16 +1,18 @@
 import { CONFIG } from '../../config.js';
-import { applyHitReaction, tickHitWiggle, applyWiggleToSegments } from './snakeHitReaction.js';
+import { applyHitReaction, tickHitWiggle, applyWiggleToSegments, ensureRedTexture } from './snakeHitReaction.js';
+
+const PYTHON_RED_SEGS = 3;  // last N body segments are always red and targetable
 
 /**
  * Python — World 2 multi-segment snake.
  *
  * Body structure:
- *   - Head (container origin): the ONLY targetable hit zone for damage.
- *   - Body segments (world-space images): deflect projectiles without taking damage.
- *     CollisionSystem checks `python._bodyHitboxes` and destroys the projectile with
- *     a spark but does NOT call takeDamage.
- *   - Exception: when the Python has 3 or fewer segments remaining, the tail-end
- *     segments also count as targetable (exposed tail hitboxes added to the head check).
+ *   - Head (container origin): targetable hit zone for damage.
+ *   - Body segments (world-space images): deflect projectiles without taking damage,
+ *     EXCEPT the last PYTHON_RED_SEGS (3) segments, which are tinted red and always
+ *     targetable.  CollisionSystem checks `python._bodyHitboxes` (non-red, deflect)
+ *     and `python._tailHitboxes` (red, deal damage on hit).
+ *   - As segments are removed by damage, the last 3 remaining are always kept red.
  *
  * Damage model:
  *   - Each hit to the head deals CONFIG.SNAKES.PYTHON.HP_PER_SEGMENT damage.
@@ -51,6 +53,7 @@ export default class Python extends Phaser.GameObjects.Container {
         this._jitterCooldown = Phaser.Math.Between(sc.JITTER_COOLDOWN_MIN, sc.JITTER_COOLDOWN_MAX);
 
         this._buildVisuals(scene, cfg.SEGMENT_COUNT);
+        this._applySegmentColors();
         this._rebuildBodyHitboxes();
     }
 
@@ -75,37 +78,43 @@ export default class Python extends Phaser.GameObjects.Container {
         this._tailImg.setOrigin(0.5, 0.5).setScale(1.69).setDepth(this.depth - 2);
     }
 
-    /** Rebuild `_bodyHitboxes` from current segment positions. */
+    /** Rebuild `_bodyHitboxes` / `_tailHitboxes` from current segment positions. */
     _rebuildBodyHitboxes() {
-        const cfg      = CONFIG.SNAKES.PYTHON;
-        const bodyR    = cfg.BODY_RADIUS;
-        const tailSegs = cfg.TAIL_HITBOX_SEGS;
+        const bodyR          = CONFIG.SNAKES.PYTHON.BODY_RADIUS;
+        const redCount       = Math.min(PYTHON_RED_SEGS, this._segCount);
+        const protectedCount = this._segCount - redCount;
 
-        // When few segments remain, expose the tail end as a secondary hitbox
-        const tailThreshold = tailSegs;
-        const exposeTail    = this._segCount <= tailThreshold;
-
-        // Body hitboxes: segments that block projectiles (don't damage the python)
-        // We exclude tail segments when they're exposed (they become head hitboxes)
+        // Non-red segments: block projectiles, no damage
         this._bodyHitboxes = [];
-        const protectedCount = exposeTail ? Math.max(0, this._segCount - tailSegs) : this._segCount;
         for (let i = 0; i < protectedCount; i++) {
             const img = this._bodyImgs[i];
-            if (img && img.active) {
-                this._bodyHitboxes.push({ x: img.x, y: img.y, r: bodyR });
-            }
+            if (img && img.active) this._bodyHitboxes.push({ x: img.x, y: img.y, r: bodyR });
         }
 
-        // Exposed tail hitboxes: treated identically to the head (deal damage on hit)
+        // Red segments: always targetable, deal damage on hit
         this._tailHitboxes = [];
-        if (exposeTail) {
-            for (let i = protectedCount; i < this._segCount; i++) {
-                const img = this._bodyImgs[i];
-                if (img && img.active) {
-                    this._tailHitboxes.push({ x: img.x, y: img.y, r: bodyR });
-                }
-            }
+        for (let i = protectedCount; i < this._segCount; i++) {
+            const img = this._bodyImgs[i];
+            if (img && img.active) this._tailHitboxes.push({ x: img.x, y: img.y, r: bodyR });
         }
+    }
+
+    /** Apply red tint to the last PYTHON_RED_SEGS body segments; normal texture to the rest. */
+    _applySegmentColors() {
+        const bodyKey  = 'snake-python-body';
+        const redKey   = `${bodyKey}-hit-red`;
+        ensureRedTexture(this.scene, bodyKey);
+        const redStart = Math.max(0, this._segCount - PYTHON_RED_SEGS);
+        for (let i = 0; i < this._segCount; i++) {
+            const img = this._bodyImgs[i];
+            if (!img || !img.active) continue;
+            img.setTexture(i >= redStart ? redKey : bodyKey);
+        }
+    }
+
+    /** Called by applyHitReaction after restoring textures — re-applies persistent red coloring. */
+    _onHitReactionEnd() {
+        this._applySegmentColors();
     }
 
     takeDamage(amount) {
@@ -123,6 +132,7 @@ export default class Python extends Phaser.GameObjects.Container {
                 const img = this._bodyImgs[this._segCount];
                 if (img && img.active) img.setVisible(false);
             }
+            this._applySegmentColors();
             this._rebuildBodyHitboxes();
         }
 
