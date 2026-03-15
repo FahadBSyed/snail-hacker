@@ -32,14 +32,11 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         this._targetBush  = null;
         this._stunMs      = 0;
 
-        // History for body segments
-        this._spacing  = CONFIG.SNAKES.BODY_SPACING;
-        const segCount = cfg.SEGMENT_COUNT;
-        const histLen  = (segCount + 2) * this._spacing + 60;
-        this._history  = [];
-        for (let i = 0; i < histLen; i++) this._history.push({ x, y });
+        // Distance-based history: push only when moved ≥ 2 px
+        this._spacing = CONFIG.SNAKES.BODY_SPACING;
+        this._history = [{ x, y }];
 
-        this._buildVisuals(scene, segCount);
+        this._buildVisuals(scene, cfg.SEGMENT_COUNT);
 
         // Pick first target bush immediately
         this._targetBush = this._nearestFreeBush();
@@ -107,6 +104,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                     if (this.currentBush) this.currentBush.exit();
                     this.hidingInBush = false;
                     this.currentBush  = null;
+                    this._setBodyAlpha(1);
                     this._targetBush  = nextBush;
                     this._state       = 'DASHING';
                 } else {
@@ -114,6 +112,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                     if (this.currentBush) this.currentBush.exit();
                     this.hidingInBush = false;
                     this.currentBush  = null;
+                    this._setBodyAlpha(1);
                     this._state       = 'ATTACK';
                 }
             }
@@ -140,6 +139,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                         this.hidingInBush = true;
                         this.currentBush  = this._targetBush;
                         this._targetBush  = null;
+                        this._setBodyAlpha(0.2);
                         this._state       = 'HIDING';
                     } else {
                         // Occupied — try a different bush
@@ -150,7 +150,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                     this._moveToward(this._targetBush, spd, dt);
                 }
             }
-            this._pushHistory();
+            this._pushHistory(time);
             this._updateSegments();
             return 'alive';
         }
@@ -161,7 +161,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
             const dist = Phaser.Math.Distance.Between(
                 this.x, this.y, this.scene.snail.x, this.scene.snail.y,
             );
-            this._pushHistory();
+            this._pushHistory(time);
             this._updateSegments();
             if (dist < this.radius + 20) return 'reached_snail';
         }
@@ -207,9 +207,22 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         return best;
     }
 
-    _pushHistory() {
-        this._history.unshift({ x: this.x, y: this.y });
-        if (this._history.length > 300) this._history.length = 300;
+    _setBodyAlpha(alpha) {
+        this.setAlpha(alpha);
+        for (const img of this._bodyImgs) img.setAlpha(alpha);
+        if (this._tailImg) this._tailImg.setAlpha(alpha);
+    }
+
+    _pushHistory(time) {
+        const last = this._history[0];
+        if (last && Phaser.Math.Distance.Between(this.x, this.y, last.x, last.y) < 2) return;
+        const angle  = last ? Math.atan2(this.y - last.y, this.x - last.x) : 0;
+        const wiggle = Math.sin(time * CONFIG.SNAKES.WIGGLE_FREQ) * CONFIG.SNAKES.WIGGLE_AMP;
+        this._history.unshift({
+            x: this.x + (-Math.sin(angle)) * wiggle,
+            y: this.y + ( Math.cos(angle)) * wiggle,
+        });
+        if (this._history.length > 500) this._history.length = 500;
     }
 
     _updateSegments() {
@@ -229,6 +242,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
     }
 
     _histAt(i) {
+        if (this._history.length === 0) return { x: this.x, y: this.y };
         return this._history[Math.min(i, this._history.length - 1)];
     }
 

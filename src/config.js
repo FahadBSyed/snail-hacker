@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 27;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 28;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -253,15 +253,22 @@ export const DEFAULTS = {
 
     // ── World 2: Snake Pit ────────────────────────────────────────────────────
     SNAKES: {
-        BODY_SPACING: 14,       // px between history samples used for body segment placement
+        // Body history is pushed when the head moves ≥ 2 px (distance-based, frame-rate
+        // independent).  BODY_SPACING controls how many history entries to skip between
+        // consecutive body segments; effective pixel gap ≈ BODY_SPACING × 2 px.
+        BODY_SPACING:    10,    // history entries between consecutive body segments (~20 px)
+        WIGGLE_AMP:       3,    // px — lateral sinusoidal wiggle amplitude
+        WIGGLE_FREQ:  0.003,    // rad/ms — wiggle cycle (full period ≈ 2094 ms)
         HIDE_SEEK_DIST: 200,    // px — snake starts moving toward a bush when this close
 
         BASIC: {
-            SPEED:         55,   // px/s movement speed
-            HEALTH:        30,   // hit points
-            RADIUS:        14,   // px — head collision radius
-            SEGMENT_COUNT:  4,   // number of body segments (not counting head/tail)
-            HIDE_CHANCE:   0.4,  // probability of seeking a bush after spawning
+            SPEED:              55,   // px/s movement speed
+            HEALTH:             30,   // hit points
+            RADIUS:             14,   // px — head collision radius
+            SEGMENT_COUNT:       4,   // number of body segments (not counting head/tail)
+            HIDE_CHANCE:        0.4,  // probability of seeking a bush after spawning
+            HIDE_TIMER_MIN:  10000,   // ms — minimum hide duration before re-emerging
+            HIDE_TIMER_MAX:  20000,   // ms — maximum hide duration before re-emerging
         },
 
         SIDEWINDER: {

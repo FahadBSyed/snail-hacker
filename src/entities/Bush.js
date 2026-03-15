@@ -59,9 +59,11 @@ export default class Bush extends Phaser.GameObjects.Container {
 
     /** The snake leaves voluntarily (e.g., hunting again). */
     exit() {
+        const snake = this.occupant;
         this.isOccupied = false;
         this.occupant   = null;
         this._stopRustle();
+        if (snake && snake.active) snake._setBodyAlpha?.(1);
     }
 
     /**
@@ -78,6 +80,7 @@ export default class Bush extends Phaser.GameObjects.Container {
             snake.hidingInBush = false;
             snake.currentBush  = null;
             snake._stunMs      = CONFIG.BUSHES.FLUSH_STUN_MS;
+            snake._setBodyAlpha?.(1);
             // Brief white flash on the bush to signal the flush
             this._doFlash(0.5, 200);
         }

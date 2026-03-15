@@ -36,9 +36,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
         // History for body segments
         this._spacing  = CONFIG.SNAKES.BODY_SPACING;
         const segCount = cfg.SEGMENT_COUNT;
-        const histLen  = (segCount + 2) * this._spacing + 60;
-        this._history  = [];
-        for (let i = 0; i < histLen; i++) this._history.push({ x, y });
+        this._history  = [{ x, y }];
 
         this._buildVisuals(scene, segCount);
 
@@ -104,7 +102,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
 
             const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
             if (dist < this.radius + 20) {
-                this._pushHistory();
+                this._pushHistory(time);
                 this._updateSegments();
                 return 'reached_snail';
             }
@@ -152,7 +150,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
             }
         }
 
-        this._pushHistory();
+        this._pushHistory(time);
         this._updateSegments();
         return 'alive';
     }
@@ -235,7 +233,9 @@ export default class Burrower extends Phaser.GameObjects.Container {
         }
     }
 
-    _pushHistory() {
+    _pushHistory(time) {
+        const last = this._history[0];
+        if (last && Phaser.Math.Distance.Between(this.x, this.y, last.x, last.y) < 2) return;
         this._history.unshift({ x: this.x, y: this.y });
         if (this._history.length > 300) this._history.length = 300;
     }
@@ -257,6 +257,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
     }
 
     _histAt(i) {
+        if (this._history.length === 0) return { x: this.x, y: this.y };
         return this._history[Math.min(i, this._history.length - 1)];
     }
 

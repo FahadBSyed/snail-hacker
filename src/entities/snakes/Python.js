@@ -35,9 +35,7 @@ export default class Python extends Phaser.GameObjects.Container {
         this._segCount    = cfg.SEGMENT_COUNT;  // current number of body segments
         this._spacing     = cfg.BODY_SPACING;
 
-        const histLen = (cfg.SEGMENT_COUNT + 2) * cfg.BODY_SPACING + 60;
-        this._history = [];
-        for (let i = 0; i < histLen; i++) this._history.push({ x, y });
+        this._history = [{ x, y }];
 
         this._buildVisuals(scene, cfg.SEGMENT_COUNT);
         this._rebuildBodyHitboxes();
@@ -132,7 +130,7 @@ export default class Python extends Phaser.GameObjects.Container {
         this.y += Math.sin(angle) * this.speed * mult * dt;
         this._headImg.setRotation(angle);
 
-        this._pushHistory();
+        this._pushHistory(time);
         this._updateSegments();
         this._rebuildBodyHitboxes();  // update world-space positions each frame
 
@@ -141,9 +139,16 @@ export default class Python extends Phaser.GameObjects.Container {
         return 'alive';
     }
 
-    _pushHistory() {
-        this._history.unshift({ x: this.x, y: this.y });
-        if (this._history.length > 400) this._history.length = 400;
+    _pushHistory(time) {
+        const last = this._history[0];
+        if (last && Phaser.Math.Distance.Between(this.x, this.y, last.x, last.y) < 2) return;
+        const angle  = last ? Math.atan2(this.y - last.y, this.x - last.x) : 0;
+        const wiggle = Math.sin(time * CONFIG.SNAKES.WIGGLE_FREQ) * CONFIG.SNAKES.WIGGLE_AMP * 1.6;
+        this._history.unshift({
+            x: this.x + (-Math.sin(angle)) * wiggle,
+            y: this.y + ( Math.cos(angle)) * wiggle,
+        });
+        if (this._history.length > 600) this._history.length = 600;
     }
 
     _updateSegments() {
@@ -164,6 +169,7 @@ export default class Python extends Phaser.GameObjects.Container {
     }
 
     _histAt(i) {
+        if (this._history.length === 0) return { x: this.x, y: this.y };
         return this._history[Math.min(i, this._history.length - 1)];
     }
 

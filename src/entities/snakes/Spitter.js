@@ -34,9 +34,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
         // History for body segments
         this._spacing  = CONFIG.SNAKES.BODY_SPACING;
         const segCount = cfg.SEGMENT_COUNT;
-        const histLen  = (segCount + 2) * this._spacing + 60;
-        this._history  = [];
-        for (let i = 0; i < histLen; i++) this._history.push({ x, y });
+        this._history  = [{ x, y }];
 
         this._buildVisuals(scene, segCount);
     }
@@ -59,6 +57,12 @@ export default class Spitter extends Phaser.GameObjects.Container {
         }
         this._tailImg = scene.add.image(this.x, this.y, 'snake-spitter-tail');
         this._tailImg.setOrigin(0.5, 0.5).setDepth(this.depth - 2);
+    }
+
+    _setBodyAlpha(alpha) {
+        this.setAlpha(alpha);
+        for (const img of this._bodyImgs) img.setAlpha(alpha);
+        if (this._tailImg) this._tailImg.setAlpha(alpha);
     }
 
     takeDamage(amount) {
@@ -99,6 +103,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
                 if (this.currentBush) this.currentBush.exit();
                 this.hidingInBush = false;
                 this.currentBush  = null;
+                this._setBodyAlpha(1);
                 this._state       = 'KITE';
                 // Reset spit cooldown so it doesn't fire immediately on emerge
                 this._spitCooldown = cfg.SPIT_COOLDOWN * 0.5;
@@ -120,6 +125,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
                         this.hidingInBush = true;
                         this.currentBush  = this._targetBush;
                         this._targetBush  = null;
+                        this._setBodyAlpha(0.2);
                         this._state       = 'HIDING';
                         this._hideTimer   = cfg.HIDE_DURATION;
                     } else {
@@ -129,7 +135,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
                     this._moveToward(this._targetBush, cfg.SPEED * 2, dt);
                 }
             }
-            this._pushHistory();
+            this._pushHistory(time);
             this._updateSegments();
             return 'alive';
         }
@@ -164,7 +170,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
             this._fireGlob();
         }
 
-        this._pushHistory();
+        this._pushHistory(time);
         this._updateSegments();
         return 'alive';
     }
@@ -197,7 +203,9 @@ export default class Spitter extends Phaser.GameObjects.Container {
         return best;
     }
 
-    _pushHistory() {
+    _pushHistory(time) {
+        const last = this._history[0];
+        if (last && Phaser.Math.Distance.Between(this.x, this.y, last.x, last.y) < 2) return;
         this._history.unshift({ x: this.x, y: this.y });
         if (this._history.length > 300) this._history.length = 300;
     }
@@ -219,6 +227,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
     }
 
     _histAt(i) {
+        if (this._history.length === 0) return { x: this.x, y: this.y };
         return this._history[Math.min(i, this._history.length - 1)];
     }
 
