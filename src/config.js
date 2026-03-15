@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 29;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 30;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -266,7 +266,7 @@ export const DEFAULTS = {
         BASIC: {
             SPEED:              55,   // px/s movement speed
             HEALTH:             30,   // hit points
-            RADIUS:             14,   // px — head collision radius
+            RADIUS:              7,   // px — head collision radius
             SEGMENT_COUNT:       4,   // number of body segments (not counting head/tail)
             HIDE_CHANCE:        0.4,  // probability of seeking a bush after spawning
             HIDE_TIMER_MIN:  10000,   // ms — minimum hide duration before re-emerging
@@ -277,7 +277,7 @@ export const DEFAULTS = {
             HEALTH:        10,
             SPEED_SLOW:    35,   // px/s while cursor is watching (suppressed)
             SPEED_DASH:   220,   // px/s when cursor looks away (bush hop)
-            RADIUS:        12,
+            RADIUS:         6,
             SEGMENT_COUNT:  3,
             WATCH_RADIUS:  200,  // px — cursor distance from bush that suppresses a dash
         },
@@ -287,7 +287,7 @@ export const DEFAULTS = {
             HP_PER_SEGMENT:     10,
             SEGMENT_COUNT:      10,   // total body segments after head (excludes head)
             SPEED:              40,   // px/s
-            RADIUS:             16,   // head collision radius
+            RADIUS:              8,   // head collision radius
             BODY_RADIUS:        12,   // per body-segment hit radius (for body-only intercept)
             BODY_SPACING:       18,   // px between history samples used for segment positions
             TAIL_HITBOX_SEGS:    3,   // how many tail segments also count as hittable head when few remain
@@ -297,7 +297,7 @@ export const DEFAULTS = {
             HEALTH:                30,
             SPEED_SURFACE:         65,   // px/s on the surface
             SPEED_UNDERGROUND:     95,   // px/s while burrowed
-            RADIUS:                14,
+            RADIUS:                 7,
             SEGMENT_COUNT:          3,
             SURFACE_DURATION:    2500,   // ms on surface before warning
             TRANSITION_DURATION:  500,   // ms for warn-burrow and warn-emerge states
@@ -306,7 +306,7 @@ export const DEFAULTS = {
 
         SPITTER: {
             HEALTH:             30,
-            RADIUS:             12,
+            RADIUS:              6,
             SEGMENT_COUNT:       3,
             SPEED:               60,   // px/s — kiting movement speed
             PREFERRED_MIN:      350,   // px — backs away if Gerald is closer than this

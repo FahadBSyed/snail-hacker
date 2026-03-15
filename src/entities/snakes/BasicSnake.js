@@ -55,11 +55,11 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
     _buildVisuals(scene, segCount) {
         const shadow = scene.add.graphics();
         shadow.fillStyle(0x000000, 0.25);
-        shadow.fillEllipse(2, 8, 52, 16);
+        shadow.fillEllipse(1, 4, 26, 8);
         this.add(shadow);
 
         this._headImg = scene.add.image(0, 0, 'snake-basic-head');
-        this._headImg.setOrigin(0.5, 0.5);
+        this._headImg.setOrigin(0.5, 0.5).setScale(0.5);
         this.add(this._headImg);
 
         this._bodyImgs = [];

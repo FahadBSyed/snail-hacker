@@ -50,11 +50,11 @@ export default class Python extends Phaser.GameObjects.Container {
     _buildVisuals(scene, segCount) {
         const shadow = scene.add.graphics();
         shadow.fillStyle(0x000000, 0.25);
-        shadow.fillEllipse(2, 10, 56, 18);
+        shadow.fillEllipse(1, 5, 28, 9);
         this.add(shadow);
 
         this._headImg = scene.add.image(0, 0, 'snake-python-head');
-        this._headImg.setOrigin(0.5, 0.5);
+        this._headImg.setOrigin(0.5, 0.5).setScale(0.5);
         this.add(this._headImg);
 
         this._bodyImgs = [];

@@ -288,6 +288,48 @@ export function checkProjectileCollisions(scene) {
 
         if (!proj.active) continue;
 
+        // ── Snake body-joint damage (BasicSnake / Sidewinder / Spitter / Burrower) ──
+        // Projectile still alive — check body segments of non-Python snakes.
+        // Each segment that is hit deals full damage to the snake.
+        for (const alien of scene.aliens) {
+            if (!alien.active || alien.hidingInBush || alien._dying) continue;
+            if (alien._bodyHitboxes || !alien._bodyImgs) continue; // skip Python & non-snakes
+            let hitImg = null;
+            for (const img of alien._bodyImgs) {
+                if (Phaser.Math.Distance.Between(proj.x, proj.y, img.x, img.y)
+                        < alien.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
+                    hitImg = img;
+                    break;
+                }
+            }
+            if (!hitImg) continue;
+
+            const bx = hitImg.x, by = hitImg.y;
+            proj.destroy();
+            const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+
+            const hitFlash = scene.add.arc(bx, by, alien.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
+            scene.tweens.add({ targets: hitFlash, alpha: 0, duration: 200, onComplete: () => hitFlash.destroy() });
+            scene.tweens.add({ targets: alien, x: alien.x + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+
+            if (died) {
+                scene.score++;
+                scene.hud.updateScore(scene.score);
+                const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
+                alien._dying = true;
+                scene.time.delayedCall(200, () => {
+                    if (!alien.active) return;
+                    spawnDeathBurst(scene, bx, by, burstColor, () => scene.spawnFrogEscape?.(bx, by));
+                    if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) scene.healthDrops.push(new HealthDrop(scene, bx, by));
+                    if (alien.alienType === 'bomber') checkBomberBlast(scene, bx, by);
+                    alien.destroy();
+                });
+            }
+            break;
+        }
+
+        if (!proj.active) continue;
+
         // ── World 2: Python body-segment intercept ────────────────────────────
         // If projectile is still alive after the alien loop, check Python body
         // hitboxes.  A hit destroys the projectile with a spark but does NOT

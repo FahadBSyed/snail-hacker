@@ -2,6 +2,12 @@
 
 ## Session — 2026-03-15
 
+### Snake heads halved; body joints now deal damage
+
+- All 5 snake heads scaled to 0.5 (`setScale(0.5)` on `_headImg`); head shadow ellipses halved to match
+- Head collision `RADIUS` halved for all snake types (Basic 14→7, Sidewinder 12→6, Python 16→8, Burrower 14→7, Spitter 12→6); `CONFIG_VERSION` bumped to 30
+- `CollisionSystem.checkProjectileCollisions`: new body-joint pass after the main alien loop checks each `_bodyImg` position of non-Python snakes; a hit deals full projectile damage with the same flash/wobble/death logic as a head hit; Python retains its existing body-block mechanic
+
 ### Fix snake bush entry (body fully enters; snakes now leave correctly)
 
 **Root cause**: the snake aimed toward the bush center and stopped at `d ≤ 2 px`,
