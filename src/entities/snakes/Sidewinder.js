@@ -32,6 +32,8 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         this._targetBush  = null;
         this._stunMs      = 0;
 
+        this._bushAnimTimers = [];   // pending delayedCall refs for hide/reveal sequences
+
         // Jitter — same side-to-side slither as BasicSnake, applied during ATTACK
         this._jitterMs       = 0;
         this._jitterDir      = 1;
@@ -111,7 +113,6 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                     if (this.currentBush) this.currentBush.exit(this);
                     this.hidingInBush = false;
                     this.currentBush  = null;
-                    this._setBodyAlpha(1);
                     this._targetBush  = nextBush;
                     this._state       = 'DASHING';
                 } else {
@@ -119,7 +120,6 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                     if (this.currentBush) this.currentBush.exit(this);
                     this.hidingInBush = false;
                     this.currentBush  = null;
-                    this._setBodyAlpha(1);
                     this._state       = 'ATTACK';
                 }
             }
@@ -146,7 +146,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                         this.hidingInBush = true;
                         this.currentBush  = this._targetBush;
                         this._targetBush  = null;
-                        this._setBodyAlpha(0.2);
+                        this._startHideAnimation();
                         this._state       = 'HIDING';
                     } else {
                         // Scorched — try a different bush
@@ -245,6 +245,35 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         if (this._tailImg) this._tailImg.setAlpha(alpha);
     }
 
+    _startHideAnimation() {
+        this._cancelBushAnim();
+        const parts = [this, ...this._bodyImgs, this._tailImg].filter(Boolean);
+        parts.forEach((part, i) => {
+            const t = this.scene.time.delayedCall(i * 65, () => {
+                if (!this.active || !part.active) return;
+                this.scene.tweens.add({ targets: part, alpha: 0, duration: 150, ease: 'Sine.easeOut' });
+            });
+            this._bushAnimTimers.push(t);
+        });
+    }
+
+    _startRevealAnimation() {
+        this._cancelBushAnim();
+        const parts = [this, ...this._bodyImgs, this._tailImg].filter(Boolean);
+        parts.forEach((part, i) => {
+            const t = this.scene.time.delayedCall(i * 65, () => {
+                if (!this.active || !part.active) return;
+                this.scene.tweens.add({ targets: part, alpha: 1, duration: 150, ease: 'Sine.easeOut' });
+            });
+            this._bushAnimTimers.push(t);
+        });
+    }
+
+    _cancelBushAnim() {
+        for (const t of this._bushAnimTimers) t.remove(false);
+        this._bushAnimTimers = [];
+    }
+
     _pushHistory(time) {
         const last = this._history[0];
         if (last && Phaser.Math.Distance.Between(this.x, this.y, last.x, last.y) < 2) return;
@@ -274,9 +303,8 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
     }
 
     destroy(fromScene) {
-        if (this.currentBush && this.currentBush.active && this.currentBush.isOccupied) {
-            this.currentBush.exit(this);
-        }
+        if (this.currentBush && this.currentBush.active) this.currentBush.exit(this);
+        this._cancelBushAnim();
         for (const img of this._bodyImgs) { if (img && img.active) img.destroy(); }
         this._bodyImgs = [];
         if (this._tailImg && this._tailImg.active) { this._tailImg.destroy(); this._tailImg = null; }

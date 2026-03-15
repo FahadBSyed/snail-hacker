@@ -71,7 +71,7 @@ export default class Bush extends Phaser.GameObjects.Container {
         const idx = this.occupants.indexOf(snake);
         if (idx === -1) return;
         this.occupants.splice(idx, 1);
-        if (snake && snake.active) snake._setBodyAlpha?.(1);
+        if (snake && snake.active) snake._startRevealAnimation?.();
         if (this.occupants.length === 0) this._stopRustle();
     }
 
@@ -91,7 +91,8 @@ export default class Bush extends Phaser.GameObjects.Container {
                 snake.hidingInBush = false;
                 snake.currentBush  = null;
                 snake._stunMs      = CONFIG.BUSHES.FLUSH_STUN_MS;
-                snake._setBodyAlpha?.(1);
+                snake._cancelBushAnim?.();   // cancel any in-progress hide/reveal
+                snake._setBodyAlpha?.(1);    // instant reveal for abrupt flush
             }
         }
         this._doFlash(0.5, 200);

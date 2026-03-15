@@ -29,6 +29,8 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         this._stunMs      = 0;
         this._hideTimer   = 0;
 
+        this._bushAnimTimers = [];   // pending delayedCall refs for hide/reveal sequences
+
         this._state      = 'HUNT';
         this._targetBush = null;
 
@@ -68,11 +70,42 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         this._tailImg.setOrigin(0.5, 0.5).setDepth(this.depth - 2);
     }
 
-    /** Set alpha on the container (head) AND all world-space segment images. */
+    /** Set alpha on the container (head) AND all world-space segment images (instant). */
     _setBodyAlpha(alpha) {
         this.setAlpha(alpha);
         for (const img of this._bodyImgs) img.setAlpha(alpha);
         if (this._tailImg) this._tailImg.setAlpha(alpha);
+    }
+
+    /** Fade each part to 0 in sequence: head → body[0..n] → tail, 65 ms stagger. */
+    _startHideAnimation() {
+        this._cancelBushAnim();
+        const parts = [this, ...this._bodyImgs, this._tailImg].filter(Boolean);
+        parts.forEach((part, i) => {
+            const t = this.scene.time.delayedCall(i * 65, () => {
+                if (!this.active || !part.active) return;
+                this.scene.tweens.add({ targets: part, alpha: 0, duration: 150, ease: 'Sine.easeOut' });
+            });
+            this._bushAnimTimers.push(t);
+        });
+    }
+
+    /** Fade each part back to 1 in sequence: head → body[0..n] → tail, 65 ms stagger. */
+    _startRevealAnimation() {
+        this._cancelBushAnim();
+        const parts = [this, ...this._bodyImgs, this._tailImg].filter(Boolean);
+        parts.forEach((part, i) => {
+            const t = this.scene.time.delayedCall(i * 65, () => {
+                if (!this.active || !part.active) return;
+                this.scene.tweens.add({ targets: part, alpha: 1, duration: 150, ease: 'Sine.easeOut' });
+            });
+            this._bushAnimTimers.push(t);
+        });
+    }
+
+    _cancelBushAnim() {
+        for (const t of this._bushAnimTimers) t.remove(false);
+        this._bushAnimTimers = [];
     }
 
     takeDamage(amount) {
@@ -103,7 +136,6 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
                 if (this.currentBush) this.currentBush.exit(this);
                 this.hidingInBush = false;
                 this.currentBush  = null;
-                this._setBodyAlpha(1);
                 this._state = 'HUNT';
             } else {
                 this._updateSegmentPositions();
@@ -131,7 +163,7 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
                             CONFIG.SNAKES.BASIC.HIDE_TIMER_MIN,
                             CONFIG.SNAKES.BASIC.HIDE_TIMER_MAX,
                         );
-                        this._setBodyAlpha(0.2);
+                        this._startHideAnimation();
                         this._state = 'HIDING';
                         this._updateSegmentPositions();
                         return 'alive';
@@ -247,9 +279,8 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
     }
 
     destroy(fromScene) {
-        if (this.currentBush && this.currentBush.active && this.currentBush.isOccupied) {
-            this.currentBush.exit(this);
-        }
+        if (this.currentBush && this.currentBush.active) this.currentBush.exit(this);
+        this._cancelBushAnim();
         for (const img of this._bodyImgs) { if (img && img.active) img.destroy(); }
         this._bodyImgs = [];
         if (this._tailImg && this._tailImg.active) { this._tailImg.destroy(); this._tailImg = null; }

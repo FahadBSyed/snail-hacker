@@ -2,6 +2,21 @@
 
 ## Session — 2026-03-15
 
+### Sequential hide/reveal animation when snakes enter or exit a bush
+
+**Bush** (`src/entities/Bush.js`):
+- `exit(snake)` now calls `snake._startRevealAnimation?.()` instead of instant `_setBodyAlpha(1)`
+- `flush()` calls `snake._cancelBushAnim?.()` before instant `_setBodyAlpha(1)` so abrupt ejection overrides any in-progress fade
+
+**BasicSnake, Sidewinder, Spitter** (`src/entities/snakes/`):
+- Added `_bushAnimTimers = []` to track pending `delayedCall` handles
+- `_startHideAnimation()`: fades head → body[0..n] → tail to alpha 0; 65 ms stagger, 150 ms per part
+- `_startRevealAnimation()`: same order but to alpha 1
+- `_cancelBushAnim()`: removes all pending timers immediately (used by flush + destroy)
+- `_setBodyAlpha(0.2)` on successful bush entry replaced with `_startHideAnimation()`
+- Redundant `_setBodyAlpha(1)` calls after `currentBush.exit()` removed (animation handles it)
+- `destroy()` calls `exit(this)` then `_cancelBushAnim()` to prevent ghost tweens after death
+
 ### Multi-occupancy bushes + jitter for all snake types
 
 **Bush** (`src/entities/Bush.js`):
