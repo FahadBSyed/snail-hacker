@@ -142,12 +142,7 @@ export default class Python extends Phaser.GameObjects.Container {
     _pushHistory(time) {
         const last = this._history[0];
         if (last && Phaser.Math.Distance.Between(this.x, this.y, last.x, last.y) < 2) return;
-        const angle  = last ? Math.atan2(this.y - last.y, this.x - last.x) : 0;
-        const wiggle = Math.sin(time * CONFIG.SNAKES.WIGGLE_FREQ) * CONFIG.SNAKES.WIGGLE_AMP * 1.6;
-        this._history.unshift({
-            x: this.x + (-Math.sin(angle)) * wiggle,
-            y: this.y + ( Math.cos(angle)) * wiggle,
-        });
+        this._history.unshift({ x: this.x, y: this.y });
         if (this._history.length > 600) this._history.length = 600;
     }
 

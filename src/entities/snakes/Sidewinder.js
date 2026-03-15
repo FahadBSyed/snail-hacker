@@ -216,12 +216,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
     _pushHistory(time) {
         const last = this._history[0];
         if (last && Phaser.Math.Distance.Between(this.x, this.y, last.x, last.y) < 2) return;
-        const angle  = last ? Math.atan2(this.y - last.y, this.x - last.x) : 0;
-        const wiggle = Math.sin(time * CONFIG.SNAKES.WIGGLE_FREQ) * CONFIG.SNAKES.WIGGLE_AMP;
-        this._history.unshift({
-            x: this.x + (-Math.sin(angle)) * wiggle,
-            y: this.y + ( Math.cos(angle)) * wiggle,
-        });
+        this._history.unshift({ x: this.x, y: this.y });
         if (this._history.length > 500) this._history.length = 500;
     }
 
