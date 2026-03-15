@@ -2,6 +2,23 @@
 
 ## Session — 2026-03-15
 
+### Fix snake bush entry (body fully enters; snakes now leave correctly)
+
+**Root cause**: the snake aimed toward the bush center and stopped at `d ≤ 2 px`,
+but body segments trail the head by `BODY_SPACING × segCount` path-units — often
+larger than `OCCUPY_RADIUS` — so they never crossed the fade threshold.  Because
+`_fadedParts` never reached the total-part count, `_state` never became `'HIDING'`
+and the hide timer never ran, so snakes were trapped in the entry loop forever.
+
+**Fix (BasicSnake, Sidewinder, Spitter)**:
+- Added `_bushEntryAngle`: the approach angle is captured the moment the head
+  crosses `OCCUPY_RADIUS` and the snake keeps moving in **that fixed direction**
+  at full speed until all parts are faded (no "pull to center" deceleration, no stop)
+- `_tickBushHide` is now called unconditionally every frame during the entry phase
+  (previously inside `dist < OCCUPY_RADIUS` so it stopped once the head passed center)
+- The snake slithers straight through the bush sprite; the body traces the same path
+  and each segment fades as it crosses the radius boundary
+
 ### Position-based bush hide/reveal + Sidewinder jitter fix
 
 **BasicSnake, Sidewinder, Spitter** (`src/entities/snakes/`):

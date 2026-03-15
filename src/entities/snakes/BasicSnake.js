@@ -29,8 +29,9 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         this._stunMs      = 0;
         this._hideTimer   = 0;
 
-        this._fadedParts  = new Set();   // parts currently at alpha 0 (inside a bush)
-        this._lastBushPos = null;        // cached on exit; used for position-based reveal
+        this._fadedParts      = new Set();   // parts currently at alpha 0 (inside a bush)
+        this._lastBushPos     = null;        // cached on exit; used for position-based reveal
+        this._bushEntryAngle  = 0;           // direction stored when head enters, used to slither through
 
         this._state      = 'HUNT';
         this._targetBush = null;
@@ -161,28 +162,27 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
                 targetY = bush.y;
 
                 const dist = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
-                if (dist < CONFIG.BUSHES.OCCUPY_RADIUS) {
-                    if (!this.hidingInBush) {
-                        if (bush.enter(this)) {
-                            // Clear any leftover reveal from a previous bush
-                            if (this._fadedParts.size > 0) { this._setBodyAlpha(1); this._lastBushPos = null; }
-                            this.hidingInBush = true;
-                            this.currentBush  = bush;
-                            this._hideTimer   = Phaser.Math.Between(
-                                CONFIG.SNAKES.BASIC.HIDE_TIMER_MIN,
-                                CONFIG.SNAKES.BASIC.HIDE_TIMER_MAX,
-                            );
-                        } else {
-                            this._targetBush = null;
-                            this._state = 'HUNT';
-                        }
+                if (dist < CONFIG.BUSHES.OCCUPY_RADIUS && !this.hidingInBush) {
+                    if (bush.enter(this)) {
+                        if (this._fadedParts.size > 0) { this._setBodyAlpha(1); this._lastBushPos = null; }
+                        // Store approach direction so the whole body slithers through
+                        this._bushEntryAngle = Phaser.Math.Angle.Between(this.x, this.y, bush.x, bush.y);
+                        this.hidingInBush = true;
+                        this.currentBush  = bush;
+                        this._hideTimer   = Phaser.Math.Between(
+                            CONFIG.SNAKES.BASIC.HIDE_TIMER_MIN,
+                            CONFIG.SNAKES.BASIC.HIDE_TIMER_MAX,
+                        );
+                    } else {
+                        this._targetBush = null;
+                        this._state = 'HUNT';
                     }
-                    if (this.hidingInBush) {
-                        // Fade parts that have reached the bush; switch to HIDING once all gone
-                        this._tickBushHide(bush.x, bush.y);
-                        if (this._fadedParts.size >= 2 + this._bodyImgs.length) {
-                            this._state = 'HIDING';
-                        }
+                }
+                // Check parts every frame during entry (head may have passed through center)
+                if (this.hidingInBush) {
+                    this._tickBushHide(bush.x, bush.y);
+                    if (this._fadedParts.size >= 2 + this._bodyImgs.length) {
+                        this._state = 'HIDING';
                     }
                 }
             }
@@ -229,15 +229,11 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         } else if (this._state === 'TO_BUSH') {
             const speedMult = this.scene.alienSpeedMultiplier || 1.0;
             if (this.hidingInBush) {
-                // Pull the trailing body into the bush at reduced speed
-                const bx = this.currentBush.x, by = this.currentBush.y;
-                const d  = Phaser.Math.Distance.Between(this.x, this.y, bx, by);
-                if (d > 2) {
-                    const pullAngle = Phaser.Math.Angle.Between(this.x, this.y, bx, by);
-                    this.x += Math.cos(pullAngle) * this.speed * 0.4 * speedMult * dt;
-                    this.y += Math.sin(pullAngle) * this.speed * 0.4 * speedMult * dt;
-                    this._headImg.setRotation(pullAngle);
-                }
+                // Slither through the bush in the stored approach direction so
+                // the body follows the same path and all segments cross the radius
+                this.x += Math.cos(this._bushEntryAngle) * this.speed * speedMult * dt;
+                this.y += Math.sin(this._bushEntryAngle) * this.speed * speedMult * dt;
+                this._headImg.setRotation(this._bushEntryAngle);
             } else {
                 const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
                 this.x += Math.cos(angle) * this.speed * speedMult * dt;

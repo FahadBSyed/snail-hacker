@@ -31,8 +31,9 @@ export default class Spitter extends Phaser.GameObjects.Container {
         this._hideTimer    = 0;
         this._stunMs       = 0;
 
-        this._fadedParts  = new Set();
-        this._lastBushPos = null;
+        this._fadedParts     = new Set();
+        this._lastBushPos    = null;
+        this._bushEntryAngle = 0;
 
         // Jitter — same side-to-side slither as BasicSnake, applied when closing in
         this._jitterMs       = 0;
@@ -153,19 +154,14 @@ export default class Spitter extends Phaser.GameObjects.Container {
         if (this._state === 'FLEEING') {
             const mult = this.scene.alienSpeedMultiplier || 1.0;
 
-            // Entry phase: body still entering the bush
+            // Entry phase: slither through the bush so the whole body follows
             if (this.hidingInBush) {
                 this._tickBushHide(this.currentBush.x, this.currentBush.y);
                 if (this._fadedParts.size >= 2 + this._bodyImgs.length) {
                     this._state = 'HIDING';
                 } else {
-                    const bx = this.currentBush.x, by = this.currentBush.y;
-                    const d  = Phaser.Math.Distance.Between(this.x, this.y, bx, by);
-                    if (d > 2) {
-                        const pullAngle = Phaser.Math.Angle.Between(this.x, this.y, bx, by);
-                        this.x += Math.cos(pullAngle) * cfg.SPEED * mult * dt;
-                        this.y += Math.sin(pullAngle) * cfg.SPEED * mult * dt;
-                    }
+                    this.x += Math.cos(this._bushEntryAngle) * cfg.SPEED * mult * dt;
+                    this.y += Math.sin(this._bushEntryAngle) * cfg.SPEED * mult * dt;
                 }
                 this._pushHistory(time);
                 this._updateSegments();
@@ -181,6 +177,9 @@ export default class Spitter extends Phaser.GameObjects.Container {
                 if (dist < CONFIG.BUSHES.OCCUPY_RADIUS) {
                     if (this._targetBush.enter(this)) {
                         if (this._fadedParts.size > 0) { this._setBodyAlpha(1); this._lastBushPos = null; }
+                        this._bushEntryAngle = Phaser.Math.Angle.Between(
+                            this.x, this.y, this._targetBush.x, this._targetBush.y,
+                        );
                         this.hidingInBush = true;
                         this.currentBush  = this._targetBush;
                         this._targetBush  = null;
