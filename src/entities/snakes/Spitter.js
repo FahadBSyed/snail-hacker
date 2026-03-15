@@ -54,20 +54,21 @@ export default class Spitter extends Phaser.GameObjects.Container {
         const shadow = scene.add.graphics();
         shadow.fillStyle(0x000000, 0.25);
         shadow.fillEllipse(1, 4, 22, 7);
+        shadow.setScale(1.3);
         this.add(shadow);
 
         this._headImg = scene.add.image(0, 0, 'snake-spitter-head');
-        this._headImg.setOrigin(0.5, 0.5).setScale(0.5);
+        this._headImg.setOrigin(0.5, 0.5).setScale(0.65);
         this.add(this._headImg);
 
         this._bodyImgs = [];
         for (let i = 0; i < segCount; i++) {
             const img = scene.add.image(this.x, this.y, 'snake-spitter-body');
-            img.setOrigin(0.5, 0.5).setDepth(this.depth - 1);
+            img.setOrigin(0.5, 0.5).setScale(1.3).setDepth(this.depth - 1);
             this._bodyImgs.push(img);
         }
         this._tailImg = scene.add.image(this.x, this.y, 'snake-spitter-tail');
-        this._tailImg.setOrigin(0.5, 0.5).setDepth(this.depth - 2);
+        this._tailImg.setOrigin(0.5, 0.5).setScale(1.3).setDepth(this.depth - 2);
     }
 
     _setBodyAlpha(alpha) {

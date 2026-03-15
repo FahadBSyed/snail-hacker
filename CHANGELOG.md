@@ -2,6 +2,13 @@
 
 ## Session — 2026-03-15
 
+### Scale all snakes up by 130%
+
+- Head images: `setScale(0.5 → 0.65)` on all 5 snake types
+- Body segments and tail images: `setScale(1.3)` added to all 5 types
+- Head shadow graphics: `setScale(1.3)` applied on all 5 types
+- Collision `RADIUS` scaled ×1.3 in `config.js` (Basic 7→9, Sidewinder 6→8, Python 8→10, Burrower 7→9, Spitter 6→8); `CONFIG_VERSION` bumped to 31
+
 ### Snake colour repaints
 
 Updated palettes in `scripts/generate-snake-sprites.js` and regenerated all 15 snake SVGs:
