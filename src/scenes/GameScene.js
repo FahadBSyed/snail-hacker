@@ -1356,11 +1356,70 @@ export default class GameScene extends Phaser.Scene {
             if (Math.abs(rx * sin - ry * cos) > HIT_RADIUS) continue;
             candidates.push({ alien, along });
         }
+
+        // Add Python body/tail segment candidates.
+        // Body segments deflect the beam; red tail segments deal damage.
+        for (const alien of this.aliens) {
+            if (!alien.active || alien._dying) continue;
+            for (const seg of (alien._bodyHitboxes || [])) {
+                const rx = seg.x - sx, ry = seg.y - sy;
+                const along = rx * cos + ry * sin;
+                if (along <= 0 || along > tMax) continue;
+                if (Math.abs(rx * sin - ry * cos) > HIT_RADIUS + seg.r) continue;
+                candidates.push({ alien, along, _pythonSeg: 'body', _seg: seg });
+            }
+            for (const seg of (alien._tailHitboxes || [])) {
+                const rx = seg.x - sx, ry = seg.y - sy;
+                const along = rx * cos + ry * sin;
+                if (along <= 0 || along > tMax) continue;
+                if (Math.abs(rx * sin - ry * cos) > HIT_RADIUS + seg.r) continue;
+                candidates.push({ alien, along, _pythonSeg: 'tail', _seg: seg });
+            }
+        }
+
         candidates.sort((a, b) => a.along - b.along);
 
         let laserEnd = tMax;  // beam travels to screen edge unless blocked
-        for (const { alien, along } of candidates) {
-            const bx = alien.x, by = alien.y;
+        for (const { alien, along, _pythonSeg, _seg } of candidates) {
+            if (along > laserEnd) break;  // beam already blocked by an earlier entry
+
+            const bx = _seg ? _seg.x : alien.x;
+            const by = _seg ? _seg.y : alien.y;
+
+            // ── Python non-red body segment: deflect beam, no damage ──
+            if (_pythonSeg === 'body') {
+                laserEnd = along;
+                const spark = this.add.arc(bx, by, 5, 0, 360, false, 0xaaff44, 0.85).setDepth(58);
+                this.tweens.add({ targets: spark, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 180, onComplete: () => spark.destroy() });
+                break;
+            }
+
+            // ── Python red (tail) segment: deal damage same as head hit ──
+            if (_pythonSeg === 'tail') {
+                hitSet.add(alien);
+                if (along > ricochetBestAlong) {
+                    ricochetBestAlong = along;
+                    ricochetOriginX = bx;
+                    ricochetOriginY = by;
+                }
+                const hitFlash = this.add.arc(bx, by, _seg.r, 0, 360, false, 0xff2222, 0.75).setDepth(58);
+                this.tweens.add({ targets: hitFlash, alpha: 0, duration: 200, onComplete: () => hitFlash.destroy() });
+                this.tweens.add({ targets: alien, x: alien.x + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+                const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                if (died) {
+                    this.score++;
+                    this.hud.updateScore(this.score);
+                    alien._dying = true;
+                    if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                        this.healthDrops.push(new HealthDrop(this, bx, by));
+                    }
+                    spawnSnakeDeathAnimation(this, alien);
+                } else if (!this._laser2) {
+                    laserEnd = along;
+                    break;
+                }
+                continue;
+            }
 
             if (alien.shielded) {
                 alien.flashShield?.();
