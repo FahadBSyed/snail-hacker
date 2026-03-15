@@ -23,6 +23,11 @@ import HealthDrop from '../entities/HealthDrop.js';
 import FrogEscape from '../entities/FrogEscape.js'; // decorative escape frogs
 import Bush from '../entities/Bush.js';
 import BasicSnake from '../entities/snakes/BasicSnake.js';
+import Sidewinder from '../entities/snakes/Sidewinder.js';
+import Python from '../entities/snakes/Python.js';
+import Burrower from '../entities/snakes/Burrower.js';
+import Spitter from '../entities/snakes/Spitter.js';
+import AcidGlob from '../entities/AcidGlob.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
 import Decoy from '../entities/Decoy.js';
@@ -364,8 +369,14 @@ export default class GameScene extends Phaser.Scene {
         // ── Game state ────────────────────────────────────────────────────────
         this.aliens      = [];
         this.bushes      = [];
+        this.acidGlobs   = [];
+        this.acidPuddles = [];
         this.healthDrops = [];
         this.frogEscapes = [];
+
+        // World 2 venom state
+        this._venomActive = false;
+        this._venomTimer  = null;
         this.score       = this.startScore;
         this.wave        = this.startWave;
 
@@ -1919,9 +1930,15 @@ export default class GameScene extends Phaser.Scene {
         }
         this.aliens = [];
 
-        // Destroy World 2 bushes
-        for (const bush of this.bushes) { if (bush.active) bush.destroy(); }
-        this.bushes = [];
+        // Destroy World 2 bushes + acid
+        for (const bush of this.bushes)   { if (bush.active) bush.destroy(); }
+        for (const g    of this.acidGlobs) { if (g.active) g.destroy(); }
+        for (const p    of this.acidPuddles) { if (p.active) p.destroy(); }
+        this.bushes      = [];
+        this.acidGlobs   = [];
+        this.acidPuddles = [];
+        this._venomActive = false;
+        if (this._venomTimer) { this._venomTimer.remove(false); this._venomTimer = null; }
 
         // Move snail onto the ship
         this.escapeShip.setPromptVisible(false);
@@ -2052,6 +2069,35 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
+    /**
+     * Apply the World 2 venom debuff to Gerald for VENOM.DURATION ms.
+     * Re-calling while active simply refreshes the timer.
+     * The speed penalty is applied directly in Snail.update() via scene._venomActive.
+     */
+    _applyVenom() {
+        this._venomActive = true;
+        if (this._venomTimer) this._venomTimer.remove(false);
+        this._venomTimer = this.time.delayedCall(CONFIG.SNAKES.VENOM.DURATION, () => {
+            this._venomActive = false;
+            this._venomTimer  = null;
+        });
+        // Visual indicator — brief purple text over Gerald
+        if (!this._venomLabel || !this._venomLabel.active) {
+            this._venomLabel = this.add.text(0, -36, 'VENOMED', {
+                fontSize: '10px', fontFamily: 'monospace', color: '#cc44ff',
+            }).setOrigin(0.5).setDepth(60);
+        }
+        this._venomLabel.setPosition(this.snail.x, this.snail.y - 36);
+        this._venomLabel.setAlpha(1);
+        this.tweens.killTweensOf(this._venomLabel);
+        this.tweens.add({
+            targets:  this._venomLabel,
+            alpha:    0,
+            delay:    CONFIG.SNAKES.VENOM.DURATION - 400,
+            duration: 400,
+        });
+    }
+
     /** Schedule a sporadic ribbet while aliens are alive; re-schedules itself. */
     _startRibbetTimer() {
         if (this._ribbetTimer) { this._ribbetTimer.remove(false); this._ribbetTimer = null; }
@@ -2152,6 +2198,10 @@ export default class GameScene extends Phaser.Scene {
             case 'bomber':       alien = new BomberAlien(this, x, y); break;
             case 'shield':       alien = new ShieldAlien(this, x, y); break;
             case 'basic-snake':  alien = new BasicSnake(this, x, y);  break;
+            case 'sidewinder':   alien = new Sidewinder(this, x, y);  break;
+            case 'python':       alien = new Python(this, x, y);      break;
+            case 'burrower':     alien = new Burrower(this, x, y);    break;
+            case 'spitter':      alien = new Spitter(this, x, y);     break;
             default:             alien = new BasicAlien(this, x, y);
         }
         if (this.slowFieldActive) {
@@ -2367,6 +2417,8 @@ export default class GameScene extends Phaser.Scene {
                     const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                     this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
                     this.soundSynth.play('damage');
+                    // World 2: snake contact applies venom
+                    if (this.world === 2) this._applyVenom();
                     if (died) {
                         if (this.waveManager) this.waveManager.active = false;
                         if (this.activeHack)  { this.activeHack.cancel(); this.activeHack = null; }
@@ -2473,6 +2525,25 @@ export default class GameScene extends Phaser.Scene {
 
         // Collision checks (projectile vs alien)
         checkProjectileCollisions(this);
+
+        // ── World 2: Acid globs update ────────────────────────────────────────
+        this.acidGlobs = this.acidGlobs.filter(g => {
+            if (!g.active) return false;
+            g.update(delta);
+            return g.active;
+        });
+
+        // ── World 2: Acid puddles update + snail slow ─────────────────────────
+        let inPuddle = false;
+        this.acidPuddles = this.acidPuddles.filter(p => {
+            if (!p.active) return false;
+            p.update(delta);
+            if (!p.active) return false;
+            const d = Phaser.Math.Distance.Between(this.snail.x, this.snail.y, p.x, p.y);
+            if (d < p.radius + 12) inPuddle = true;
+            return true;
+        });
+        this._snailInPuddle = inPuddle;
 
         // Health drop pickups (+ gravitation when Health Boost II is owned)
         this.healthDrops = this.healthDrops.filter(drop => {

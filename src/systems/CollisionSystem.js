@@ -285,5 +285,77 @@ export function checkProjectileCollisions(scene) {
             }
             break;  // one projectile hits one alien
         }
+
+        if (!proj.active) continue;
+
+        // ── World 2: Python body-segment intercept ────────────────────────────
+        // If projectile is still alive after the alien loop, check Python body
+        // hitboxes.  A hit destroys the projectile with a spark but does NOT
+        // damage the Python.  (Head hits are handled above in the normal loop.)
+        for (const alien of scene.aliens) {
+            if (!alien.active || !alien._bodyHitboxes) continue;
+            let blocked = false;
+            for (const seg of alien._bodyHitboxes) {
+                const sd = Phaser.Math.Distance.Between(proj.x, proj.y, seg.x, seg.y);
+                if (sd < seg.r + CONFIG.PLAYER.PROJECTILE_RADIUS) {
+                    blocked = true;
+                    break;
+                }
+            }
+            if (!blocked && alien._tailHitboxes) {
+                // Exposed tail segments count as head → deal damage
+                for (const seg of alien._tailHitboxes) {
+                    const sd = Phaser.Math.Distance.Between(proj.x, proj.y, seg.x, seg.y);
+                    if (sd < seg.r + CONFIG.PLAYER.PROJECTILE_RADIUS) {
+                        // Treat as a head hit — full normal damage path
+                        const ricocheted = scene.ricochetEnabled && !proj.fromCannon
+                            ? tryRicochetBullet(proj, scene, alien, seg.x, seg.y)
+                            : false;
+                        if (!ricocheted) proj.destroy();
+                        alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                        blocked = true;
+                        break;
+                    }
+                }
+            }
+            if (blocked && proj.active) {
+                // Body block — spark effect, no damage
+                const sx = proj.x, sy = proj.y;
+                proj.destroy();
+                const spark = scene.add.arc(sx, sy, 4, 0, 360, false, 0xaaff44, 0.85).setDepth(58);
+                scene.tweens.add({
+                    targets: spark, scaleX: 2.5, scaleY: 2.5, alpha: 0,
+                    duration: 180, ease: 'Power2.easeOut', onComplete: () => spark.destroy(),
+                });
+                break;
+            }
+        }
+
+        if (!proj.active) continue;
+
+        // ── World 2: AcidGlob intercept ───────────────────────────────────────
+        // P2 projectiles can shoot down acid globs mid-air.
+        if (scene.acidGlobs) {
+            for (let gi = scene.acidGlobs.length - 1; gi >= 0; gi--) {
+                const glob = scene.acidGlobs[gi];
+                if (!glob.active) continue;
+                const gd = Phaser.Math.Distance.Between(
+                    proj.x, proj.y, glob.x, glob.y,
+                );
+                if (gd < glob.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
+                    glob.destroy();
+                    scene.acidGlobs.splice(gi, 1);
+                    proj.destroy();
+                    // Small pop effect
+                    const pop = scene.add.arc(glob.x, glob.y, 6, 0, 360, false, 0x88dd00, 0.7)
+                        .setDepth(58);
+                    scene.tweens.add({
+                        targets: pop, scaleX: 2, scaleY: 2, alpha: 0,
+                        duration: 200, ease: 'Power2.easeOut', onComplete: () => pop.destroy(),
+                    });
+                    break;
+                }
+            }
+        }
     }
 }

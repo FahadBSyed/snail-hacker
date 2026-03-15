@@ -1,5 +1,69 @@
 # SNAIL HACKER — Changelog
 
+## Session — 2026-03-15
+
+### World 2 — Phase 2 enemies: Sidewinder, Python, Burrower, Spitter (W2-5 through W2-8)
+
+**Config additions** (`CONFIG_VERSION` → 27):
+- `CONFIG.SNAKES.SIDEWINDER` — HEALTH, SPEED_SLOW, SPEED_DASH, RADIUS, WATCH_RADIUS
+- `CONFIG.SNAKES.PYTHON` — HEALTH, HP_PER_SEGMENT, SEGMENT_COUNT, SPEED, RADIUS, BODY_RADIUS, BODY_SPACING, TAIL_HITBOX_SEGS
+- `CONFIG.SNAKES.BURROWER` — HEALTH, SPEED_SURFACE, SPEED_UNDERGROUND, RADIUS, SURFACE/TRANSITION/UNDERGROUND durations
+- `CONFIG.SNAKES.SPITTER` — HEALTH, RADIUS, SPEED, PREFERRED_MIN/MAX, SPIT_COOLDOWN, HIDE_DURATION, GLOB_SPEED/DAMAGE/RADIUS, PUDDLE_DURATION/RADIUS/SLOW_MULT
+- `CONFIG.SNAKES.VENOM` — DURATION, SPEED_MULT
+- `CONFIG.ANACONDA` — full boss config block (for upcoming W2-10)
+
+**Sidewinder** (`src/entities/snakes/Sidewinder.js` — new file):
+- State machine: ENTERING → HIDING → DASHING → ATTACK
+- Monitors P2 cursor distance to current bush each frame; if cursor watches (< WATCH_RADIUS), creeps slowly toward Gerald; if cursor looks away, dashes to the next bush closer to the station
+- When no closer bush exists, switches to ATTACK: direct fast dash at Gerald
+- Bush-hop produces genuine spatial pressure on P2 to "watch" multiple positions
+
+**Python** (`src/entities/snakes/Python.js` — new file):
+- 10-segment body chain; head is only damageable hitzone; body segments deflect projectiles
+- `_bodyHitboxes` array updated each frame from world-space segment positions
+- When ≤ TAIL_HITBOX_SEGS segments remain, the tail end becomes an additional damage hitzone (`_tailHitboxes`)
+- `takeDamage()` removes tail segments visually as health crosses HP_PER_SEGMENT thresholds
+
+**Burrower** (`src/entities/snakes/Burrower.js` — new file):
+- State machine: SURFACE → WARN_BURROW → UNDERGROUND → WARN_EMERGE → SURFACE
+- Underground: invisible + moves at 1.5× speed + animated ground-ripple graphic (`_ripple` world-space Graphics)
+- Warn-emerge: ground-crack/spike radial burst animation, stationary 0.5s warning
+- `takeDamage()` returns false while UNDERGROUND or WARN_BURROW (invulnerable)
+- Dust-puff particles on state transitions
+
+**Spitter** (`src/entities/snakes/Spitter.js` — new file):
+- Kiting behavior: backs away if Gerald < PREFERRED_MIN px, closes in if > PREFERRED_MAX, strafes perpendicular at in-range
+- Fires `AcidGlob` at Gerald's position every SPIT_COOLDOWN ms
+- On any damage → FLEEING state: dashes to nearest free bush, hides for HIDE_DURATION ms, then resumes kiting
+
+**AcidGlob** (`src/entities/AcidGlob.js` — new file):
+- Slow (80 px/s) projectile; tracked in `scene.acidGlobs`; auto-destroys off-screen
+- On contact with Gerald: deals GLOB_DAMAGE, applies venom, spawns AcidPuddle, splat particle effect
+- Destroyable by P2 projectiles (CollisionSystem AcidGlob intercept)
+
+**AcidPuddle** (`src/entities/AcidPuddle.js` — new file):
+- Fades over PUDDLE_DURATION ms; `scene.acidPuddles` array tracked in GameScene
+- While Gerald is inside: `scene._snailInPuddle = true` → Snail applies PUDDLE_SLOW_MULT to movement
+- Multiple puddles can overlap (area coverage stacks, slow doesn't re-multiply)
+
+**GameScene** (`src/scenes/GameScene.js`):
+- New imports: Sidewinder, Python, Burrower, Spitter, AcidGlob
+- New game-state arrays: `this.acidGlobs = []`, `this.acidPuddles = []`
+- New venom state: `this._venomActive`, `this._venomTimer`
+- `spawnAlien`: added cases for `'sidewinder'`, `'python'`, `'burrower'`, `'spitter'`
+- `_applyVenom()`: sets `_venomActive`, refreshes debuff timer, shows fading "VENOMED" text over Gerald
+- Update loop: iterates `acidGlobs` (update + filter), iterates `acidPuddles` (update + Gerald overlap check → `_snailInPuddle`)
+- `reached_snail` handler: calls `this._applyVenom()` when `this.world === 2`
+- Wave-end cleanup: destroys acidGlobs, acidPuddles; clears venom state
+
+**Snail** (`src/entities/Snail.js`):
+- Movement now checks `scene._venomActive` and `scene._snailInPuddle`; applies respective speed multipliers (multiplicative)
+
+**CollisionSystem** (`src/systems/CollisionSystem.js`):
+- Python body-segment intercept: after the normal alien loop, checks `alien._bodyHitboxes`; body hits destroy the projectile with a green spark but do NOT damage the Python
+- Exposed tail hitboxes (`alien._tailHitboxes`) deal full damage, same as head
+- AcidGlob intercept: P2 projectiles can destroy acid globs mid-air; pop effect on hit
+
 ## Session — 2026-03-14
 
 ### World 2 — Bush entity, BasicSnake entity, GameScene integration (W2-1 & W2-4)

@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 26;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 27;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -262,6 +262,82 @@ export const DEFAULTS = {
             RADIUS:        14,   // px — head collision radius
             SEGMENT_COUNT:  4,   // number of body segments (not counting head/tail)
             HIDE_CHANCE:   0.4,  // probability of seeking a bush after spawning
+        },
+
+        SIDEWINDER: {
+            HEALTH:        10,
+            SPEED_SLOW:    35,   // px/s while cursor is watching (suppressed)
+            SPEED_DASH:   220,   // px/s when cursor looks away (bush hop)
+            RADIUS:        12,
+            SEGMENT_COUNT:  3,
+            WATCH_RADIUS:  200,  // px — cursor distance from bush that suppresses a dash
+        },
+
+        PYTHON: {
+            HEALTH:            100,   // total (10 × 10 per segment)
+            HP_PER_SEGMENT:     10,
+            SEGMENT_COUNT:      10,   // total body segments after head (excludes head)
+            SPEED:              40,   // px/s
+            RADIUS:             16,   // head collision radius
+            BODY_RADIUS:        12,   // per body-segment hit radius (for body-only intercept)
+            BODY_SPACING:       18,   // px between history samples used for segment positions
+            TAIL_HITBOX_SEGS:    3,   // how many tail segments also count as hittable head when few remain
+        },
+
+        BURROWER: {
+            HEALTH:                30,
+            SPEED_SURFACE:         65,   // px/s on the surface
+            SPEED_UNDERGROUND:     95,   // px/s while burrowed
+            RADIUS:                14,
+            SEGMENT_COUNT:          3,
+            SURFACE_DURATION:    2500,   // ms on surface before warning
+            TRANSITION_DURATION:  500,   // ms for warn-burrow and warn-emerge states
+            UNDERGROUND_DURATION: 2000,  // ms underground
+        },
+
+        SPITTER: {
+            HEALTH:             30,
+            RADIUS:             12,
+            SEGMENT_COUNT:       3,
+            SPEED:               60,   // px/s — kiting movement speed
+            PREFERRED_MIN:      350,   // px — backs away if Gerald is closer than this
+            PREFERRED_MAX:      500,   // px — approaches if Gerald is farther than this
+            SPIT_COOLDOWN:     2500,   // ms between acid glob shots
+            HIDE_DURATION:     6000,   // ms hiding after taking any damage
+            GLOB_SPEED:          80,   // px/s — acid glob projectile speed
+            GLOB_DAMAGE:          8,   // HP damage to Gerald on hit
+            GLOB_RADIUS:          7,   // px — glob collision radius
+            PUDDLE_DURATION:   4000,   // ms before acid puddle disappears
+            PUDDLE_RADIUS:       40,   // px — puddle area
+            PUDDLE_SLOW_MULT:   0.3,   // fraction of normal snail speed while inside puddle
+        },
+
+        VENOM: {
+            DURATION:    3000,   // ms the venom debuff lasts
+            SPEED_MULT:   0.7,   // fraction of normal snail speed while venomed
+        },
+    },
+
+    ANACONDA: {
+        HP:                     600,
+        SEGMENT_COUNT:           24,
+        SEGMENT_SPACING:         22,   // px between history samples
+        HEAD_RADIUS:             22,
+        BODY_RADIUS:             14,
+        PHASE2_HP:              250,
+        PHASE3_HP:              100,
+        PASS_DURATION_P1:      8000,   // ms per screen crossing, phase 1
+        PASS_DURATION_P2:      6000,
+        PASS_DURATION_P3:      4000,
+        SCALE_DAMAGE_MULT:      0.5,   // head takes 50% damage while scaled
+        BOMB_DAMAGE:             25,
+        BOMB_SLOW_DURATION:    5000,
+        BOMB_EXPOSED_DURATION: 5000,
+        ATTACK_COOLDOWNS: {
+            VENOM_SPIT:    6000,
+            CONSTRICT:    15000,
+            SERPENT_CALL: 20000,
+            SHED_SKIN:    25000,
         },
     },
 
