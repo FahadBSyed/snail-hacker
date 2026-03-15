@@ -1,5 +1,397 @@
 # SNAIL HACKER — Changelog
 
+## Session — 2026-03-15
+
+### Dust cloud particles for burrowing
+
+New export `spawnDustCloud(scene, x, y, opts)` in `snakeHitReaction.js`: 16 earthy-coloured puff circles (3–14 px) that expand as they drift outward in a flat elliptical spread with upward bias — puffs grow larger as they disperse for a realistic billowing look.
+- **Snake death**: dust cloud (count=20, upBias=32) fires at t=80ms coinciding with the burrow cascade start.
+- **Burrower going underground**: 14-puff cloud, low upBias (soil pushed outward).
+- **Burrower emerging**: 18-puff cloud, higher upBias=38 (soil erupts upward). Distinct from the going-under cloud.
+- Removed the old `_spawnDustPuff` from `Burrower.js` (replaced by shared function).
+
+### Snake death animation — cry tears + burrow underground
+
+- `spawnSnakeDeathAnimation(scene, snake)` added to `snakeHitReaction.js`: plays `snakeDie` sound (cartoon slide-whistle whimper + muffled burrow thud), spawns 4 cyan teardrop graphics that arc upward then fall with gravity, then after 80 ms cascades the snake to scale 0 head-first with a dirt-ripple ellipse; calls `snake.destroy()` when the tail finishes shrinking.
+- New `_snakeDie()` in `SoundSynth`: sine sweep 800→150 Hz (slide-whistle), soft harmonic layer, muffled low-freq thud at end.
+- `CollisionSystem.js`: both kill sites branch on `SNAKE_TYPES` — snakes use `spawnSnakeDeathAnimation`, other aliens keep `spawnDeathBurst`.
+
+### Snake hit reaction — red flash + freeze + body wiggle
+
+New shared module `src/entities/snakes/snakeHitReaction.js`:
+- `applyHitReaction(snake)` — on a non-lethal hit: generates red-tinted texture copies via Canvas-2D multiply + destination-in (same as rock/mushroom colorisation), swaps head/body/tail to red, freezes for 130 ms, then runs 220 ms of lateral body-wiggle (sinusoidal cascade, smooth envelope). Generation counter handles rapid hits cleanly. Original textures restored afterward.
+- `tickHitWiggle` / `applyWiggleToSegments` wired into all five snake `update()` + `_updateSegments()` methods.
+- Python: added missing `_stunMs` stun block.
+- All five `takeDamage` methods call `applyHitReaction` when snake survives.
+
+### Sidewinder search speed + concentric bush layout
+
+- Added `SPEED_SEARCH: 140` to `CONFIG.SNAKES.SIDEWINDER` (4× the old slow approach speed of 35 px/s); `CONFIG_VERSION` bumped to 32
+- Sidewinder ENTERING and DASHING states now both use `SPEED_SEARCH` — zooms to target bushes 4× faster; `SPEED_DASH` is now exclusively for the ATTACK dash at Gerald
+- Replaced `_spawnBushes` random rejection sampler with fixed concentric clock positions: ring 1 at r=350px (10/3/7 o'clock), ring 2 at r=250px (1/9/5 o'clock), slot 7 at r=310px (11 o'clock); sidewinders naturally hop inward ring 1 → ring 2 → attack
+
+### Scale all snakes up by 130%
+
+- Head images: `setScale(0.5 → 0.65)` on all 5 snake types
+- Body segments and tail images: `setScale(1.3)` added to all 5 types
+- Head shadow graphics: `setScale(1.3)` applied on all 5 types
+- Collision `RADIUS` scaled ×1.3 in `config.js` (Basic 7→9, Sidewinder 6→8, Python 8→10, Burrower 7→9, Spitter 6→8); `CONFIG_VERSION` bumped to 31
+
+### Snake colour repaints
+
+Updated palettes in `scripts/generate-snake-sprites.js` and regenerated all 15 snake SVGs:
+
+| Type | New colour |
+|------|-----------|
+| BasicSnake | Black (dark grey scale lines, red eyes) |
+| Sidewinder | Yellow (orange eyes) |
+| Python | Bright green (yellow eyes) |
+| Burrower | Blue (cyan eyes) |
+| Spitter | Red (orange eyes) |
+
+Anaconda (boss) palette unchanged. Updated `assets/sprites/PALETTE_SWAPS.md` with the new snake colour table.
+
+### Snake heads halved; body joints now deal damage
+
+- All 5 snake heads scaled to 0.5 (`setScale(0.5)` on `_headImg`); head shadow ellipses halved to match
+- Head collision `RADIUS` halved for all snake types (Basic 14→7, Sidewinder 12→6, Python 16→8, Burrower 14→7, Spitter 12→6); `CONFIG_VERSION` bumped to 30
+- `CollisionSystem.checkProjectileCollisions`: new body-joint pass after the main alien loop checks each `_bodyImg` position of non-Python snakes; a hit deals full projectile damage with the same flash/wobble/death logic as a head hit; Python retains its existing body-block mechanic
+
+### Fix snake bush entry (body fully enters; snakes now leave correctly)
+
+**Root cause**: the snake aimed toward the bush center and stopped at `d ≤ 2 px`,
+but body segments trail the head by `BODY_SPACING × segCount` path-units — often
+larger than `OCCUPY_RADIUS` — so they never crossed the fade threshold.  Because
+`_fadedParts` never reached the total-part count, `_state` never became `'HIDING'`
+and the hide timer never ran, so snakes were trapped in the entry loop forever.
+
+**Fix (BasicSnake, Sidewinder, Spitter)**:
+- Added `_bushEntryAngle`: the approach angle is captured the moment the head
+  crosses `OCCUPY_RADIUS` and the snake keeps moving in **that fixed direction**
+  at full speed until all parts are faded (no "pull to center" deceleration, no stop)
+- `_tickBushHide` is now called unconditionally every frame during the entry phase
+  (previously inside `dist < OCCUPY_RADIUS` so it stopped once the head passed center)
+- The snake slithers straight through the bush sprite; the body traces the same path
+  and each segment fades as it crosses the radius boundary
+
+### Position-based bush hide/reveal + Sidewinder jitter fix
+
+**BasicSnake, Sidewinder, Spitter** (`src/entities/snakes/`):
+- Replaced time-stagger animation (`i * 65 ms delayedCall`) with per-frame distance checks
+- `_tickBushHide(bx, by)`: fades any part whose world position crosses inside `OCCUPY_RADIUS`
+- `_tickBushReveal(bx, by)`: reveals any faded part that has moved outside `OCCUPY_RADIUS`
+- `_setBodyAlpha(alpha)` now also clears `_fadedParts` (used for instant flush restore)
+- `_bushAnimTimers` / `_startHideAnimation` / `_startRevealAnimation` / `_cancelBushAnim` removed
+- Snake continues moving slowly toward the bush center after `bush.enter()` fires (0.4–0.5× speed)
+  so that trailing body segments and the tail physically enter the bush before it switches to HIDING
+- On exit, Bush caches its position into `snake._lastBushPos`; HUNT/KITE/DASHING/ATTACK states
+  call `_tickBushReveal` each frame until `_fadedParts` empties
+
+**Sidewinder** — jitter now active during ENTERING and DASHING:
+- Bush-approach movement replaced with jitter version (was a plain `_moveToward` call)
+- Jitter applies at both SPEED_SLOW (ENTERING) and SPEED_DASH (DASHING) toward the target bush
+- Previously jitter only fired during ATTACK, which is rarely reached
+
+**Bush** (`src/entities/Bush.js`):
+- `exit(snake)` now writes `snake._lastBushPos = { x, y }` instead of calling reveal animation
+
+### Sequential hide/reveal animation when snakes enter or exit a bush
+
+**Bush** (`src/entities/Bush.js`):
+- `exit(snake)` now calls `snake._startRevealAnimation?.()` instead of instant `_setBodyAlpha(1)`
+- `flush()` calls `snake._cancelBushAnim?.()` before instant `_setBodyAlpha(1)` so abrupt ejection overrides any in-progress fade
+
+**BasicSnake, Sidewinder, Spitter** (`src/entities/snakes/`):
+- Added `_bushAnimTimers = []` to track pending `delayedCall` handles
+- `_startHideAnimation()`: fades head → body[0..n] → tail to alpha 0; 65 ms stagger, 150 ms per part
+- `_startRevealAnimation()`: same order but to alpha 1
+- `_cancelBushAnim()`: removes all pending timers immediately (used by flush + destroy)
+- `_setBodyAlpha(0.2)` on successful bush entry replaced with `_startHideAnimation()`
+- Redundant `_setBodyAlpha(1)` calls after `currentBush.exit()` removed (animation handles it)
+- `destroy()` calls `exit(this)` then `_cancelBushAnim()` to prevent ghost tweens after death
+
+### Multi-occupancy bushes + jitter for all snake types
+
+**Bush** (`src/entities/Bush.js`):
+- `isOccupied` / `occupant` converted to getters backed by a new `occupants[]` array
+- `enter(snake)` no longer rejects occupied bushes — only rejects scorched ones; multiple snakes can now share the same bush simultaneously
+- `exit(snake)` takes the departing snake as an argument; rustle tween stops only when the last occupant leaves; each exiting snake has its alpha restored individually
+- `flush()` ejects and stuns every occupant in the array (was single-occupant only)
+- All bush-finding helpers in BasicSnake, Sidewinder, Spitter updated to drop the `isOccupied` filter; `_pickOrKeepBush` in BasicSnake simplified to only reject scorched bushes
+
+**Jitter inherited by Sidewinder, Spitter, Burrower**:
+- All three now initialise `_jitterMs`, `_jitterDir`, `_jitterCooldown` from `CONFIG.SNAKES.JITTER_*` (same shared config as BasicSnake)
+- Sidewinder: jitter applied during ATTACK state (direct dash at Gerald)
+- Spitter: jitter applied during KITE state when closing in (dist > PREFERRED_MAX)
+- Burrower: jitter applied during both SURFACE and UNDERGROUND chase phases
+- `exit()` call sites updated to pass `this` as the snake argument
+
+**Snake head sprites** (`scripts/generate-snake-sprites.js`):
+- Replaced space-suit visor + alien eyes + antennae with top-down snake anatomy:
+  - Two small eyes on opposite sides (top/bottom of sprite), with iris, vertical slit pupil, specular highlight
+  - Forked red tongue extending from snout tip
+- SVG width widened by 10 px to accommodate tongue prongs
+
+### World 2 — Phase 2 enemies: Sidewinder, Python, Burrower, Spitter (W2-5 through W2-8)
+
+**Config additions** (`CONFIG_VERSION` → 27):
+- `CONFIG.SNAKES.SIDEWINDER` — HEALTH, SPEED_SLOW, SPEED_DASH, RADIUS, WATCH_RADIUS
+- `CONFIG.SNAKES.PYTHON` — HEALTH, HP_PER_SEGMENT, SEGMENT_COUNT, SPEED, RADIUS, BODY_RADIUS, BODY_SPACING, TAIL_HITBOX_SEGS
+- `CONFIG.SNAKES.BURROWER` — HEALTH, SPEED_SURFACE, SPEED_UNDERGROUND, RADIUS, SURFACE/TRANSITION/UNDERGROUND durations
+- `CONFIG.SNAKES.SPITTER` — HEALTH, RADIUS, SPEED, PREFERRED_MIN/MAX, SPIT_COOLDOWN, HIDE_DURATION, GLOB_SPEED/DAMAGE/RADIUS, PUDDLE_DURATION/RADIUS/SLOW_MULT
+- `CONFIG.SNAKES.VENOM` — DURATION, SPEED_MULT
+- `CONFIG.ANACONDA` — full boss config block (for upcoming W2-10)
+
+**Sidewinder** (`src/entities/snakes/Sidewinder.js` — new file):
+- State machine: ENTERING → HIDING → DASHING → ATTACK
+- Monitors P2 cursor distance to current bush each frame; if cursor watches (< WATCH_RADIUS), creeps slowly toward Gerald; if cursor looks away, dashes to the next bush closer to the station
+- When no closer bush exists, switches to ATTACK: direct fast dash at Gerald
+- Bush-hop produces genuine spatial pressure on P2 to "watch" multiple positions
+
+**Python** (`src/entities/snakes/Python.js` — new file):
+- 10-segment body chain; head is only damageable hitzone; body segments deflect projectiles
+- `_bodyHitboxes` array updated each frame from world-space segment positions
+- When ≤ TAIL_HITBOX_SEGS segments remain, the tail end becomes an additional damage hitzone (`_tailHitboxes`)
+- `takeDamage()` removes tail segments visually as health crosses HP_PER_SEGMENT thresholds
+
+**Burrower** (`src/entities/snakes/Burrower.js` — new file):
+- State machine: SURFACE → WARN_BURROW → UNDERGROUND → WARN_EMERGE → SURFACE
+- Underground: invisible + moves at 1.5× speed + animated ground-ripple graphic (`_ripple` world-space Graphics)
+- Warn-emerge: ground-crack/spike radial burst animation, stationary 0.5s warning
+- `takeDamage()` returns false while UNDERGROUND or WARN_BURROW (invulnerable)
+- Dust-puff particles on state transitions
+
+**Spitter** (`src/entities/snakes/Spitter.js` — new file):
+- Kiting behavior: backs away if Gerald < PREFERRED_MIN px, closes in if > PREFERRED_MAX, strafes perpendicular at in-range
+- Fires `AcidGlob` at Gerald's position every SPIT_COOLDOWN ms
+- On any damage → FLEEING state: dashes to nearest free bush, hides for HIDE_DURATION ms, then resumes kiting
+
+**AcidGlob** (`src/entities/AcidGlob.js` — new file):
+- Slow (80 px/s) projectile; tracked in `scene.acidGlobs`; auto-destroys off-screen
+- On contact with Gerald: deals GLOB_DAMAGE, applies venom, spawns AcidPuddle, splat particle effect
+- Destroyable by P2 projectiles (CollisionSystem AcidGlob intercept)
+
+**AcidPuddle** (`src/entities/AcidPuddle.js` — new file):
+- Fades over PUDDLE_DURATION ms; `scene.acidPuddles` array tracked in GameScene
+- While Gerald is inside: `scene._snailInPuddle = true` → Snail applies PUDDLE_SLOW_MULT to movement
+- Multiple puddles can overlap (area coverage stacks, slow doesn't re-multiply)
+
+**GameScene** (`src/scenes/GameScene.js`):
+- New imports: Sidewinder, Python, Burrower, Spitter, AcidGlob
+- New game-state arrays: `this.acidGlobs = []`, `this.acidPuddles = []`
+- New venom state: `this._venomActive`, `this._venomTimer`
+- `spawnAlien`: added cases for `'sidewinder'`, `'python'`, `'burrower'`, `'spitter'`
+- `_applyVenom()`: sets `_venomActive`, refreshes debuff timer, shows fading "VENOMED" text over Gerald
+- Update loop: iterates `acidGlobs` (update + filter), iterates `acidPuddles` (update + Gerald overlap check → `_snailInPuddle`)
+- `reached_snail` handler: calls `this._applyVenom()` when `this.world === 2`
+- Wave-end cleanup: destroys acidGlobs, acidPuddles; clears venom state
+
+**Snail** (`src/entities/Snail.js`):
+- Movement now checks `scene._venomActive` and `scene._snailInPuddle`; applies respective speed multipliers (multiplicative)
+
+**CollisionSystem** (`src/systems/CollisionSystem.js`):
+- Python body-segment intercept: after the normal alien loop, checks `alien._bodyHitboxes`; body hits destroy the projectile with a green spark but do NOT damage the Python
+- Exposed tail hitboxes (`alien._tailHitboxes`) deal full damage, same as head
+- AcidGlob intercept: P2 projectiles can destroy acid globs mid-air; pop effect on hit
+
+## Session — 2026-03-14
+
+### World 2 — Bush entity, BasicSnake entity, GameScene integration (W2-1 & W2-4)
+
+**Config additions** (`CONFIG_VERSION` → 26):
+- `CONFIG.SNAKES.BODY_SPACING`, `CONFIG.SNAKES.HIDE_SEEK_DIST`
+- `CONFIG.SNAKES.BASIC` — `SPEED`, `HEALTH`, `RADIUS`, `SEGMENT_COUNT`, `HIDE_CHANCE`
+- `CONFIG.BUSHES` — `RUSTLE_DURATION`, `BURN_FLASH_ALPHA`, `FLUSH_STUN_MS`, `OCCUPY_RADIUS`
+
+**Bush entity** (`src/entities/Bush.js` — new file):
+- Phaser Container at depth 30; children: sprite image (`bush` / `bush-scorched`) + white-flash graphics overlay
+- `enter(snake)` — accepts snake if not occupied/scorched; plays rustle tween; returns false if rejected
+- `exit()` — clears occupant
+- `flush()` — force-ejects occupant; sets `snake._stunMs = CONFIG.BUSHES.FLUSH_STUN_MS`; brief flash
+- `burn()` — scorches permanently; ejects occupant; swaps to `bush-scorched` texture; full flash
+
+**BasicSnake entity** (`src/entities/snakes/BasicSnake.js` — new file):
+- Extends `Phaser.GameObjects.Container`; fits into `scene.aliens` array; `update()` returns `'alive' | 'reached_snail'`
+- Multi-segment body: head = container child (moves with container); body/tail = world-space images positioned from a `_history` array of past head positions, each spaced `BODY_SPACING` px apart along the trail, rotated toward the preceding sample
+- State machine: `HUNT` (straight-line toward snail) → `TO_BUSH` (seeks nearest available bush) → `HIDING` (fully still, invulnerable) → back to `HUNT` (not yet, future: on timer or flush)
+- `takeDamage()` blocked when `hidingInBush === true`; `takeDamageRaw()` bypasses
+- `destroy()` cleans up world-space segment/tail images and calls `currentBush.exit()`
+
+**GameScene** (`src/scenes/GameScene.js`):
+- Imports `Bush` and `BasicSnake`
+- `this.bushes = []` initialized in `create()`
+- `onWaveStart`: calls `this._spawnBushes(count)` when `this.world === 2`
+- `_spawnBushes(count)`: destroys previous bushes, places N new ones using seeded PRNG rejection-sampling (avoids station center, screen edges, terminals, and each other)
+- `spawnAlien`: added `case 'basic-snake': alien = new BasicSnake(this, x, y)`
+- Wave-end cleanup: destroys and clears `this.bushes` in `_boardEscapeShip`
+- `_resolveSnailCollisions`: Gerald walking into an occupied bush calls `bush.flush()`
+
+**CollisionSystem** (`src/systems/CollisionSystem.js`):
+- `checkProjectileCollisions`: added `if (alien.hidingInBush) continue;` guard — snakes inside a bush are immune to projectile hits
+
+### World 2 foundation — world system, asset manifest, snake sprites
+
+**World system** — The game now supports multiple worlds selectable from the main menu. `world: 1 | 2` is passed through all scene transitions (Menu → Game → Intermission → Game → Victory/GameOver). All scenes read `data.world` in `init()` and forward it on `scene.start()`.
+
+**Menu** — `MenuScene` now shows two world buttons instead of a single "START GAME":
+- `[ WORLD 1: ALIEN INVASION ]` (cyan) — the existing alien campaign
+- `[ WORLD 2: THE SNAKE PIT  ]` (green) — the new snake campaign
+
+**Asset manifest** (`src/data/assetManifest.js` — new file) — Central registry of every loadable texture tagged by world:
+- `worlds: 'all'` — loaded in every world (snail, station, terminals, props)
+- `worlds: [1]`   — World 1 only (alien/frog sprites, 8-directional × 6 types)
+- `worlds: [2]`   — World 2 only (snake sprites, bush props, snake terminals)
+
+`GameScene.preload()` now iterates the manifest and skips entries whose world tag doesn't match the current world, replacing ~70 lines of manual `load.svg()` calls with a 6-line loop. Frog and alien sprites are not loaded at all in World 2.
+
+**WaveManager** (`src/systems/WaveManager.js`) — Now accepts `opts.world` and maintains separate wave-config tables:
+- `WAVE_CONFIGS` — unchanged World 1 alien waves
+- `SNAKE_WAVE_CONFIGS` — 10 World 2 waves with snake type names and `bushCount` per wave
+- World 2 uses a simple interval-based spawn system (one snake every `spawnInterval` ms, random from pool) instead of the budget+bias system, as snakes don't use formation spawning
+
+**Sprite generation scripts** (3 new scripts, all runnable with `node scripts/…`):
+- `scripts/generate-snake-sprites.js` — 18 SVGs: 5 enemy types + anaconda boss, each with head (64×48), body (32×24), tail (28×20). Anaconda uses larger canvases (80×60 / 36×28 / 32×24). All sprites face right and are rotated at runtime — no 8-directional variants needed. Aesthetic: alien snake in a space suit (bubble visor, metallic collar ring, scale texture, slit-pupil eyes, antennae). Each type has a distinct color palette.
+- `scripts/generate-bush-sprite.js` — 2 SVGs: `bush.svg` (lush green, multi-layer foliage) and `bush-scorched.svg` (charred grey with orange ember glints). Saved to `assets/sprites/props/`.
+- `scripts/generate-snake-terminal-sprites.js` — 2 SVGs: `terminal-burner.svg` (hot orange screen, flame icon on desk) and `terminal-mongoose.svg` (amber screen, mongoose silhouette + paw-print). Saved to `assets/sprites/terminal/`.
+
+**Generated assets** (22 new SVG files):
+- `assets/sprites/snake/snake-{basic,sidewinder,python,burrower,spitter,anaconda}-{head,body,tail}.svg`
+- `assets/sprites/props/bush.svg`, `bush-scorched.svg`
+- `assets/sprites/terminal/terminal-burner.svg`, `terminal-mongoose.svg`
+
+**SNAKE_WORLD.md** — Updated `Implementation Plan` section to reflect that Steps W2-2 (world select), W2-3 (WaveManager snake config), and sprite generation are now complete.
+
+### Fix FROGGER_CROSSINGS config; rebalance boss
+
+**Bug fix:** `CONFIG.MINIGAMES.FROGGER_CROSSINGS` had no effect because `_wordsForWave(10)` returned `CONFIG.BOSS.SHIELD_DROP_WORDS` (a separate, duplicate constant), which was then passed explicitly as `pointsNeeded` to `FroggerMinigame`, bypassing the config fallback. Fixed by removing `BOSS.SHIELD_DROP_WORDS` and making `_wordsForWave(10)` return `CONFIG.MINIGAMES.FROGGER_CROSSINGS` directly — single source of truth.
+
+**Config changes** (CONFIG_VERSION → 24):
+- `MINIGAMES.FROGGER_CROSSINGS`: 3 → 1
+- `BOSS.HP`: 200 → 40; `BOSS.PHASE_SHIFT_HP`: 100 → 20 (kept at 50% of HP)
+- `BOSS.ATTACK_COOLDOWNS.ALIEN_BURST`: 5000 → 10000
+- `BOSS.ATTACK_COOLDOWNS.BLACK_HOLE`: 8000 → 15000
+- `BOSS.ATTACK_COOLDOWNS.EMP`: 12000 → 20000
+- `BOSS.ATTACK_COOLDOWNS.TERMINAL_LOCK`: 15000 → 30000
+- `BOSS.SHIELD_DROP_WORDS`: removed (superseded by `MINIGAMES.FROGGER_CROSSINGS`)
+
+### Speed II — reworked as pure passive (skip rhythm minigame)
+
+Speed II no longer creates a terminal or grants a speed burst. It is now a pure passive: when owned, every terminal's `launchMinigame` is replaced with `_instantLauncher` immediately after `_spawnUpgradeTerminals()` runs, so pressing E on any terminal (including RELOAD and all upgrade terminals) succeeds instantly without the rhythm minigame. `CONFIG.TERMINALS.SPEED_2` block removed from `config.js`; CONFIG_VERSION bumped to 23. IntermissionScene description updated. The `SPEED_2` case removed from `_spawnUpgradeTerminals`.
+
+### Decoy bounce on contact (Decoy I & II)
+
+Aliens no longer die when they reach the decoy. Instead they bounce away (identical to the Shield I mechanic): the decoy takes damage (`ALIEN_HIT_SNAIL`), a `shieldReflect` sound plays, and the alien is pushed away at `speed × 2` for 3 s. After the bounce timer expires it resumes normal targeting and approaches again. Decoy II remains invulnerable (its `takeDamage` override is a no-op), so only the bounce occurs. `src/scenes/GameScene.js` — replaced `alien.destroy()` + `spawnDeathBurst` in the `reached_decoy` block with bounce-angle + `_bounceUntil` assignment, caching decoy coords before calling `takeDamage` so the bounce angle is correct even if the decoy expires.
+
+### Hitscan Laser II — Tier II Passive
+
+Adds **LASER_2**, offered on even waves once Laser is owned. Pure passive with two improvements over T1:
+
+1. **Pass-through** — the beam no longer stops at surviving aliens. The `break` in `_fireLaser`'s candidate loop is now gated on `!this._laser2`, so the beam continues to screen edge regardless of whether hit aliens die.
+2. **Auto-aim** — at the start of `_fireLaser`, if `_laser2` is set, scan all active aliens within `LASER_2.SNAP_RADIUS` (80 px) of the cursor position and redirect `(tx, ty)` to the nearest one. If no alien is within range the shot fires at cursor as normal.
+
+**`src/config.js`**: Bumped `CONFIG_VERSION` to 22. Added `LASER_2: { SNAP_RADIUS: 80 }`.
+
+**`src/scenes/IntermissionScene.js`**: Added `LASER_2` to `PASSIVE_UPGRADES`, `PASSIVE_POOL_T2`, `T2_PREREQS`, and `getUpgradeDefs()`.
+
+**`src/scenes/GameScene.js`**: Caches `this._laser2` flag in `create()`; prepends auto-aim block and changes the surviving-alien `break` to `else if (!this._laser2)` in `_fireLaser`.
+
+### Ricochet II — Tier II Passive
+
+Adds **RICOCHET_2**, offered on even waves once Ricochet is owned. Pure passive with two improvements over T1:
+
+1. **No chance falloff** — `FALLOFF` stays at `1.0` so every bounce fires at the full 80% `BASE_CHANCE` rather than halving each hop.
+2. **Double search radius** — 480 px instead of 240 px, letting bounces reach across the arena.
+
+Both the laser (`_fireLaserRicochet`) and projectile (`tryRicochetBullet`) code paths now read from scene-level fields `_ricochetFalloff` and `_ricochetSearchRadius` set in `create()`. This keeps CONFIG immutable while letting T2 override both values cleanly; `??` fallbacks in `CollisionSystem` ensure safety if the scene fields are ever absent.
+
+**`src/config.js`**: Bumped `CONFIG_VERSION` to 21. Added `RICOCHET_2: { FALLOFF: 1.0, SEARCH_RADIUS: 480 }`.
+
+**`src/scenes/IntermissionScene.js`**: Added `RICOCHET_2` to `PASSIVE_UPGRADES`, `PASSIVE_POOL_T2`, `T2_PREREQS`, and `getUpgradeDefs()`.
+
+**`src/scenes/GameScene.js`**: Caches `_ricochetFalloff` and `_ricochetSearchRadius` in `create()`; `_fireLaserRicochet` reads from those instead of CONFIG directly.
+
+**`src/systems/CollisionSystem.js`**: `tryRicochetBullet` reads `scene._ricochetFalloff` and `scene._ricochetSearchRadius` with CONFIG fallbacks.
+
+### Health Boost II — Tier II Passive
+
+Adds **HEALTH_2**, offered on even waves once Health Boost is owned. Pure passive with two simultaneous effects:
+
+1. **Passive regen** — 0.5 HP/s via a 1 s Phaser timer that adds `HEALTH_2_REGEN_RATE` HP per tick (caps at `maxHealth`). Pauses automatically with the scene.
+2. **Drop gravitation** — health drops home toward the snail each frame at `GRAVITATE_SPEED` (80 px/s). Uses a new `HealthDrop.gravitate()` method and a cached `this._healthDropGravitate` flag to avoid per-frame `.some()` calls.
+
+**`src/config.js`**: Bumped `CONFIG_VERSION` to 20. Added `SNAIL.HEALTH_2_REGEN_RATE: 0.5` and `HEALTH_DROP.GRAVITATE_SPEED: 80`.
+
+**`src/entities/HealthDrop.js`**: Added `gravitate(snailX, snailY, delta)` method.
+
+**`src/scenes/IntermissionScene.js`**: Added `HEALTH_2` to `PASSIVE_UPGRADES`, `PASSIVE_POOL_T2`, `T2_PREREQS`, and `getUpgradeDefs()`.
+
+**`src/scenes/GameScene.js`**: Caches `this._healthDropGravitate` flag in `create()`; starts regen timer after HUD init; calls `drop.gravitate()` each frame in the health drop update loop when flag is set.
+
+### Ammo Boost II — Tier II Passive
+
+Adds **AMMO_2**, offered on even waves once Ammo Boost is owned. Pure passive (no terminal). Starts a looping 1 s timer in `GameScene.create()` (after HUD init) that increments `this.ammo` by 1 and calls `hud.updateAmmo` whenever ammo is below max. Naturally caps at `ammoMax` and is paused automatically when the scene is paused (Phaser timer).
+
+**`src/config.js`**: Bumped `CONFIG_VERSION` to 19. Added `PLAYER.AMMO_2_REGEN_RATE: 1`.
+
+**`src/scenes/IntermissionScene.js`**: Added `AMMO_2` to `PASSIVE_UPGRADES`, `PASSIVE_POOL_T2`, `T2_PREREQS`, and `getUpgradeDefs()`.
+
+**`src/scenes/GameScene.js`**: After HUD setup, checks for `AMMO_2` ownership and registers a `time.addEvent` loop with `delay = 1000 / AMMO_2_REGEN_RATE`.
+
+### Quick Grab II — Tier II Passive
+
+Adds **QUICK_GRAB_2**, offered on even waves once Quick Grab is owned. Pure passive (no terminal). Sets the grab cooldown to a flat **0.5 s** by computing the appropriate `cooldownMultiplier` from the base cooldown config. The T2 check runs after the T1 check so it always wins when both are owned.
+
+**`src/config.js`**: Bumped `CONFIG_VERSION` to 18. Added `GRAB.QUICK_GRAB_2_COOLDOWN: 0.5`.
+
+**`src/scenes/IntermissionScene.js`**: Added `QUICK_GRAB_2` to `PASSIVE_UPGRADES`, `PASSIVE_POOL_T2`, `T2_PREREQS`, and `getUpgradeDefs()`.
+
+**`src/scenes/GameScene.js`**: Added `QUICK_GRAB_2` check after the `QUICK_GRAB` check; sets `cooldownMultiplier = CONFIG.GRAB.QUICK_GRAB_2_COOLDOWN / CONFIG.GRAB.COOLDOWN`.
+
+### Speed Boost II — First Tier II Passive Upgrade
+
+Adds **SPEED_2**, the first Tier II passive upgrade. Unlike T1 passives (which apply instantly and permanently), SPEED_2 spawns a terminal near the station that the player activates by pressing **E** — no minigame required. While active it triples Gerald's base speed for 15 s, then enters a 20 s cooldown.
+
+**`src/config.js`**:
+- Bumped `CONFIG_VERSION` to 17.
+- Added `TERMINALS.SPEED_2: { DURATION, COOLDOWN, SPEED_MULTIPLIER }`.
+
+**`src/scenes/IntermissionScene.js`**:
+- Added `SPEED_2: 'SPEED_BOOST'` to `T2_PREREQS`.
+- Extracted `ACTIVE_POOL_T2` from `Object.keys(T2_PREREQS)` so it stays active-only; introduced `PASSIVE_POOL_T2 = ['SPEED_2']`.
+- Added `ALL_T2` set (union of both pools) used in `buildOffered` so passive T2s are also guaranteed when available.
+- Even-wave `available` selection now uses `PASSIVE_POOL_T2` (was hardcoded `[]`).
+- Startup mode now also includes passive T2s in the available pool.
+- Added `SPEED_2` entry to `getUpgradeDefs()`.
+
+**`src/scenes/GameScene.js`**:
+- Added `this._instantLauncher` — calls `onSuccess()` directly without spawning a minigame.
+- Added `SPEED_2: 'SPEED_BOOST'` to the local `T2_TO_T1` map in `_spawnUpgradeTerminals`.
+- Added `case 'SPEED_2'` terminal: uses `_instantLauncher`, captures current snail speed as `restoreSpeed`, bumps to `3× SNAIL_SPEED` for the effect duration, then restores via `delayedCall`.
+
+## Session — 2026-03-13
+
+### Terminal Active-Phase State + Cooldown Sequencing Fix
+
+Terminals with a timed effect (Cannon, Shield, Slow Field, Decoy, EMP, and all T2 equivalents) now correctly show an "ACTIVE" phase while the effect is running, and only begin the cooldown countdown *after* the effect expires.
+
+**Root cause**: `handleMinigameResult` immediately called `startCooldown(DURATION + COOLDOWN)` — so the cooldown timer started the moment the hack succeeded and could expire before the effect ended (most visible with DECOY, whose DURATION > COOLDOWN).
+
+**`src/entities/Terminal.js`**:
+- Added `opts.effectDuration` (ms the effect runs before cooldown starts; defaults to 0 for instant terminals).
+- Added `startEffect(effectDuration, cooldownDuration)` method: sets `terminalState = 'EFFECT_ACTIVE'`, shows a bright screen glow and `ACT Xs` countdown in the terminal's own colour, then automatically calls `startCooldown(cooldownDuration)` when the effect timer expires.
+- `handleMinigameResult`: on success, calls `startEffect` when `effectDuration > 0`, otherwise `startCooldown` as before.
+- `startCooldown` and `forceLock` both cancel `_effectHandle` as well as `_cooldownHandle`.
+
+**`src/scenes/GameScene.js`**: Updated all duration-based terminal constructions to pass `effectDuration` + `cooldown` separately (instead of the previous combined `DURATION + COOLDOWN` total):
+- CANNON / CANNON_2, SHIELD / SHIELD_2, SLOWFIELD / SLOWFIELD_2, DECOY / DECOY_2, EMP_MINES / EMP_MINES_2, REPAIR_2 (regen duration).
+
+### REPAIR_2 Regen — Visible Indicator
+
+Added a `▲ REGEN` label next to the health bar that appears while Repair Kit II's 5-second passive regen is active, making it clear nanobots are running even if the health bar is near full.
+
+- **`src/scenes/HUD.js`**: `_regenLabel` text object (hidden by default); `showRegen()` / `hideRegen()` methods.
+- **`src/scenes/GameScene.js`**: REPAIR_2 `onSuccess` calls `hud.showRegen()` at start and `hud.hideRegen()` at the last tick (or if Gerald dies mid-regen).
+
 ## Session — 2026-03-12
 
 ### EMP Terminal Sprite + Unified Electric-Yellow Color

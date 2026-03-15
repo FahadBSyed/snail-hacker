@@ -353,6 +353,32 @@ function accentRepair({ MX, MY, MW, MH, DX, DY, SC }) {
   <circle cx="${DX+33}" cy="${DY+11}" r="1.5" fill="none" stroke="${SC}" stroke-width="0.8"/>`;
 }
 
+function accentDecoy({ MX, MY, MW, MH, DX, DY, SC }) {
+    // Beacon / lure icon: crosshair circle + expanding pulse rings on screen
+    const cx = MX + MW / 2;
+    const cy = MY + MH - 7;
+    return `
+  <!-- Decoy beacon: centre circle with crosshair on screen -->
+  <circle cx="${cx}" cy="${cy}" r="4.5" fill="none" stroke="${SC}" stroke-width="1" opacity="0.85"/>
+  <line x1="${cx-7}" y1="${cy}" x2="${cx-5.5}" y2="${cy}" stroke="${SC}" stroke-width="0.9" opacity="0.7"/>
+  <line x1="${cx+5.5}" y1="${cy}" x2="${cx+7}" y2="${cy}" stroke="${SC}" stroke-width="0.9" opacity="0.7"/>
+  <line x1="${cx}" y1="${cy-7}" x2="${cx}" y2="${cy-5.5}" stroke="${SC}" stroke-width="0.9" opacity="0.7"/>
+  <line x1="${cx}" y1="${cy+5.5}" x2="${cx}" y2="${cy+7}" stroke="${SC}" stroke-width="0.9" opacity="0.7"/>
+  <!-- Bright centre dot -->
+  <circle cx="${cx}" cy="${cy}" r="1.5" fill="${SC}" opacity="0.9"/>
+  <!-- Outer pulse ring -->
+  <circle cx="${cx}" cy="${cy}" r="8" fill="none" stroke="${SC}" stroke-width="0.6" opacity="0.35"/>
+  <!-- Signal waves on desk front: three arcs expanding upward -->
+  <path d="M${DX+34},${DY+10} a4,4 0 0 1 8,0"
+        fill="none" stroke="${SC}" stroke-width="1.1" stroke-linecap="round" opacity="0.85"/>
+  <path d="M${DX+31},${DY+10} a7,7 0 0 1 14,0"
+        fill="none" stroke="${SC}" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+  <path d="M${DX+28},${DY+10} a10,10 0 0 1 20,0"
+        fill="none" stroke="${SC}" stroke-width="0.6" stroke-linecap="round" opacity="0.3"/>
+  <!-- Antenna dot at base of waves -->
+  <circle cx="${DX+38}" cy="${DY+11}" r="1.2" fill="${SC}" opacity="0.8"/>`;
+}
+
 function accentEmp({ MX, MY, MW, MH, DX, DY, SC }) {
     // Lightning bolt on screen (classic EMP / electricity symbol)
     const cx = MX + MW / 2;
@@ -413,6 +439,11 @@ const sprites = {
         label:       'EMP',
         accentFn:    accentEmp,
     }),
+    'terminal-decoy.svg': terminal({
+        screenColor: '#ff44cc',
+        label:       'DECOY',
+        accentFn:    accentDecoy,
+    }),
 };
 
 for (const [filename, content] of Object.entries(sprites)) {
@@ -422,4 +453,4 @@ for (const [filename, content] of Object.entries(sprites)) {
     console.log(`✔  ${path}`);
 }
 
-console.log('\nDone — 8 SVGs generated.');
+console.log('\nDone — 9 SVGs generated.');

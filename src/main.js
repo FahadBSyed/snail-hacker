@@ -40,3 +40,5 @@ const config = {
 
 const game = new Phaser.Game(config);
 game.registry.set('soundSynth', soundSynth);
+
+game.canvas.addEventListener('contextmenu', (e) => e.preventDefault());

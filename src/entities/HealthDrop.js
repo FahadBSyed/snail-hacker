@@ -46,6 +46,17 @@ export default class HealthDrop extends Phaser.GameObjects.Container {
         });
     }
 
+    /** Move toward the snail at the configured gravitation speed. */
+    gravitate(snailX, snailY, delta) {
+        const dx   = snailX - this.x;
+        const dy   = snailY - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 2) return;
+        const move = Math.min(CONFIG.HEALTH_DROP.GRAVITATE_SPEED * delta / 1000, dist);
+        this.x += (dx / dist) * move;
+        this.y += (dy / dist) * move;
+    }
+
     /**
      * Returns true if the snail is close enough to pick this up.
      * Caller is responsible for destroying and applying the heal.

@@ -80,6 +80,23 @@ The dome ring colour (`#00eeff`) intentionally matches the in-game shield ring g
 
 ---
 
+---
+
+## Snake Palettes
+
+> Source: `scripts/generate-snake-sprites.js`
+
+| Type | Skin | Visor / Eyes |
+|------|------|--------------|
+| BasicSnake | Black (`#111111` / `#242424`) | Grey visor, red eyes (`#ff3333`) |
+| Sidewinder | Yellow (`#c8a000` / `#e8c000`) | Yellow visor, orange eyes (`#ff6600`) |
+| Python | Bright green (`#00aa00` / `#00cc00`) | Green visor, yellow eyes (`#ffff00`) |
+| Burrower | Blue (`#1a4080` / `#2255aa`) | Blue visor, cyan eyes (`#44ccff`) |
+| Spitter | Red (`#8a1010` / `#b01818`) | Red visor, orange eyes (`#ff8800`) |
+| Anaconda (boss) | Deep purple (`#160822` / `#220e34`) | Purple visor, purple eyes + gold trim |
+
+---
+
 ## alien-boss (BossAlien / The Overlord) — crimson dreadnought
 
 > Source: `scripts/generate-boss-sprite.js`

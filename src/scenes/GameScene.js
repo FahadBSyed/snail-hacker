@@ -21,13 +21,23 @@ import HelicopterMinigame from '../minigames/HelicopterMinigame.js';
 import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import FrogEscape from '../entities/FrogEscape.js'; // decorative escape frogs
+import Bush from '../entities/Bush.js';
+import BasicSnake from '../entities/snakes/BasicSnake.js';
+import Sidewinder from '../entities/snakes/Sidewinder.js';
+import Python from '../entities/snakes/Python.js';
+import Burrower from '../entities/snakes/Burrower.js';
+import Spitter from '../entities/snakes/Spitter.js';
+import AcidGlob from '../entities/AcidGlob.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
 import Decoy from '../entities/Decoy.js';
 import EmpMine from '../entities/EmpMine.js';
 import HUD from './HUD.js';
 import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions, BURST_COLORS } from '../systems/CollisionSystem.js';
+import { spawnSnakeDeathAnimation } from '../entities/snakes/snakeHitReaction.js';
+const SNAKE_TYPES = new Set(['basic-snake', 'sidewinder', 'spitter', 'burrower', 'python']);
 import { PROP_PALETTES } from '../data/propPalettes.js';
+import { ASSET_MANIFEST } from '../data/assetManifest.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -35,6 +45,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     init(data = {}) {
+        this.world        = data.world       || 1;
         this.startWave    = data.wave        || 1;
         this.startScore   = data.score       || 0;
         // Accept snailHealth (new) or stationHealth (legacy from old intermission saves)
@@ -127,74 +138,13 @@ export default class GameScene extends Phaser.Scene {
             this.load.svg(this.bgKey, `assets/backgrounds/${this.bgKey}.svg`, { width: 1280, height: 720 });
         }
 
-        const svgSize = { width: 48, height: 48 };
-        // Snail directional sprites
-        this.load.svg('snail-right', 'assets/sprites/snail/snail-right.svg', svgSize);
-        this.load.svg('snail-left',  'assets/sprites/snail/snail-left.svg',  svgSize);
-        this.load.svg('snail-up',    'assets/sprites/snail/snail-up.svg',    svgSize);
-        this.load.svg('snail-down',  'assets/sprites/snail/snail-down.svg',  svgSize);
-        // Walk, idle and damage animation frames
-        for (const dir of ['right', 'left', 'up', 'down']) {
-            for (let i = 0; i < 6; i++) {
-                const f = `f${String(i).padStart(2, '0')}`;
-                this.load.svg(`snail-walk-${dir}-${f}`, `assets/sprites/snail/snail-walk-${dir}-${f}.svg`, svgSize);
-            }
-            for (let i = 0; i < 12; i++) {
-                const f = `f${String(i).padStart(2, '0')}`;
-                this.load.svg(`snail-idle-${dir}-${f}`, `assets/sprites/snail/snail-idle-${dir}-${f}.svg`, svgSize);
-            }
-            for (let i = 0; i <= 15; i++) {
-                const f = `f${String(i).padStart(2, '0')}`;
-                this.load.svg(`snail-hit-${dir}-${f}`, `assets/sprites/snail/snail-hit-${dir}-${f}.svg`, svgSize);
-            }
-        }
-        // On-foot frog sprites (4 cardinal directions, idle + 4 hop frames each)
-        for (const dir of ['right', 'left', 'up', 'down']) {
-            this.load.svg(`frog-${dir}`, `assets/sprites/frog/frog-${dir}.svg`, svgSize);
-            for (const frame of ['f00', 'f01', 'f02', 'f03']) {
-                this.load.svg(`frog-hop-${dir}-${frame}`,
-                    `assets/sprites/frog/frog-hop-${dir}-${frame}.svg`, svgSize);
-            }
-        }
-
-        // Alien sprites — 8 directions each
-        const dirs = ['right', 'diag-right-down', 'down', 'diag-left-down',
-                      'left',  'diag-left-up',    'up',   'diag-right-up'];
-        for (const dir of dirs) {
-            this.load.svg(`alien-frog-${dir}`,    `assets/sprites/alien/alien-frog-${dir}.svg`,    svgSize);
-            this.load.svg(`alien-fast-${dir}`,    `assets/sprites/alien/alien-fast-${dir}.svg`,    svgSize);
-            this.load.svg(`alien-tank-${dir}`,    `assets/sprites/alien/alien-tank-${dir}.svg`,    svgSize);
-            this.load.svg(`alien-bomber-${dir}`,  `assets/sprites/alien/alien-bomber-${dir}.svg`,  svgSize);
-            this.load.svg(`alien-shield-${dir}`,  `assets/sprites/alien/alien-shield-${dir}.svg`,  svgSize);
-            this.load.svg(`alien-boss-${dir}`,    `assets/sprites/alien/alien-boss-${dir}.svg`,    { width: 96, height: 96 });
-        }
-
-        // Station + terminal sprites
-        if (!this.textures.exists('station-mainframe')) {
-            this.load.svg('station-mainframe', 'assets/sprites/station/station-mainframe.svg', { width: 96, height: 96 });
-        }
-        if (!this.textures.exists('station-gun')) {
-            this.load.svg('station-gun', 'assets/sprites/station/station-gun.svg', { width: 48, height: 48 });
-        }
-        for (const key of ['terminal-reload', 'terminal-turret', 'terminal-shield', 'terminal-slow', 'terminal-repair', 'terminal-emp']) {
-            if (!this.textures.exists(key)) {
-                this.load.svg(key, `assets/sprites/terminal/${key}.svg`, { width: 64, height: 64 });
-            }
-        }
-
-        // ── Prop sprites (rocks + mushrooms) — loaded once, tinted per wave ──
-        const PROP_SIZES = {
-            'prop-rock-0':     { w: 40,  h: 34 },
-            'prop-rock-1':     { w: 60,  h: 38 },
-            'prop-rock-2':     { w: 46,  h: 56 },
-            'prop-mushroom-0': { w: 32,  h: 52 },
-            'prop-mushroom-1': { w: 48,  h: 68 },
-        };
-        for (const [key, sz] of Object.entries(PROP_SIZES)) {
-            if (!this.textures.exists(key)) {
-                const file = key.replace('prop-', '') + '.svg'; // rock-0.svg etc.
-                this.load.svg(key, `assets/sprites/props/${file}`, { width: sz.w, height: sz.h });
-            }
+        // ── Load all assets tagged for this world (or 'all' worlds) ──────────
+        // The manifest skips world-specific assets that don't belong to this world,
+        // e.g. frog/alien sprites are skipped in World 2 (snake world) and vice versa.
+        for (const { key, path, size, worlds } of ASSET_MANIFEST) {
+            if (worlds !== 'all' && !worlds.includes(this.world)) continue;
+            if (this.textures.exists(key)) continue;
+            this.load.svg(key, path, size);
         }
     }
 
@@ -268,27 +218,11 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
-        this.input.on('pointerdown', (pointer) => {
-            if (pointer.button !== 0) return;
-            if (this.ammo <= 0) return;
-            this.ammo--;
-            if (this._laserMode) {
-                this._fireLaser(pointer.x, pointer.y);
-            } else {
-                const proj = new Projectile(this, this.station.x, this.station.y, pointer.x, pointer.y);
-                this.projectiles.push(proj);
-            }
-            this.hud.updateAmmo(this.ammo);
-            this.cameras.main.shake(90, 0.005);
-            this.soundSynth.play('shoot');
-            this.station.fireEffect();
-        });
-
         // ── Battery / power state ─────────────────────────────────────────────
         this.battery        = null;   // Battery instance or null
         this.stationPowered = true;
 
-        // ── Grab hand system (Player 2 — right-click to pick up snail or battery) ──
+        // ── Grab hand system (Player 2 — left-click to pick up snail or battery) ──
         this.grabSystem = new GrabHandSystem(this, {
             snail:      this.snail,
             getBattery: () => this.battery,
@@ -311,6 +245,37 @@ export default class GameScene extends Phaser.Scene {
         if (this.upgradesList.some(u => u.type === 'QUICK_GRAB')) {
             this.grabSystem.cooldownMultiplier = 0.5;
         }
+        if (this.upgradesList.some(u => u.type === 'QUICK_GRAB_2')) {
+            this.grabSystem.cooldownMultiplier = CONFIG.GRAB.QUICK_GRAB_2_COOLDOWN / CONFIG.GRAB.COOLDOWN;
+        }
+        this._healthDropGravitate = this.upgradesList.some(u => u.type === 'HEALTH_2');
+        this._laser2  = this.upgradesList.some(u => u.type === 'LASER_2');
+        this._speed2  = this.upgradesList.some(u => u.type === 'SPEED_2');
+        const hasRicochet2 = this.upgradesList.some(u => u.type === 'RICOCHET_2');
+        this._ricochetFalloff      = hasRicochet2 ? CONFIG.RICOCHET_2.FALLOFF       : CONFIG.RICOCHET.FALLOFF;
+        this._ricochetSearchRadius = hasRicochet2 ? CONFIG.RICOCHET_2.SEARCH_RADIUS : CONFIG.RICOCHET.SEARCH_RADIUS;
+
+        // Shoot listener registered AFTER grabSystem so grab's pointerdown fires first,
+        // ensuring grabSystem.hovering is already up-to-date when this check runs.
+        this.input.on('pointerdown', (pointer) => {
+            if (pointer.button !== 0) return;
+            if (this.grabSystem.hovering) return;  // grab consumed this click
+            if (this.ammo <= 0) return;
+            this.ammo--;
+            if (this._laserMode) {
+                this._fireLaser(pointer.x, pointer.y);
+            } else {
+                const proj = new Projectile(this, this.station.x, this.station.y, pointer.x, pointer.y);
+                this.projectiles.push(proj);
+            }
+            this.hud.updateAmmo(this.ammo);
+            this.cameras.main.shake(90, 0.005);
+            this.soundSynth.play('shoot');
+            this.station.fireEffect();
+        });
+
+        // Notify grabSystem when the scene is resumed from pause
+        this.events.on('resume', () => this.grabSystem.onResume());
 
         // ── Service terminals ─────────────────────────────────────────────────
         // Minigame launchers — each wraps the minigame and tracks it for grab-cancel support.
@@ -323,7 +288,10 @@ export default class GameScene extends Phaser.Scene {
             this.activeTerminalMinigame = mg;
         };
         // Store launcher so _spawnUpgradeTerminals can use it.
-        this._rhythmLauncher   = rhythmLauncher;
+        this._rhythmLauncher  = rhythmLauncher;
+
+        // Instant launcher — no minigame; pressing E succeeds immediately.
+        this._instantLauncher = (_term, onSuccess, _onFailure) => { onSuccess(); };
 
         // RELOAD — orbits the hacking station at a fixed radius; relocates on each success.
         // Picks an angle that won't overlap existing upgrade terminals.
@@ -370,6 +338,13 @@ export default class GameScene extends Phaser.Scene {
         // ── Upgrade terminals (carried over from previous waves) ───────────────
         this._spawnUpgradeTerminals();
 
+        // Speed II — passive: replace rhythm launcher with instant on every terminal
+        if (this._speed2) {
+            for (const term of this.terminals) {
+                term.launchMinigame = this._instantLauncher;
+            }
+        }
+
         // ── E key: open hack OR activate nearby terminal ───────────────────────
         this.eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
         this.eKey.on('down', () => {
@@ -395,8 +370,15 @@ export default class GameScene extends Phaser.Scene {
 
         // ── Game state ────────────────────────────────────────────────────────
         this.aliens      = [];
+        this.bushes      = [];
+        this.acidGlobs   = [];
+        this.acidPuddles = [];
         this.healthDrops = [];
         this.frogEscapes = [];
+
+        // World 2 venom state
+        this._venomActive = false;
+        this._venomTimer  = null;
         this.score       = this.startScore;
         this.wave        = this.startWave;
 
@@ -414,15 +396,53 @@ export default class GameScene extends Phaser.Scene {
         });
         this.hud.updateAmmo(this.ammo);
         this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
+
+        // Ammo Boost II — passive bullet regen
+        if (this.upgradesList.some(u => u.type === 'AMMO_2')) {
+            this.time.addEvent({
+                delay:    Math.round(1000 / CONFIG.PLAYER.AMMO_2_REGEN_RATE),
+                loop:     true,
+                callback: () => {
+                    if (this.ammo < this.ammoMax) {
+                        this.ammo++;
+                        this.hud.updateAmmo(this.ammo);
+                    }
+                },
+            });
+        }
+
+        // Health Boost II — passive HP regen
+        if (this._healthDropGravitate) {
+            this.time.addEvent({
+                delay:    1000,
+                loop:     true,
+                callback: () => {
+                    if (!this.snail?.active) return;
+                    if (this.snail.health < this.snail.maxHealth) {
+                        this.snail.health = Math.min(
+                            this.snail.maxHealth,
+                            this.snail.health + CONFIG.SNAIL.HEALTH_2_REGEN_RATE,
+                        );
+                        this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
+                    }
+                },
+            });
+        }
         this.hud.updateGrab(this.grabSystem.statusText, this.grabSystem.statusColor);
 
         // ── Wave Manager ──────────────────────────────────────────────────────
         this.waveManager = new WaveManager(this, {
+            world:     this.world,
             startWave: this.startWave,
             onSpawn: (type) => this.spawnAlien(type),
+            onFormation: (formation) => this._spawnFormation(formation),
             onWaveStart: (wave) => {
                 this.wave          = wave;
                 this._spawnProps(wave);
+                if (this.world === 2) {
+                    const bushCount = this.waveManager.getConfig().bushCount || 0;
+                    this._spawnBushes(bushCount);
+                }
                 this.hackProgress  = 0;
                 this.hackThreshold = this._wordsForWave(wave);
                 this.escapePhase  = false;
@@ -572,6 +592,45 @@ export default class GameScene extends Phaser.Scene {
     }
 
     /**
+     * Spawn World 2 bushes for the current wave.
+     * Places bushes at fixed concentric clock positions around the station:
+     *   Ring 1 (r=350): 10 o'clock, 3 o'clock, 7 o'clock
+     *   Ring 2 (r=250): 1 o'clock, 9 o'clock, 5 o'clock
+     *   Slot 7  (r=310): 11 o'clock (used only when count ≥ 7)
+     * Sidewinders naturally hop inward from ring 1 → ring 2 → attack.
+     */
+    _spawnBushes(count) {
+        for (const b of this.bushes) { if (b.active) b.destroy(); }
+        this.bushes = [];
+        if (!count) return;
+
+        const CX = 640, CY = 360;
+        // Pre-defined positions: [radius, angleDeg]
+        // Angles: 0=right, clockwise positive (Phaser convention, Y-down)
+        const SLOTS = [
+            // Ring 1 — outer (r=350)
+            [350, 210],   // 10 o'clock
+            [350,   0],   // 3  o'clock
+            [350, 120],   // 7  o'clock
+            // Ring 2 — inner (r=250)
+            [250, 300],   // 1  o'clock
+            [250, 180],   // 9  o'clock
+            [250,  60],   // 5  o'clock
+            // Slot 7 — mid (r=310)
+            [310, 240],   // 11 o'clock
+        ];
+
+        const n = Math.min(count, SLOTS.length);
+        for (let i = 0; i < n; i++) {
+            const [r, deg] = SLOTS[i];
+            const rad = deg * Math.PI / 180;
+            const x = CX + r * Math.cos(rad);
+            const y = CY + r * Math.sin(rad);
+            this.bushes.push(new Bush(this, x, y));
+        }
+    }
+
+    /**
      * Creates a colourised copy of a greyscale prop texture and registers it
      * under `newKey` in the Phaser texture cache.
      *
@@ -609,7 +668,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     _wordsForWave(wave) {
-        if (wave === 10) return CONFIG.BOSS.SHIELD_DROP_WORDS;
+        if (wave === 10) return CONFIG.MINIGAMES.FROGGER_CROSSINGS;
         return CONFIG.HACK.BASE_WORDS + (wave - 1) * CONFIG.HACK.WORDS_GROWTH;
     }
 
@@ -617,9 +676,30 @@ export default class GameScene extends Phaser.Scene {
         const cx = 640, cy = 360;
         const r  = CONFIG.UPGRADES.ORBIT_RADIUS;
 
+        // Build the owned-type set so we can skip T1s replaced by their T2.
+        const ownedTypes = new Set(this.upgradesList.map(u => u.type));
+
+        // Reverse map: T2 type → T1 type (used to resolve the T1's orbital angle).
+        const T2_TO_T1 = {
+            CANNON_2: 'CANNON', SHIELD_2: 'SHIELD', SLOWFIELD_2: 'SLOWFIELD',
+            REPAIR_2: 'REPAIR', DRONE_2: 'DRONE', DECOY_2: 'DECOY', EMP_MINES_2: 'EMP_MINES',
+            SPEED_2: 'SPEED_BOOST',
+        };
+
         for (const upgrade of this.upgradesList) {
-            const x = cx + Math.cos(upgrade.angle) * r;
-            const y = cy + Math.sin(upgrade.angle) * r;
+            // Skip the T1 when its T2 is also owned — the T2 entry below spawns
+            // the replacement terminal at the T1's orbital angle.
+            if (ownedTypes.has(upgrade.type + '_2')) continue;
+
+            // T2 upgrades slot into the T1 predecessor's orbital position so the
+            // terminal replaces the old one in exactly the same screen location.
+            const t1Type = T2_TO_T1[upgrade.type];
+            const angle  = t1Type
+                ? (this.upgradesList.find(u => u.type === t1Type)?.angle ?? upgrade.angle)
+                : upgrade.angle;
+
+            const x = cx + Math.cos(angle) * r;
+            const y = cy + Math.sin(angle) * r;
 
             let term;
             switch (upgrade.type) {
@@ -631,7 +711,8 @@ export default class GameScene extends Phaser.Scene {
                     });
                     term = new Terminal(this, x, y + 25, {
                         label:          'TURRET',
-                        cooldown:       CONFIG.TERMINALS.CANNON.DURATION + CONFIG.TERMINALS.CANNON.COOLDOWN,
+                        effectDuration: CONFIG.TERMINALS.CANNON.DURATION,
+                        cooldown:       CONFIG.TERMINALS.CANNON.COOLDOWN,
                         color:          0xff8844,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => cannon.activate(),
@@ -641,7 +722,8 @@ export default class GameScene extends Phaser.Scene {
                 case 'SHIELD':
                     term = new Terminal(this, x, y, {
                         label:          'SHIELD',
-                        cooldown:       CONFIG.TERMINALS.SHIELD.DURATION + CONFIG.TERMINALS.SHIELD.COOLDOWN,
+                        effectDuration: CONFIG.TERMINALS.SHIELD.DURATION,
+                        cooldown:       CONFIG.TERMINALS.SHIELD.COOLDOWN,
                         color:          0x4488ff,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => { this.soundSynth.play('shieldActivate'); this.snail.shield(CONFIG.TERMINALS.SHIELD.DURATION); },
@@ -650,7 +732,8 @@ export default class GameScene extends Phaser.Scene {
                 case 'SLOWFIELD':
                     term = new Terminal(this, x, y, {
                         label:          'SLOW',
-                        cooldown:       CONFIG.TERMINALS.SLOW.DURATION + CONFIG.TERMINALS.SLOW.COOLDOWN,
+                        effectDuration: CONFIG.TERMINALS.SLOW.DURATION,
+                        cooldown:       CONFIG.TERMINALS.SLOW.COOLDOWN,
                         color:          0xaa44ff,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateSlowField(),
@@ -677,6 +760,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'DECOY':
                     term = new Terminal(this, x, y, {
                         label:          'DECOY',
+                        effectDuration: CONFIG.TERMINALS.DECOY.DURATION,
                         cooldown:       CONFIG.TERMINALS.DECOY.COOLDOWN,
                         color:          0xff44cc,
                         launchMinigame: this._rhythmLauncher,
@@ -686,12 +770,130 @@ export default class GameScene extends Phaser.Scene {
                 case 'EMP_MINES':
                     term = new Terminal(this, x, y, {
                         label:          'EMP',
-                        cooldown:       CONFIG.TERMINALS.EMP.ACTIVE_DURATION + CONFIG.TERMINALS.EMP.COOLDOWN,
+                        effectDuration: CONFIG.TERMINALS.EMP.ACTIVE_DURATION,
+                        cooldown:       CONFIG.TERMINALS.EMP.COOLDOWN,
                         color:          0x00ff88,
                         launchMinigame: this._rhythmLauncher,
                         onSuccess:      () => this._activateEmpMines(),
                     });
                     break;
+
+                // ── Tier II actives ────────────────────────────────────────
+                case 'CANNON_2': {
+                    const cannon2 = new DefenseStation(this, x, y - 30, {
+                        type:           'CANNON II',
+                        getAliens:      () => this.aliens,
+                        alienFilter:    (a) => !a.shielded,
+                        fireInterval:   CONFIG.TERMINALS.CANNON_2.FIRE_INTERVAL,
+                        activeDuration: CONFIG.TERMINALS.CANNON_2.DURATION,
+                    });
+                    term = new Terminal(this, x, y + 25, {
+                        label:          'TURRET II',
+                        effectDuration: CONFIG.TERMINALS.CANNON_2.DURATION,
+                        cooldown:       CONFIG.TERMINALS.CANNON_2.COOLDOWN,
+                        color:          0xffaa66,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => cannon2.activate(),
+                    });
+                    break;
+                }
+                case 'SHIELD_2':
+                    term = new Terminal(this, x, y, {
+                        label:          'SHIELD II',
+                        effectDuration: CONFIG.TERMINALS.SHIELD_2.DURATION,
+                        cooldown:       CONFIG.TERMINALS.SHIELD_2.COOLDOWN,
+                        color:          0x88bbff,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => {
+                            this.soundSynth.play('shieldActivate');
+                            this.snail.shield(CONFIG.TERMINALS.SHIELD_2.DURATION);
+                            this._shieldLethal = true;
+                            this.time.delayedCall(CONFIG.TERMINALS.SHIELD_2.DURATION,
+                                () => { this._shieldLethal = false; });
+                        },
+                    });
+                    break;
+                case 'SLOWFIELD_2':
+                    term = new Terminal(this, x, y, {
+                        label:          'SLOW II',
+                        effectDuration: CONFIG.TERMINALS.SLOW_2.DURATION,
+                        cooldown:       CONFIG.TERMINALS.SLOW_2.COOLDOWN,
+                        color:          0xcc88ff,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => this._activateSlowField(
+                            CONFIG.TERMINALS.SLOW_2.SPEED_MULTIPLIER,
+                            CONFIG.TERMINALS.SLOW_2.DURATION,
+                        ),
+                    });
+                    break;
+                case 'REPAIR_2':
+                    term = new Terminal(this, x, y, {
+                        label:          'REPAIR II',
+                        effectDuration: CONFIG.TERMINALS.REPAIR_2.REGEN_DURATION,
+                        cooldown:       CONFIG.TERMINALS.REPAIR_2.COOLDOWN,
+                        color:          0x88ffcc,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => {
+                            // Instant heal
+                            this.snail.health = Math.min(
+                                this.snail.maxHealth,
+                                this.snail.health + CONFIG.TERMINALS.REPAIR_2.HEAL,
+                            );
+                            this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
+                            // Passive regen ticks
+                            const tickMs    = 500;
+                            const hpPerTick = CONFIG.TERMINALS.REPAIR_2.REGEN_RATE * (tickMs / 1000);
+                            const maxTicks  = Math.round(CONFIG.TERMINALS.REPAIR_2.REGEN_DURATION / tickMs);
+                            let ticks = 0;
+                            this.hud.showRegen();
+                            const regenTimer = this.time.addEvent({
+                                delay: tickMs, loop: true,
+                                callback: () => {
+                                    if (!this.snail?.active) {
+                                        this.hud.hideRegen();
+                                        regenTimer.remove(false);
+                                        return;
+                                    }
+                                    this.snail.health = Math.min(
+                                        this.snail.maxHealth,
+                                        this.snail.health + hpPerTick,
+                                    );
+                                    this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
+                                    if (++ticks >= maxTicks) {
+                                        this.hud.hideRegen();
+                                        regenTimer.remove(false);
+                                    }
+                                },
+                            });
+                        },
+                    });
+                    break;
+                case 'DRONE_2':
+                    this._setupDrone(CONFIG.TERMINALS.DRONE_2);
+                    break;
+                case 'DECOY_2':
+                    term = new Terminal(this, x, y, {
+                        label:          'DECOY II',
+                        effectDuration: CONFIG.TERMINALS.DECOY_2.DURATION,
+                        cooldown:       CONFIG.TERMINALS.DECOY_2.COOLDOWN,
+                        color:          0xff88ee,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => this._activateDecoy2(),
+                    });
+                    break;
+                case 'EMP_MINES_2':
+                    term = new Terminal(this, x, y, {
+                        label:          'EMP II',
+                        effectDuration: CONFIG.TERMINALS.EMP_2.ACTIVE_DURATION,
+                        cooldown:       CONFIG.TERMINALS.EMP_2.COOLDOWN,
+                        color:          0xaaff44,
+                        launchMinigame: this._rhythmLauncher,
+                        onSuccess:      () => this._activateEmpMines2(),
+                    });
+                    break;
+
+                // SPEED_2 is a pure passive — handled after _spawnUpgradeTerminals; no terminal.
+
                 default:
                     break;
             }
@@ -699,7 +901,7 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    _setupDrone() {
+    _setupDrone(cfg = CONFIG.TERMINALS.DRONE) {
         // Small yellow diamond that orbits the station inside the terminal ring.
         // Uses a Container so Phaser tweens can animate its world position.
         this._droneAngle  = Math.random() * Math.PI * 2;
@@ -713,12 +915,12 @@ export default class GameScene extends Phaser.Scene {
         this._renderDroneGfx(false);
         this._droneContainer = this.add.container(startX, startY, [this._droneGfx]).setDepth(60);
 
-        // First activation: random time within DRONE_FIRST_SHOT_MAX, then fixed cooldown loop.
-        const firstDelay = Math.random() * CONFIG.TERMINALS.DRONE.FIRST_SHOT_MAX;
+        // First activation: random time within FIRST_SHOT_MAX, then fixed cooldown loop.
+        const firstDelay = Math.random() * cfg.FIRST_SHOT_MAX;
         this._droneTimer = this.time.delayedCall(firstDelay, () => {
             this._droneFire();
             this._droneTimer = this.time.addEvent({
-                delay:    CONFIG.TERMINALS.DRONE.COOLDOWN,
+                delay:    cfg.COOLDOWN,
                 loop:     true,
                 callback: () => this._droneFire(),
             });
@@ -792,12 +994,14 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
-    _activateSlowField() {
+    _activateSlowField(
+        mult     = CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER,
+        duration = CONFIG.TERMINALS.SLOW.DURATION,
+    ) {
         if (this.slowFieldActive) return;
         this.slowFieldActive = true;
         this.soundSynth.play('slowActivate');
 
-        const mult = CONFIG.DAMAGE.SLOW_SPEED_MULTIPLIER;
         for (const alien of this.aliens) {
             if (!alien.active || alien._dying) continue;
             alien._origSpeed = alien._origSpeed || alien.speed;
@@ -815,7 +1019,7 @@ export default class GameScene extends Phaser.Scene {
             callback: () => { if (this.slowFieldActive) this.soundSynth.play('slowTick'); },
         });
 
-        this.time.delayedCall(CONFIG.TERMINALS.SLOW.DURATION, () => {
+        this.time.delayedCall(duration, () => {
             this.slowFieldActive = false;
 
             // Stop tick, fade out overlay
@@ -883,12 +1087,66 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
+    _activateDecoy2() {
+        if (this.decoy && this.decoy.active) this.decoy._expire();
+
+        const angle = Math.random() * Math.PI * 2;
+        const dist  = 180 + Math.random() * 180;
+        const dx    = Math.cos(angle) * dist;
+        const dy    = Math.sin(angle) * dist;
+        const px    = Phaser.Math.Clamp(640 + dx, 80, 1200);
+        const py    = Phaser.Math.Clamp(360 + dy, 80, 640);
+
+        this.decoy = new Decoy(this, px, py);
+        // Override duration to Tier II and make the decoy invulnerable
+        this.decoy._expireTimer.remove(false);
+        this.decoy._expireTimer = this.time.delayedCall(
+            CONFIG.TERMINALS.DECOY_2.DURATION, () => this.decoy?._expire());
+        this.decoy.takeDamage = () => {};  // invulnerable — ignore alien hits
+        this.soundSynth.play('slowActivate');
+    }
+
+    _activateEmpMines2() {
+        if (this._empSpawnTimer) { this._empSpawnTimer.remove(false); this._empSpawnTimer = null; }
+
+        const spawnPair = () => {
+            const angle = Math.random() * Math.PI * 2;
+            const dist  = 120 + Math.random() * 230;
+            // Two mines on opposite sides of the station along the same axis
+            for (const sign of [1, -1]) {
+                const mx = Phaser.Math.Clamp(640 + Math.cos(angle) * dist * sign, 60, 1220);
+                const my = Phaser.Math.Clamp(360 + Math.sin(angle) * dist * sign, 60, 660);
+                const mine = new EmpMine(this, mx, my);
+                mine.blastRadius = CONFIG.TERMINALS.EMP_2.BLAST_RADIUS;
+                this.mines.push(mine);
+            }
+        };
+
+        spawnPair(); // first pair immediately
+
+        let spawned = 1;
+        const maxSpawns = Math.floor(CONFIG.TERMINALS.EMP_2.ACTIVE_DURATION / CONFIG.TERMINALS.EMP_2.SPAWN_INTERVAL);
+        this._empSpawnTimer = this.time.addEvent({
+            delay:    CONFIG.TERMINALS.EMP_2.SPAWN_INTERVAL,
+            loop:     true,
+            callback: () => {
+                spawnPair();
+                spawned++;
+                if (spawned >= maxSpawns) {
+                    this._empSpawnTimer.remove(false);
+                    this._empSpawnTimer = null;
+                }
+            },
+        });
+    }
+
     /**
      * Detonate a mine: deal CONFIG.EMP.MINE_DAMAGE to every alien within
      * BLAST_RADIUS, bypassing shields. Shows an EMP ring + flash visual.
      */
     _empExplode(mine) {
         const { x, y } = mine;
+        const blastRadius = mine.blastRadius ?? CONFIG.EMP.BLAST_RADIUS;
         mine.destroy();
 
         this.soundSynth.play('explosion');
@@ -898,8 +1156,8 @@ export default class GameScene extends Phaser.Scene {
         ring.setStrokeStyle(3, 0x00ff88, 0.95);
         this.tweens.add({
             targets: ring,
-            scaleX:  CONFIG.EMP.BLAST_RADIUS / 8,
-            scaleY:  CONFIG.EMP.BLAST_RADIUS / 8,
+            scaleX:  blastRadius / 8,
+            scaleY:  blastRadius / 8,
             alpha:   0,
             duration: 500, ease: 'Power2.easeOut',
             onComplete: () => ring.destroy(),
@@ -916,7 +1174,7 @@ export default class GameScene extends Phaser.Scene {
         for (const alien of this.aliens) {
             if (!alien.active || alien._dying) continue;
             const dist = Phaser.Math.Distance.Between(x, y, alien.x, alien.y);
-            if (dist >= CONFIG.EMP.BLAST_RADIUS) continue;
+            if (dist >= blastRadius) continue;
 
             // Green hit flash on each affected alien
             const bx = alien.x, by = alien.y;
@@ -929,25 +1187,34 @@ export default class GameScene extends Phaser.Scene {
             if (died) {
                 this.score++;
                 this.hud.updateScore(this.score);
-                const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
                 alien._dying = true;
-                this.time.delayedCall(200, () => {
-                    if (!alien.active) return;
-                    spawnDeathBurst(this, bx, by, burstColor,
-                        () => this.spawnFrogEscape(bx, by));
+                if (SNAKE_TYPES.has(alien.alienType)) {
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
-                        this.healthDrops.push(new HealthDrop(this, bx, by));
+                        this.time.delayedCall(120, () => {
+                            this.healthDrops.push(new HealthDrop(this, bx, by));
+                        });
                     }
-                    if (isBomber) checkBomberBlast(this, bx, by);
-                    alien.destroy();
-                });
+                    spawnSnakeDeathAnimation(this, alien);
+                } else {
+                    const burstColor = BURST_COLORS[alien.alienType] || 0xffffff;
+                    this.time.delayedCall(200, () => {
+                        if (!alien.active) return;
+                        spawnDeathBurst(this, bx, by, burstColor,
+                            () => this.spawnFrogEscape(bx, by));
+                        if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                            this.healthDrops.push(new HealthDrop(this, bx, by));
+                        }
+                        if (isBomber) checkBomberBlast(this, bx, by);
+                        alien.destroy();
+                    });
+                }
             }
         }
 
         // Also damage the boss if in blast radius (boss is not in this.aliens)
         if (this.boss && this.boss.active && !this.boss._dying) {
             const dist = Phaser.Math.Distance.Between(x, y, this.boss.x, this.boss.y);
-            if (dist < CONFIG.EMP.BLAST_RADIUS) {
+            if (dist < blastRadius) {
                 const bx = this.boss.x, by = this.boss.y;
                 const hitFlash = this.add.arc(bx, by, this.boss.radius, 0, 360, false, 0x00ff88, 0.75).setDepth(58);
                 this.tweens.add({ targets: hitFlash, alpha: 0, duration: 240, onComplete: () => hitFlash.destroy() });
@@ -1047,6 +1314,17 @@ export default class GameScene extends Phaser.Scene {
      * Hits every alien along the ray (within HIT_RADIUS px) in one instant shot.
      */
     _fireLaser(tx, ty) {
+        // LASER_2: snap aim to the nearest alien within SNAP_RADIUS of the cursor
+        if (this._laser2) {
+            let nearest = null, nearestDist = CONFIG.LASER_2.SNAP_RADIUS;
+            for (const a of this.aliens) {
+                if (!a.active || a._dying || a.shielded) continue;
+                const d = Phaser.Math.Distance.Between(tx, ty, a.x, a.y);
+                if (d < nearestDist) { nearest = a; nearestDist = d; }
+            }
+            if (nearest) { tx = nearest.x; ty = nearest.y; }
+        }
+
         const sx  = this.station.x;
         const sy  = this.station.y;
         const angle = Phaser.Math.Angle.Between(sx, sy, tx, ty);
@@ -1060,32 +1338,97 @@ export default class GameScene extends Phaser.Scene {
         if (sin > 0)  tMax = Math.min(tMax, (720 - sy) / sin);
         else if (sin < 0) tMax = Math.min(tMax, -sy / sin);
 
-        const ex = sx + cos * tMax;
-        const ey = sy + sin * tMax;
-
-        // Hit all aliens along the ray
+        // Hit aliens along the ray, front-to-back.
+        // A shielded alien or one that survives the hit blocks the beam.
+        // Only dead aliens let the laser pass through.
         const HIT_RADIUS = 18;
         const hitSet = new Set();  // track hits for ricochet to avoid re-targeting
         let ricochetOriginX = sx, ricochetOriginY = sy, ricochetBestAlong = 0;
+
+        // Collect candidates sorted nearest-first so blocking works correctly
+        const candidates = [];
         for (const alien of this.aliens) {
             if (!alien.active || alien._dying) continue;
-            const rx    = alien.x - sx;
-            const ry    = alien.y - sy;
+            const rx = alien.x - sx;
+            const ry = alien.y - sy;
             const along = rx * cos + ry * sin;
             if (along <= 0 || along > tMax) continue;
-            const perp = Math.abs(rx * sin - ry * cos);
-            if (perp > HIT_RADIUS) continue;
+            if (Math.abs(rx * sin - ry * cos) > HIT_RADIUS) continue;
+            candidates.push({ alien, along });
+        }
 
-            const bx = alien.x, by = alien.y;
+        // Add Python body/tail segment candidates.
+        // Body segments deflect the beam; red tail segments deal damage.
+        for (const alien of this.aliens) {
+            if (!alien.active || alien._dying) continue;
+            for (const seg of (alien._bodyHitboxes || [])) {
+                const rx = seg.x - sx, ry = seg.y - sy;
+                const along = rx * cos + ry * sin;
+                if (along <= 0 || along > tMax) continue;
+                if (Math.abs(rx * sin - ry * cos) > HIT_RADIUS + seg.r) continue;
+                candidates.push({ alien, along, _pythonSeg: 'body', _seg: seg });
+            }
+            for (const seg of (alien._tailHitboxes || [])) {
+                const rx = seg.x - sx, ry = seg.y - sy;
+                const along = rx * cos + ry * sin;
+                if (along <= 0 || along > tMax) continue;
+                if (Math.abs(rx * sin - ry * cos) > HIT_RADIUS + seg.r) continue;
+                candidates.push({ alien, along, _pythonSeg: 'tail', _seg: seg });
+            }
+        }
+
+        candidates.sort((a, b) => a.along - b.along);
+
+        let laserEnd = tMax;  // beam travels to screen edge unless blocked
+        for (const { alien, along, _pythonSeg, _seg } of candidates) {
+            if (along > laserEnd) break;  // beam already blocked by an earlier entry
+
+            const bx = _seg ? _seg.x : alien.x;
+            const by = _seg ? _seg.y : alien.y;
+
+            // ── Python non-red body segment: deflect beam, no damage ──
+            if (_pythonSeg === 'body') {
+                laserEnd = along;
+                const spark = this.add.arc(bx, by, 5, 0, 360, false, 0xaaff44, 0.85).setDepth(58);
+                this.tweens.add({ targets: spark, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 180, onComplete: () => spark.destroy() });
+                break;
+            }
+
+            // ── Python red (tail) segment: deal damage same as head hit ──
+            if (_pythonSeg === 'tail') {
+                hitSet.add(alien);
+                if (along > ricochetBestAlong) {
+                    ricochetBestAlong = along;
+                    ricochetOriginX = bx;
+                    ricochetOriginY = by;
+                }
+                const hitFlash = this.add.arc(bx, by, _seg.r, 0, 360, false, 0xff2222, 0.75).setDepth(58);
+                this.tweens.add({ targets: hitFlash, alpha: 0, duration: 200, onComplete: () => hitFlash.destroy() });
+                this.tweens.add({ targets: alien, x: alien.x + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
+                const died = alien.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                if (died) {
+                    this.score++;
+                    this.hud.updateScore(this.score);
+                    alien._dying = true;
+                    if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                        this.healthDrops.push(new HealthDrop(this, bx, by));
+                    }
+                    spawnSnakeDeathAnimation(this, alien);
+                } else if (!this._laser2) {
+                    laserEnd = along;
+                    break;
+                }
+                continue;
+            }
 
             if (alien.shielded) {
                 alien.flashShield?.();
                 this.soundSynth.play('shieldReflect');
-                continue;
+                laserEnd = along;  // shield stops the beam here
+                break;
             }
 
             hitSet.add(alien);
-            // Track the farthest hit alien as ricochet origin
             if (along > ricochetBestAlong) {
                 ricochetBestAlong = along;
                 ricochetOriginX = bx;
@@ -1103,30 +1446,62 @@ export default class GameScene extends Phaser.Scene {
                 this.score++;
                 this.hud.updateScore(this.score);
                 alien._dying = true;
-                this.time.delayedCall(200, () => {
-                    if (!alien.active) return;
-                    spawnDeathBurst(this, bx, by, BURST_COLORS[alien.alienType] || 0xffffff,
-                        () => this.spawnFrogEscape(bx, by));
+                if (SNAKE_TYPES.has(alien.alienType)) {
                     if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
                         this.healthDrops.push(new HealthDrop(this, bx, by));
                     }
-                    if (isBomber) checkBomberBlast(this, bx, by);
-                    alien.destroy();
-                });
+                    spawnSnakeDeathAnimation(this, alien);
+                } else {
+                    this.time.delayedCall(200, () => {
+                        if (!alien.active) return;
+                        spawnDeathBurst(this, bx, by, BURST_COLORS[alien.alienType] || 0xffffff,
+                            () => this.spawnFrogEscape(bx, by));
+                        if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                            this.healthDrops.push(new HealthDrop(this, bx, by));
+                        }
+                        if (isBomber) checkBomberBlast(this, bx, by);
+                        alien.destroy();
+                    });
+                }
+                // Beam continues through aliens that die
+            } else if (!this._laser2) {
+                laserEnd = along;  // surviving alien blocks the beam (Laser II passes through)
+                break;
             }
         }
+
+        // Destroy any acid globs the beam passes through
+        if (this.acidGlobs) {
+            for (let gi = this.acidGlobs.length - 1; gi >= 0; gi--) {
+                const glob = this.acidGlobs[gi];
+                if (!glob.active) continue;
+                const rx = glob.x - sx;
+                const ry = glob.y - sy;
+                const along = rx * cos + ry * sin;
+                if (along <= 0 || along > laserEnd) continue;
+                if (Math.abs(rx * sin - ry * cos) > glob.radius + HIT_RADIUS) continue;
+                glob.destroy();
+                this.acidGlobs.splice(gi, 1);
+                // Small pop effect
+                const pop = this.add.arc(glob.x, glob.y, 10, 0, 360, false, 0x99ee00, 0.7).setDepth(55);
+                this.tweens.add({ targets: pop, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 180, onComplete: () => pop.destroy() });
+            }
+        }
+
+        const ex = sx + cos * laserEnd;
+        const ey = sy + sin * laserEnd;
 
         // Laser ricochet — fires from the farthest hit alien toward a new target
         if (this.ricochetEnabled && hitSet.size > 0) {
             this._fireLaserRicochet(ricochetOriginX, ricochetOriginY, 0, hitSet);
         }
 
-        // Boss hit check (laser mode)
+        // Boss hit check (laser mode) — only if beam reaches the boss
         if (this.boss && this.boss.active && !this.boss._dying) {
             const rx    = this.boss.x - sx;
             const ry    = this.boss.y - sy;
             const along = rx * cos + ry * sin;
-            if (along > 0 && along <= tMax) {
+            if (along > 0 && along <= laserEnd) {
                 const perp = Math.abs(rx * sin - ry * cos);
                 if (perp <= this.boss.radius) {
                     if (this.boss.shielded) {
@@ -1152,7 +1527,7 @@ export default class GameScene extends Phaser.Scene {
             const rx    = bp.x - sx;
             const ry    = bp.y - sy;
             const along = rx * cos + ry * sin;
-            if (along <= 0 || along > tMax) return true;
+            if (along <= 0 || along > laserEnd) return true;
             const perp = Math.abs(rx * sin - ry * cos);
             if (perp > bp.radius + HIT_RADIUS) return true;
 
@@ -1184,12 +1559,12 @@ export default class GameScene extends Phaser.Scene {
      * alien not already in hitSet. Chains with halving probability.
      */
     _fireLaserRicochet(fromX, fromY, bounces, hitSet) {
-        const chance = CONFIG.RICOCHET.BASE_CHANCE * (CONFIG.RICOCHET.FALLOFF ** bounces);
+        const chance = CONFIG.RICOCHET.BASE_CHANCE * (this._ricochetFalloff ** bounces);
         if (Math.random() > chance) return;
 
         // Find nearest valid alien not already hit, within search radius
         let nearest = null;
-        let nearestDist = CONFIG.RICOCHET.SEARCH_RADIUS;
+        let nearestDist = this._ricochetSearchRadius;
         for (const a of this.aliens) {
             if (!a.active || a._dying || a.shielded || hitSet.has(a)) continue;
             const d = Phaser.Math.Distance.Between(fromX, fromY, a.x, a.y);
@@ -1638,6 +2013,16 @@ export default class GameScene extends Phaser.Scene {
         }
         this.aliens = [];
 
+        // Destroy World 2 bushes + acid
+        for (const bush of this.bushes)   { if (bush.active) bush.destroy(); }
+        for (const g    of this.acidGlobs) { if (g.active) g.destroy(); }
+        for (const p    of this.acidPuddles) { if (p.active) p.destroy(); }
+        this.bushes      = [];
+        this.acidGlobs   = [];
+        this.acidPuddles = [];
+        this._venomActive = false;
+        if (this._venomTimer) { this._venomTimer.remove(false); this._venomTimer = null; }
+
         // Move snail onto the ship
         this.escapeShip.setPromptVisible(false);
         this.snail.x = this.escapeShip.x;
@@ -1679,19 +2064,21 @@ export default class GameScene extends Phaser.Scene {
         this.soundSynth.play('waveComplete');
         const wave = this.waveManager.wave;
         if (this.waveManager.isLastWave) {
-            this.scene.start('VictoryScene', { wave, score: this.score });
+            this.scene.start('VictoryScene', { wave, score: this.score, world: this.world });
         } else {
             this.scene.start('IntermissionScene', {
                 wave,
                 score:       this.score,
                 snailHealth: this.snail.health,
                 upgrades:    this.upgradesList,
+                world:       this.world,
             });
         }
     }
 
     _openPause() {
         if (this.scene.isActive('PauseScene')) return;
+        this.grabSystem.onPause();
         this.scene.launch('PauseScene');
         this.scene.pause();
     }
@@ -1752,6 +2139,46 @@ export default class GameScene extends Phaser.Scene {
         const margin = 24;
         this.snail.x = Phaser.Math.Clamp(this.snail.x, margin, 1280 - margin);
         this.snail.y = Phaser.Math.Clamp(this.snail.y, margin, 720 - margin);
+
+        // World 2: Gerald walking through an occupied bush flushes the hiding snake
+        if (this.world === 2) {
+            for (const bush of this.bushes) {
+                if (!bush.active || !bush.isOccupied) continue;
+                const d = Phaser.Math.Distance.Between(this.snail.x, this.snail.y, bush.x, bush.y);
+                if (d < CONFIG.PROPS.SNAIL_RADIUS + CONFIG.BUSHES.OCCUPY_RADIUS) {
+                    bush.flush();
+                }
+            }
+        }
+    }
+
+    /**
+     * Apply the World 2 venom debuff to Gerald for VENOM.DURATION ms.
+     * Re-calling while active simply refreshes the timer.
+     * The speed penalty is applied directly in Snail.update() via scene._venomActive.
+     */
+    _applyVenom() {
+        this._venomActive = true;
+        if (this._venomTimer) this._venomTimer.remove(false);
+        this._venomTimer = this.time.delayedCall(CONFIG.SNAKES.VENOM.DURATION, () => {
+            this._venomActive = false;
+            this._venomTimer  = null;
+        });
+        // Visual indicator — brief purple text over Gerald
+        if (!this._venomLabel || !this._venomLabel.active) {
+            this._venomLabel = this.add.text(0, -36, 'VENOMED', {
+                fontSize: '10px', fontFamily: 'monospace', color: '#cc44ff',
+            }).setOrigin(0.5).setDepth(60);
+        }
+        this._venomLabel.setPosition(this.snail.x, this.snail.y - 36);
+        this._venomLabel.setAlpha(1);
+        this.tweens.killTweensOf(this._venomLabel);
+        this.tweens.add({
+            targets:  this._venomLabel,
+            alpha:    0,
+            delay:    CONFIG.SNAKES.VENOM.DURATION - 400,
+            duration: 400,
+        });
     }
 
     /** Schedule a sporadic ribbet while aliens are alive; re-schedules itself. */
@@ -1770,6 +2197,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     spawnFrogEscape(x, y) {
+        if (this.world === 2) return;
         if (!this.sys.isActive()) return;
         if (Math.random() >= 0.25) return;
         if (this.frogEscapes.filter(f => f.active).length >= 5) return;
@@ -1779,6 +2207,57 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // ── Alien spawning ─────────────────────────────────────────────────────────
+
+    /**
+     * Spawn a formation of aliens from a random screen edge.
+     *
+     * Each member's world position is computed from:
+     *   worldPos = anchor + member.perp * right + member.depth * forward
+     *
+     * where `forward` points from the edge toward the station center and
+     * `right` is perpendicular (right-hand side as facing the station).
+     *
+     * Members are spawned with `formation.stagger` ms between each one,
+     * in array order (front-of-formation members first).
+     */
+    _spawnFormation(formation) {
+        // Pick a random edge: 0=top, 1=left, 2=right
+        const edge = Phaser.Math.Between(0, 2);
+
+        // Anchor point and edge basis vectors
+        // A 200 px margin keeps the widest formations (max perp ≈160 px) fully on screen.
+        let anchor, forward, right;
+        if (edge === 0) {
+            // Top edge
+            anchor  = { x: Phaser.Math.Between(200, 1080), y: -20 };
+            forward = { x: 0,  y:  1 };
+            right   = { x: 1,  y:  0 };
+        } else if (edge === 1) {
+            // Left edge
+            anchor  = { x: -20, y: Phaser.Math.Between(200, 520) };
+            forward = { x:  1,  y:  0 };
+            right   = { x:  0,  y:  1 };
+        } else {
+            // Right edge
+            anchor  = { x: 1300, y: Phaser.Math.Between(200, 520) };
+            forward = { x: -1,  y:  0 };
+            right   = { x:  0,  y: -1 };
+        }
+
+        // Play a single warning sound for the whole formation
+        this.soundSynth?.play('alienSpawn');
+
+        // Stagger each member spawn
+        formation.members.forEach((member, i) => {
+            const delay = i * formation.stagger;
+            this.time.delayedCall(delay, () => {
+                if (!this.waveManager?.active) return;
+                const wx = anchor.x + member.perp * right.x + member.depth * forward.x;
+                const wy = anchor.y + member.perp * right.y + member.depth * forward.y;
+                this.spawnAlien(member.type, wx, wy);
+            });
+        });
+    }
 
     _randomEdgePosition() {
         // On wave 10 the FroggerMinigame occupies the bottom third (y > 480),
@@ -1792,17 +2271,39 @@ export default class GameScene extends Phaser.Scene {
     }
 
     spawnAlien(type = 'basic', spawnX, spawnY) {
+        // Hard cap on total simultaneous snakes
+        if (SNAKE_TYPES.has(type)) {
+            const snakeCount = this.aliens.filter(a => a.active && SNAKE_TYPES.has(a.alienType)).length;
+            if (snakeCount >= CONFIG.SNAKES.MAX_SNAKES) return;
+        }
+
+        // Cap concurrent spitters
+        if (type === 'spitter') {
+            const spitterCount = this.aliens.filter(a => a.active && a.alienType === 'spitter').length;
+            if (spitterCount >= 3) return;
+        }
+        // Cap concurrent pythons
+        if (type === 'python') {
+            const pythonCount = this.aliens.filter(a => a.active && a.alienType === 'python').length;
+            if (pythonCount >= 2) return;
+        }
+
         const pos = (spawnX !== undefined)
             ? { x: spawnX, y: spawnY }
             : this._randomEdgePosition();
         const { x, y } = pos;
         let alien;
         switch (type) {
-            case 'fast':   alien = new FastAlien(this, x, y);   break;
-            case 'tank':   alien = new TankAlien(this, x, y);   break;
-            case 'bomber': alien = new BomberAlien(this, x, y); break;
-            case 'shield': alien = new ShieldAlien(this, x, y); break;
-            default:       alien = new BasicAlien(this, x, y);
+            case 'fast':         alien = new FastAlien(this, x, y);   break;
+            case 'tank':         alien = new TankAlien(this, x, y);   break;
+            case 'bomber':       alien = new BomberAlien(this, x, y); break;
+            case 'shield':       alien = new ShieldAlien(this, x, y); break;
+            case 'basic-snake':  alien = new BasicSnake(this, x, y);  break;
+            case 'sidewinder':   alien = new Sidewinder(this, x, y);  break;
+            case 'python':       alien = new Python(this, x, y);      break;
+            case 'burrower':     alien = new Burrower(this, x, y);    break;
+            case 'spitter':      alien = new Spitter(this, x, y);     break;
+            default:             alien = new BasicAlien(this, x, y);
         }
         if (this.slowFieldActive) {
             alien._origSpeed = alien.speed;
@@ -1930,7 +2431,7 @@ export default class GameScene extends Phaser.Scene {
                 if (mine.state !== 'ground') { surviving.push(mine); continue; }
 
                 let triggered = false;
-                const triggerR = CONFIG.EMP.BLAST_RADIUS;
+                const triggerR = mine.blastRadius ?? CONFIG.EMP.BLAST_RADIUS;
                 for (const alien of this.aliens) {
                     if (!alien.active || alien._dying) continue;
                     const d = Phaser.Math.Distance.Between(mine.x, mine.y, alien.x, alien.y);
@@ -1953,45 +2454,92 @@ export default class GameScene extends Phaser.Scene {
         // Aliens — move and check contact with snail or decoy
         this.aliens = this.aliens.filter(alien => {
             if (!alien.active || alien._dying) return false;
+
+            // Shield bounce: move away from snail for 3 s, then resume normal behaviour
+            if (alien._bounceUntil) {
+                if (time < alien._bounceUntil) {
+                    const dt = delta / 1000;
+                    alien.x += alien._bounceVx * dt;
+                    alien.y += alien._bounceVy * dt;
+                    // Keep body segments in sync during bounce
+                    alien._pushHistory?.(time);
+                    alien._updateSegmentPositions?.() ?? alien._updateSegments?.();
+                    return true;
+                }
+                delete alien._bounceUntil;
+                delete alien._bounceVx;
+                delete alien._bounceVy;
+            }
+
             const status = alien.update(time, delta);
 
             if (status === 'reached_decoy') {
-                const bx = alien.x, by = alien.y;
-                const burstColor = BURST_COLORS[alien.alienType] || 0xff4444;
-                alien.destroy();
-                spawnDeathBurst(this, bx, by, burstColor,
-                    () => this.spawnFrogEscape(bx, by));
+                // Deal damage first (Decoy II's takeDamage is a no-op — it's invulnerable)
+                const dx = this.decoy ? this.decoy.x : alien.x;
+                const dy = this.decoy ? this.decoy.y : alien.y;
                 if (this.decoy && this.decoy.active) {
                     this.decoy.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
+                    this.soundSynth.play('shieldReflect');
                 }
-                return false;
+                // Bounce away from the decoy for 3 s, then resume targeting normally
+                const bounceAngle = Phaser.Math.Angle.Between(dx, dy, alien.x, alien.y);
+                const bounceSpeed = alien.speed * 2;
+                alien._bounceVx    = Math.cos(bounceAngle) * bounceSpeed;
+                alien._bounceVy    = Math.sin(bounceAngle) * bounceSpeed;
+                alien._bounceUntil = time + 3000;
+                return true;
             }
 
             if (status === 'reached_snail' && !this.boardingShip) {
                 const isBomber = alien.alienType === 'bomber';
                 const bx = alien.x, by = alien.y;
                 const burstColor = BURST_COLORS[alien.alienType] || 0xff4444;
-                alien.destroy();
 
                 if (isBomber) {
+                    alien.destroy();
                     checkBomberBlast(this, bx, by);
+                    return false;
                 } else if (this.snail.shielded) {
-                    // Shield absorbs the hit — kill the alien, play shield sound, no damage
                     this.soundSynth.play('shieldReflect');
-                    spawnDeathBurst(this, bx, by, burstColor,
-                        () => this.spawnFrogEscape(bx, by));
+                    if (this._shieldLethal) {
+                        // Kill Shield (Tier II) — destroy the alien on contact
+                        alien.destroy();
+                        spawnDeathBurst(this, bx, by, burstColor,
+                            () => this.spawnFrogEscape(bx, by));
+                        return false;
+                    }
+                    // Standard shield — bounce the alien away for 3 s
+                    const bounceAngle = Phaser.Math.Angle.Between(
+                        this.snail.x, this.snail.y, bx, by);
+                    const bounceSpeed = alien.speed * 2;
+                    alien._bounceVx   = Math.cos(bounceAngle) * bounceSpeed;
+                    alien._bounceVy   = Math.sin(bounceAngle) * bounceSpeed;
+                    alien._bounceUntil = time + 3000;
+                    return true;
                 } else {
+                    // Snakes bounce away instead of despawning
+                    if (SNAKE_TYPES.has(alien.alienType)) {
+                        const bounceAngle = Phaser.Math.Angle.Between(this.snail.x, this.snail.y, bx, by);
+                        const bounceSpeed = alien.speed * 2;
+                        alien._bounceVx    = Math.cos(bounceAngle) * bounceSpeed;
+                        alien._bounceVy    = Math.sin(bounceAngle) * bounceSpeed;
+                        alien._bounceUntil = time + 3000;
+                    } else {
+                        alien.destroy();
+                    }
                     const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                     this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
                     this.soundSynth.play('damage');
+                    // World 2: snake contact applies venom
+                    if (this.world === 2) this._applyVenom();
                     if (died) {
                         if (this.waveManager) this.waveManager.active = false;
                         if (this.activeHack)  { this.activeHack.cancel(); this.activeHack = null; }
-                        this.scene.start('GameOverScene', { wave: this.wave, score: this.score });
+                        this.scene.start('GameOverScene', { wave: this.wave, score: this.score, world: this.world });
                         return false;
                     }
+                    return SNAKE_TYPES.has(alien.alienType); // snakes persist; others removed
                 }
-                return false;
             }
             return true;
         });
@@ -2091,9 +2639,29 @@ export default class GameScene extends Phaser.Scene {
         // Collision checks (projectile vs alien)
         checkProjectileCollisions(this);
 
-        // Health drop pickups
+        // ── World 2: Acid globs update ────────────────────────────────────────
+        this.acidGlobs = this.acidGlobs.filter(g => {
+            if (!g.active) return false;
+            g.update(delta);
+            return g.active;
+        });
+
+        // ── World 2: Acid puddles update + snail slow ─────────────────────────
+        let inPuddle = false;
+        this.acidPuddles = this.acidPuddles.filter(p => {
+            if (!p.active) return false;
+            p.update(delta);
+            if (!p.active) return false;
+            const d = Phaser.Math.Distance.Between(this.snail.x, this.snail.y, p.x, p.y);
+            if (d < p.radius + 12) inPuddle = true;
+            return true;
+        });
+        this._snailInPuddle = inPuddle;
+
+        // Health drop pickups (+ gravitation when Health Boost II is owned)
         this.healthDrops = this.healthDrops.filter(drop => {
             if (!drop.active) return false;
+            if (this._healthDropGravitate) drop.gravitate(this.snail.x, this.snail.y, delta);
             if (drop.checkPickup(this.snail.x, this.snail.y)) {
                 const healed = Math.min(
                     CONFIG.HEALTH_DROP.AMOUNT,

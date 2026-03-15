@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 10;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 34;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -10,13 +10,15 @@ export const DEFAULTS = {
         SNAIL_SPEED:       40,    // px/s
         STARTING_AMMO:     35,
         MAX_AMMO:          35,
-        PROJECTILE_SPEED:  3200,  // px/s
-        PROJECTILE_RADIUS: 4,     // px
+        PROJECTILE_SPEED:    3200,  // px/s
+        PROJECTILE_RADIUS:   4,     // px
+        AMMO_2_REGEN_RATE:   1,     // bullets per second (Ammo Boost II passive)
     },
 
     SNAIL: {
-        MAX_HEALTH:       100,
-        INVINCIBILITY_MS: 3000,  // ms of i-frames after taking damage
+        MAX_HEALTH:           100,
+        INVINCIBILITY_MS:    3000,  // ms of i-frames after taking damage
+        HEALTH_2_REGEN_RATE:  0.5,  // HP/s — passive regen when Health Boost II is owned
     },
 
 
@@ -26,24 +28,27 @@ export const DEFAULTS = {
     },
 
     HEALTH_DROP: {
-        CHANCE:   0.3,    // probability per alien kill
-        AMOUNT:   25,     // HP restored on pickup
-        RADIUS:   12,     // px — pickup collision radius
-        LIFETIME: 8000,   // ms before auto-despawn
+        CHANCE:          0.3,   // probability per alien kill
+        AMOUNT:         25,     // HP restored on pickup
+        RADIUS:         12,     // px — pickup collision radius
+        LIFETIME:     8000,     // ms before auto-despawn
+        GRAVITATE_SPEED: 80,    // px/s — drops home toward snail when Health Boost II is owned
     },
 
 
     GRAB: {
-        MAX_PICKUP_DISTANCE: 60,   // px — cursor must be within this radius of the snail to grab
+        MAX_PICKUP_DISTANCE: 24,   // px — cursor must be within this radius of the snail to grab
         MAX_SPEED:           400,  // px/s — max speed while carrying snail or battery
-        COOLDOWN:             7,   // s — cooldown after releasing (shared between snail and battery grabs)
+        COOLDOWN:              7,   // s — cooldown after releasing (shared between snail and battery grabs)
+        QUICK_GRAB_2_COOLDOWN: 0.5, // s — cooldown when Quick Grab II is owned
+        MAX_CURSOR_DIST:      48,   // px — max distance cursor can stray from held object (= snail sprite width)
     },
 
     BATTERY: {
         SPAWN_RADIUS:      200,   // px from station center where the battery spawns
         SNAIL_PICKUP_DIST: 35,    // px — snail auto-picks up battery within this range
         DELIVERY_DIST:     55,    // px — snail must be within station.radius + this to deliver
-        MOUSE_PICKUP_DIST: 50,    // px — mouse can grab battery within this range
+        MOUSE_PICKUP_DIST: 18,    // px — mouse can grab battery within this range
         MOUSE_MAX_DRAG:    220,   // px — max total distance mouse can move battery per grab
         POWER_LOSS_WORDS:  10,    // words typed before station loses power again
     },
@@ -106,12 +111,49 @@ export const DEFAULTS = {
             ACTIVE_DURATION: 25000, // ms of continuous mine spawning (5 mines total)
             COOLDOWN:        30000, // ms — post-effect rest (total lockout = ACTIVE_DURATION + this)
         },
+
+        // ── Tier II active upgrades ────────────────────────────────────────
+        CANNON_2: {
+            DURATION:      37500,  // ms — 1.5× Tier I
+            COOLDOWN:      20000,  // ms
+            FIRE_INTERVAL:   500,  // ms — 2× faster than Tier I (1000 ms)
+        },
+        SHIELD_2: {
+            DURATION: 18000,  // ms — 1.5× Tier I
+            COOLDOWN: 25000,  // ms
+        },
+        SLOW_2: {
+            DURATION:         25000,  // ms
+            COOLDOWN:         18000,  // ms
+            SPEED_MULTIPLIER:  0.15,  // slows aliens to 15% speed (vs 40% for Tier I)
+        },
+        REPAIR_2: {
+            COOLDOWN:       12000,  // ms
+            HEAL:              50,  // HP restored immediately
+            REGEN_DURATION:  5000,  // ms of passive regen after the instant heal
+            REGEN_RATE:         6,  // HP/s during regen (30 HP total)
+        },
+        DRONE_2: {
+            FIRST_SHOT_MAX: 10000,  // ms
+            COOLDOWN:       20000,  // ms — 3× faster than Tier I (60 000 ms)
+        },
+        DECOY_2: {
+            DURATION: 37500,  // ms — 1.5× Tier I; invulnerable (no HP)
+            COOLDOWN: 22000,  // ms
+        },
+        EMP_2: {
+            SPAWN_INTERVAL:  5000,  // ms between paired mine spawns
+            ACTIVE_DURATION: 25000, // ms of continuous spawning (5 pairs = 10 mines)
+            COOLDOWN:        30000, // ms
+            BLAST_RADIUS:      300, // px — 1.5× Tier I (200 px)
+        },
+
     },
 
     EMP: {
         MINE_DAMAGE:      30,   // damage dealt to all aliens in blast — ignores shields
         BLAST_RADIUS:     200,  // px — both trigger distance and explosion AoE
-        MINE_PICKUP_DIST: 45,   // px — cursor proximity to grab a mine
+        MINE_PICKUP_DIST: 20,   // px — cursor proximity to grab a mine
     },
 
     CANNON: {
@@ -126,7 +168,7 @@ export const DEFAULTS = {
         RHYTHM_BEAT_TIMEOUT:   2500,  // ms before auto-miss per beat
         TYPING_MS_PER_CHAR:    1500,  // ms per character in typing minigame
         FROGGER_TIME_LIMIT:   45000,  // ms before frogger minigame expires
-        FROGGER_CROSSINGS:        3,  // successful crossings needed to win
+        FROGGER_CROSSINGS:        1,  // successful crossings needed to win
 
         HELICOPTER_GRAVITY:       140,  // px/s² downward pull
         HELICOPTER_THRUST:       -130,  // px/s² upward acceleration while SPACE held
@@ -145,7 +187,16 @@ export const DEFAULTS = {
     RICOCHET: {
         BASE_CHANCE:   0.8,   // probability of first bounce
         FALLOFF:       0.5,   // chance multiplier each successive bounce (0.8 → 0.4 → 0.2 …)
-        SEARCH_RADIUS: 400,   // px — max distance to find next ricochet target
+        SEARCH_RADIUS: 240,   // px — max distance to find next ricochet target
+    },
+
+    RICOCHET_2: {
+        FALLOFF:       1.0,   // no chance reduction — every bounce stays at BASE_CHANCE
+        SEARCH_RADIUS: 480,   // px — 2× Tier I search distance
+    },
+
+    LASER_2: {
+        SNAP_RADIUS: 80,   // px — auto-aim snaps to nearest alien within this distance of cursor
     },
 
     PROPS: {
@@ -170,14 +221,147 @@ export const DEFAULTS = {
         SPAWN_GRACE_MS: 3000,  // ms of no-spawn buffer at the start of each wave
     },
 
+    SPAWN_BUDGET: {
+        // Budget regenerates at (BASE_REGEN + (wave-1) * WAVE_REGEN) $/s, capped at MAX_BUDGET.
+        // A spend check fires each frame; one alien or formation is purchased when affordable.
+        STARTING_BUDGET:          0,  // budget each wave begins with
+        STARTING_BUDGET_PER_WAVE: 0,  // additional starting budget per wave number (wave N gets + (N-1) * this)
+
+        BASE_REGEN:   0.6,  // $/s on wave 1
+        WAVE_REGEN:   0.3,  // additional $/s per wave (wave 9 → 3.0 $/s total)
+        MAX_BUDGET:   25,   // cap — enough to save for the priciest formation (Phalanx ≈ $21)
+
+        // Formation bias increases at BIAS_RATE/s since the last formation spawn (0→1).
+        // At the spend check, Math.random() < bias → try formation branch (withhold if none
+        // affordable); otherwise spend on a random single alien the budget can cover.
+        BIAS_RATE:    0.05, // /s — reaches 1.0 after 20 s without a formation
+
+        // Per-type alien costs; formation cost = sum of member costs.
+        ALIEN_COSTS: {
+            BASIC:  1,
+            FAST:   2,
+            TANK:   3,
+            BOMBER: 2,
+            SHIELD: 3,
+        },
+    },
+
     ESCAPE: {
         BOARD_RADIUS:    40,   // px — snail must be within this distance to board the ship
         ASCENT_DURATION: 1200, // ms for the ship to fly off the top of the screen
     },
 
+    // ── World 2: Snake Pit ────────────────────────────────────────────────────
+    SNAKES: {
+        // Body history is pushed when the head moves ≥ 2 px (distance-based, frame-rate
+        // independent).  BODY_SPACING controls how many history entries to skip between
+        // consecutive body segments; effective pixel gap ≈ BODY_SPACING × 2 px.
+        BODY_SPACING:         10,  // history entries between consecutive body segments (~20 px)
+        HIDE_SEEK_DIST:      200,  // px — snake starts moving toward a bush when this close
+        MAX_SNAKES:           15,  // hard cap on total simultaneous live snakes
+        // Jitter: snakes periodically veer orthogonally to produce a slithering S-curve
+        JITTER_DURATION:     700,  // ms of orthogonal movement per jitter burst
+        JITTER_COOLDOWN_MIN: 400,  // ms between jitter bursts (min)
+        JITTER_COOLDOWN_MAX: 1200, // ms between jitter bursts (max)
+
+        BASIC: {
+            SPEED:              55,   // px/s movement speed
+            HEALTH:             30,   // hit points
+            RADIUS:              9,   // px — head collision radius
+            SEGMENT_COUNT:       4,   // number of body segments (not counting head/tail)
+            HIDE_CHANCE:        0.4,  // probability of seeking a bush after spawning
+            HIDE_TIMER_MIN:  10000,   // ms — minimum hide duration before re-emerging
+            HIDE_TIMER_MAX:  20000,   // ms — maximum hide duration before re-emerging
+        },
+
+        SIDEWINDER: {
+            HEALTH:        10,
+            SPEED_SLOW:    35,   // px/s while cursor is watching (suppressed creep)
+            SPEED_SEARCH: 140,   // px/s while dashing to a target bush (4× SPEED_SLOW)
+            SPEED_DASH:   220,   // px/s during ATTACK dash at Gerald
+            RADIUS:         8,
+            SEGMENT_COUNT:  3,
+            WATCH_RADIUS:  200,  // px — cursor distance from bush that suppresses a dash
+        },
+
+        PYTHON: {
+            HEALTH:            150,   // total (15 × 10 per segment)
+            HP_PER_SEGMENT:     10,
+            SEGMENT_COUNT:      15,   // total body segments after head (excludes head)
+            SPEED:              40,   // px/s
+            RADIUS:             10,   // head collision radius
+            BODY_RADIUS:        12,   // per body-segment hit radius (for body-only intercept)
+            BODY_SPACING:       18,   // px between history samples used for segment positions
+            TAIL_HITBOX_SEGS:    3,   // how many tail segments also count as hittable head when few remain
+        },
+
+        BURROWER: {
+            HEALTH:                30,
+            SPEED_SURFACE:         65,   // px/s on the surface
+            SPEED_UNDERGROUND:     95,   // px/s while burrowed
+            RADIUS:                 9,
+            SEGMENT_COUNT:          3,
+            SURFACE_DURATION:    2500,   // ms on surface before warning
+            TRANSITION_DURATION:  500,   // ms for warn-burrow and warn-emerge states
+            UNDERGROUND_DURATION: 2000,  // ms underground
+        },
+
+        SPITTER: {
+            HEALTH:             30,
+            RADIUS:              8,
+            SEGMENT_COUNT:       3,
+            SPEED:               60,   // px/s — kiting movement speed
+            PREFERRED_MIN:      350,   // px — backs away if Gerald is closer than this
+            PREFERRED_MAX:      500,   // px — approaches if Gerald is farther than this
+            SPIT_COOLDOWN:    10000,   // ms between acid glob shots (4× slower fire rate)
+            HIDE_DURATION:     6000,   // ms hiding after taking any damage
+            GLOB_SPEED:          80,   // px/s — acid glob projectile speed
+            GLOB_DAMAGE:          8,   // HP damage to Gerald on hit
+            GLOB_RADIUS:         28,   // px — glob collision radius (4× base size)
+            PUDDLE_DURATION:   4000,   // ms before acid puddle disappears
+            PUDDLE_RADIUS:       40,   // px — puddle area
+            PUDDLE_SLOW_MULT:   0.3,   // fraction of normal snail speed while inside puddle
+        },
+
+        VENOM: {
+            DURATION:    3000,   // ms the venom debuff lasts
+            SPEED_MULT:   0.7,   // fraction of normal snail speed while venomed
+        },
+    },
+
+    ANACONDA: {
+        HP:                     600,
+        SEGMENT_COUNT:           24,
+        SEGMENT_SPACING:         22,   // px between history samples
+        HEAD_RADIUS:             22,
+        BODY_RADIUS:             14,
+        PHASE2_HP:              250,
+        PHASE3_HP:              100,
+        PASS_DURATION_P1:      8000,   // ms per screen crossing, phase 1
+        PASS_DURATION_P2:      6000,
+        PASS_DURATION_P3:      4000,
+        SCALE_DAMAGE_MULT:      0.5,   // head takes 50% damage while scaled
+        BOMB_DAMAGE:             25,
+        BOMB_SLOW_DURATION:    5000,
+        BOMB_EXPOSED_DURATION: 5000,
+        ATTACK_COOLDOWNS: {
+            VENOM_SPIT:    6000,
+            CONSTRICT:    15000,
+            SERPENT_CALL: 20000,
+            SHED_SKIN:    25000,
+        },
+    },
+
+    BUSHES: {
+        RUSTLE_DURATION:  400,   // ms — bush shake tween when snake enters
+        BURN_FLASH_ALPHA: 0.9,   // peak alpha of white flash on burn
+        FLUSH_STUN_MS:    600,   // ms the flushed snake is stunned (speed=0)
+        OCCUPY_RADIUS:    28,    // px — snake head must be this close to enter a bush
+    },
+
     BOSS: {
-        HP:                  200,   // total hit points
-        PHASE_SHIFT_HP:      100,   // damage taken before each phase shift
+        HP:                  400,   // total hit points
+        PHASE_SHIFT_HP:      200,   // damage taken before each phase shift
         ORBIT_RADIUS_X:      500,   // horizontal semi-axis (px)
         ORBIT_RADIUS_Y:      130,   // vertical semi-axis (px)
         MIN_ORBIT_DIST:      400,   // px — boss is never closer than this to the station center
@@ -187,7 +371,6 @@ export const DEFAULTS = {
         ENRAGE_HP:           100,   // HP threshold for enrage
         ENRAGE_ORBIT_MULT:   1.5,
         ENRAGE_COOLDOWN_MULT: 0.7,
-        SHIELD_DROP_WORDS:     3,   // frogger crossings required to drop shield
         SHIELD_DOWN_DURATION: 5000, // ms shield stays down after breaking
         ALIEN_BURST_COUNT: 3,       // FastAliens spawned per burst attack
         BLACK_HOLE_HP:           30,   // projectile hits required to destroy a black hole
@@ -199,10 +382,10 @@ export const DEFAULTS = {
         TERMINAL_LOCK_SPEED:    100,   // px/s — homes toward target terminal
         TERMINAL_LOCK_DURATION: 15000, // ms terminal stays locked
         ATTACK_COOLDOWNS: {
-            ALIEN_BURST:    5000,   // ms between alien burst attacks
-            BLACK_HOLE:     8000,   // ms between black hole shots
-            EMP:           12000,   // ms between EMP shots
-            TERMINAL_LOCK: 15000,   // ms between terminal lock EMP shots
+            ALIEN_BURST:   10000,   // ms between alien burst attacks
+            BLACK_HOLE:    15000,   // ms between black hole shots
+            EMP:           20000,   // ms between EMP shots
+            TERMINAL_LOCK: 30000,   // ms between terminal lock EMP shots
         },
     },
 };

@@ -52,8 +52,9 @@ export default class MenuScene extends Phaser.Scene {
         });
         this.add.text(680, 264, [
             'Left click     Fire toward cursor',
-            'Right drag     Grab & relocate snail',
-            '               (cancels active hack)',
+            'Left click     Grab snail / battery',
+            '  (on target)  (cancels active hack)',
+            'Right drag     Teleport snail to cursor',
         ].join('\n'), colStyle('#66bbcc'));
 
         // Objective blurb
@@ -70,32 +71,38 @@ export default class MenuScene extends Phaser.Scene {
             lineSpacing: 5, align: 'center',
         }).setOrigin(0.5, 0);
 
-        // Start button
-        const startText = this.add.text(centerX, 530, '[ START GAME ]', {
-            fontSize: '32px',
-            fontFamily: 'monospace',
-            color: '#ffffff',
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        // ── World selection buttons ───────────────────────────────────────────
+        const makeWorldBtn = (y, label, color, hoverColor, world) => {
+            const btn = this.add.text(centerX, y, label, {
+                fontSize: '26px',
+                fontFamily: 'monospace',
+                color,
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-        startText.on('pointerover', () => startText.setColor('#00ff88'));
-        startText.on('pointerout',  () => startText.setColor('#ffffff'));
-        startText.on('pointerdown', () => {
-            // User gesture — create AudioContext and decode all pre-fetched audio.
-            this.registry.get('soundSynth')?.warmup();
-            const startWave = CONFIG.DEV_MODE ? Math.max(1, CONFIG.DEV_START_WAVE || 1) : 1;
-            if (startWave > 1) {
-                this.scene.start('IntermissionScene', {
-                    wave: 0, score: 0, upgrades: [],
-                    _startupMode: true, _targetWave: startWave,
-                });
-            } else {
-                this.scene.start('GameScene');
-            }
-        });
+            btn.on('pointerover', () => btn.setColor(hoverColor));
+            btn.on('pointerout',  () => btn.setColor(color));
+            btn.on('pointerdown', () => {
+                this.registry.get('soundSynth')?.warmup();
+                const startWave = CONFIG.DEV_MODE ? Math.max(1, CONFIG.DEV_START_WAVE || 1) : 1;
+                if (startWave > 1) {
+                    this.scene.start('IntermissionScene', {
+                        wave: 0, score: 0, upgrades: [],
+                        world,
+                        _startupMode: true, _targetWave: startWave,
+                    });
+                } else {
+                    this.scene.start('GameScene', { world });
+                }
+            });
+            return btn;
+        };
+
+        makeWorldBtn(510, '[ WORLD 1: ALIEN INVASION ]', '#00ddaa', '#00ffcc', 1);
+        makeWorldBtn(560, '[ WORLD 2: THE SNAKE PIT  ]', '#88cc44', '#aaff55', 2);
 
         // Balance config editor button — only shown in DEV_MODE
         if (CONFIG.DEV_MODE) {
-            const cfgBtn = this.add.text(centerX, 590, '[ BALANCE CONFIG ]', {
+            const cfgBtn = this.add.text(centerX, 618, '[ BALANCE CONFIG ]', {
                 fontSize: '15px',
                 fontFamily: 'monospace',
                 color: '#446666',

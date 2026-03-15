@@ -315,6 +315,27 @@ export default class SoundSynth {
         this._noise(ctx, 0.08, hpf);
     }
 
+    /**
+     * Snake death — comical descending slide-whistle whimper followed by a
+     * soft muffled thud as the snake burrows underground.
+     */
+    _snakeDie() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Slide-whistle: sine sweeping from ~800 Hz down to ~150 Hz over 0.35 s
+        const g1 = this._gain(ctx, 0.28, t, 0.38);
+        this._osc(ctx, 'sine', 800, 150, t, 0.36, g1);
+        // Soft harmonic layer at half pitch adds a cartoonish quality
+        const g2 = this._gain(ctx, 0.12, t, 0.38);
+        this._osc(ctx, 'sine', 400, 75, t, 0.36, g2);
+        // Muffled thud at the end (burrowing impact)
+        const tThud = t + 0.30;
+        const gt = this._gain(ctx, 0.22, tThud, 0.12);
+        this._osc(ctx, 'sine', 90, 30, tThud, 0.10, gt);
+        const ng  = this._gain(ctx, 0.14, tThud, 0.08);
+        const lpf = this._filter(ctx, 'lowpass', 400, ng);
+        this._noise(ctx, 0.07, lpf);
+    }
+
     /** Wrong key — low square buzz. */
     _error() {
         const ctx = this._ctx_get(), t = ctx.currentTime;

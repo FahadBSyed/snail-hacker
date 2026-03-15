@@ -223,8 +223,12 @@ export default class Snail extends Phaser.GameObjects.Container {
         }
 
         if (dx !== 0 || dy !== 0) {
-            this.x += dx * this.speed * dt;
-            this.y += dy * this.speed * dt;
+            // Apply World 2 speed debuffs (venom + acid puddle) if active
+            let sMult = 1;
+            if (this.scene._venomActive)    sMult *= CONFIG.SNAKES.VENOM.SPEED_MULT;
+            if (this.scene._snailInPuddle)  sMult *= CONFIG.SNAKES.SPITTER.PUDDLE_SLOW_MULT;
+            this.x += dx * this.speed * sMult * dt;
+            this.y += dy * this.speed * sMult * dt;
             this.setState('MOVING');
 
             // Update facing direction — horizontal takes priority over vertical

@@ -8,6 +8,7 @@ const LABEL_TO_SPRITE = {
     SHIELD: 'terminal-shield',
     SLOW:   'terminal-slow',
     REPAIR: 'terminal-repair',
+    DECOY:  'terminal-decoy',
     EMP:    'terminal-emp',
 };
 
@@ -30,15 +31,17 @@ export default class Terminal extends Phaser.GameObjects.Container {
         super(scene, x, y);
         scene.add.existing(this);
 
-        this.terminalState    = 'IDLE'; // IDLE | ACTIVE | COOLING_DOWN
+        this.terminalState    = 'IDLE'; // IDLE | ACTIVE | EFFECT_ACTIVE | COOLING_DOWN
         this.cooldownDuration = opts.cooldown || 10000;
+        this.effectDuration   = opts.effectDuration || 0;  // ms of "effect running" before cooldown starts
         this.launchMinigame   = opts.launchMinigame;
         this.onSuccess        = opts.onSuccess;
         this.label            = opts.label || 'TERMINAL';
         this.color            = opts.color || 0x44ffcc;
 
         // ── SVG sprite body ──────────────────────────────────────────────────
-        const spriteKey = LABEL_TO_SPRITE[this.label] || 'terminal-reload';
+        const baseLabel = this.label.replace(/ II$/, '');
+        const spriteKey = LABEL_TO_SPRITE[this.label] || LABEL_TO_SPRITE[baseLabel] || 'terminal-reload';
         this.bodyImg = scene.add.image(0, 0, spriteKey).setOrigin(0.5);
         this.add(this.bodyImg);
 
@@ -146,13 +149,55 @@ export default class Terminal extends Phaser.GameObjects.Container {
             this.onSuccess();
         }
 
-        // Start cooldown
-        const cd = success ? this.cooldownDuration : CONFIG.TERMINALS.FAILURE_COOLDOWN;
-        this.startCooldown(cd);
+        if (!success) {
+            this.startCooldown(CONFIG.TERMINALS.FAILURE_COOLDOWN);
+        } else if (this.effectDuration > 0) {
+            this.startEffect(this.effectDuration, this.cooldownDuration);
+        } else {
+            this.startCooldown(this.cooldownDuration);
+        }
+    }
+
+    /**
+     * Show the terminal as "effect active" for effectDuration ms, then
+     * automatically transition into the normal cooldown for cooldownDuration ms.
+     * The terminal is locked (not hackable) during both phases.
+     */
+    startEffect(effectDuration, cooldownDuration) {
+        if (this._effectHandle)   { this._effectHandle.cancel();   this._effectHandle   = null; }
+        if (this._cooldownHandle) { this._cooldownHandle.cancel(); this._cooldownHandle = null; }
+
+        this.terminalState = 'EFFECT_ACTIVE';
+        this.snailNearby = false;
+        this.ePrompt.setVisible(false);
+        this.drawTerminal(false);
+
+        // Bright screen glow while active
+        this.screenGlow.fillColor = this.color;
+        this.screenGlow.fillAlpha = 0.6;
+
+        // Subtle dark overlay + countdown text in the terminal's own colour
+        this.cooldownOverlay.setFillStyle(0x000000, 0.3).setVisible(true);
+        const colorHex = '#' + this.color.toString(16).padStart(6, '0');
+        this.cooldownText.setText('ACTIVE').setColor(colorHex).setVisible(true);
+
+        this._effectHandle = startCooldown(
+            this.scene, effectDuration, 100,
+            (remaining) => {
+                this.cooldownText.setText(`ACT ${Math.ceil(remaining / 1000)}s`);
+            },
+            () => {
+                this._effectHandle = null;
+                // Effect over — dim the screen and start the post-effect cooldown
+                this.screenGlow.fillAlpha = 0;
+                this.startCooldown(cooldownDuration);
+            },
+        );
     }
 
     startCooldown(duration) {
-        // Cancel any in-flight cooldown timer before starting a new one
+        // Cancel any in-flight timers before starting a new one
+        if (this._effectHandle)   { this._effectHandle.cancel();   this._effectHandle   = null; }
         if (this._cooldownHandle) { this._cooldownHandle.cancel(); this._cooldownHandle = null; }
 
         this.terminalState = 'COOLING_DOWN';
@@ -184,7 +229,8 @@ export default class Terminal extends Phaser.GameObjects.Container {
     forceLock(duration) {
         if (this.terminalState === 'ACTIVE') return; // don't interrupt a running minigame
 
-        // Cancel the existing cooldown so its onComplete won't fire and override us
+        // Cancel any in-flight timers so their onComplete won't fire and override us
+        if (this._effectHandle)   { this._effectHandle.cancel();   this._effectHandle   = null; }
         if (this._cooldownHandle) { this._cooldownHandle.cancel(); this._cooldownHandle = null; }
 
         this.terminalState = 'COOLING_DOWN';

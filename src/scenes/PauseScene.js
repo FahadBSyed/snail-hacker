@@ -22,7 +22,7 @@ export default class PauseScene extends Phaser.Scene {
         this.add.rectangle(cx, cy - 80, 320, 1.5, 0x4444aa, 0.6);
 
         // Control reminder
-        this.add.text(cx, cy - 50, 'P1: WASD + E to hack\nP2: Left-click to shoot\n     Right-drag to teleport', {
+        this.add.text(cx, cy - 50, 'P1: WASD + E to hack\nP2: Left-click to shoot / grab\n     Right-drag to teleport', {
             fontSize: '13px', fontFamily: 'monospace', color: '#666688',
             align: 'center', lineSpacing: 6,
         }).setOrigin(0.5);

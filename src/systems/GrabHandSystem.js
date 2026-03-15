@@ -19,8 +19,20 @@ function _drawCrosshair(g) {
     g.fillCircle(0, 0, 1.5);
 }
 
+/** Draw the closed-fist cursor (centered at origin — hotspot = center of fist). */
+function _drawClosedHand(g) {
+    g.clear();
+    g.fillStyle(0x00ffcc, 1);
+    // curled finger row (knuckles)
+    g.fillRoundedRect(-12, -8, 24, 10, 3);
+    // palm / fist body
+    g.fillRoundedRect(-13, 2, 26, 14, 4);
+    // thumb
+    g.fillRoundedRect(-19, 3, 9, 9, 3);
+}
+
 /**
- * Draw the grab hand.
+ * Draw the open grab hand.
  * Hotspot is tip of index finger → SVG coord (14,2), so all rects offset by (-14, -2).
  * @param {Phaser.GameObjects.Graphics} g
  * @param {boolean} cancel  — true = dimmed hand + red prohibition overlay
@@ -74,6 +86,9 @@ export default class GrabHandSystem {
 
         this.onCooldown        = false;
         this.cooldownRemaining = 0;     // seconds
+
+        this._lastCur          = null;  // last clamped cursor pos while holding (saved on pause)
+        this._resumeCursorPos  = null;  // override cursor pos to use on resume until mouse returns
         this.cooldownMultiplier = 1.0;  // reduced by QUICK_GRAB upgrade
 
         // Dangle spring state (shared; only one object held at a time)
@@ -88,18 +103,23 @@ export default class GrabHandSystem {
         this._gCrosshair = scene.add.graphics().setDepth(1000);
         this._gGrab      = scene.add.graphics().setDepth(1000);
         this._gCancel    = scene.add.graphics().setDepth(1000);
+        this._gClosed    = scene.add.graphics().setDepth(1000);
 
         _drawCrosshair(this._gCrosshair);
-        _drawHand(this._gGrab,    false);
-        _drawHand(this._gCancel,  true);
+        _drawHand(this._gGrab,   false);
+        _drawHand(this._gCancel, true);
+        _drawClosedHand(this._gClosed);
 
         this._gGrab.setVisible(false);
         this._gCancel.setVisible(false);
+        this._gClosed.setVisible(false);
         // crosshair visible by default
 
-        // Right-click down → grab closest grabbable within range
+        this._nearGrabbable = false;  // tracked in update() so GameScene can gate shooting
+
+        // Left-click down → grab closest grabbable within range
         scene.input.on('pointerdown', (pointer) => {
-            if (pointer.button !== 2) return;
+            if (pointer.button !== 0) return;
             if (this.heldTarget !== null || this.onCooldown) return;
 
             const battery    = this.getBattery();
@@ -135,9 +155,9 @@ export default class GrabHandSystem {
             else if (candidate)        this._pickupBattery(candidate);
         });
 
-        // Right-click up → release
+        // Left-click up → release
         scene.input.on('pointerup', (pointer) => {
-            if (pointer.button !== 2) return;
+            if (pointer.button !== 0) return;
             if (this.heldTarget !== null) this._drop();
         });
     }
@@ -148,12 +168,14 @@ export default class GrabHandSystem {
         this._gCrosshair.setVisible(which === 'crosshair');
         this._gGrab.setVisible(which === 'grab');
         this._gCancel.setVisible(which === 'cancel');
+        this._gClosed.setVisible(which === 'closed');
     }
 
     _positionCursor(x, y) {
         this._gCrosshair.setPosition(x, y);
         this._gGrab.setPosition(x, y);
         this._gCancel.setPosition(x, y);
+        this._gClosed.setPosition(x, y);
     }
 
     // ── Internal helpers ─────────────────────────────────────────────────────
@@ -170,7 +192,7 @@ export default class GrabHandSystem {
     _pickupSnail() {
         this._resetDangle(this.snail);
         this.heldTarget = 'snail';
-        this._showCursor(null);   // hide all — snail is the cursor
+        this._showCursor('closed');
         this.scene.soundSynth?.play('grab');
         this.onPickup(); // let GameScene cancel hacks and drop battery if snail is carrying one
         this.snail.hackingActive = true;
@@ -182,7 +204,7 @@ export default class GrabHandSystem {
         this.heldTarget        = battery;
         this.batteryGrabOrigin = { x: battery.x, y: battery.y };
         battery.state          = 'mouse';
-        this._showCursor(null);   // hide all — battery acts as the cursor
+        this._showCursor('closed');
     }
 
     _drop() {
@@ -213,6 +235,20 @@ export default class GrabHandSystem {
         this.onCooldown        = true;
         this.cooldownRemaining = CONFIG.GRAB.COOLDOWN * this.cooldownMultiplier;
         this._showCursor('crosshair');
+    }
+
+    /**
+     * Return a point clamped to within MAX_CURSOR_DIST of `obj`.
+     * The cursor graphic and _moveToward both use this so the physics leash
+     * is visible and consistent.
+     */
+    _clampCursor(pointer, obj) {
+        const maxDist = CONFIG.GRAB.MAX_CURSOR_DIST;
+        const dx = pointer.x - obj.x;
+        const dy = pointer.y - obj.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= maxDist) return { x: pointer.x, y: pointer.y };
+        return { x: obj.x + (dx / dist) * maxDist, y: obj.y + (dy / dist) * maxDist };
     }
 
     _moveToward(target, pointer, maxSpeed, delta) {
@@ -259,11 +295,8 @@ export default class GrabHandSystem {
     update(delta) {
         const pointer = this.scene.input.activePointer;
 
-        // Keep all cursor graphics tracking the pointer
-        this._positionCursor(pointer.x, pointer.y);
-
-        // Safety: if right button was released outside the canvas we still get the drop
-        if (this.heldTarget !== null && !pointer.rightButtonDown()) {
+        // Safety: if left button was released outside the canvas we still get the drop
+        if (this.heldTarget !== null && !pointer.leftButtonDown()) {
             this._drop();
         }
 
@@ -277,13 +310,31 @@ export default class GrabHandSystem {
         }
 
         if (this.heldTarget === 'snail') {
-            this._moveToward(this.snail, pointer, CONFIG.GRAB.MAX_SPEED, delta);
-            this._applyDangle(this.snail, delta);
+            const obj = this.snail;
+            // On resume, use the saved cursor pos until the real mouse returns within range
+            if (this._resumeCursorPos) {
+                const d = Phaser.Math.Distance.Between(pointer.x, pointer.y, obj.x, obj.y);
+                if (d <= CONFIG.GRAB.MAX_CURSOR_DIST) this._resumeCursorPos = null;
+            }
+            const src = this._resumeCursorPos || pointer;
+            const cur = this._clampCursor(src, obj);
+            this._lastCur = cur;
+            this._positionCursor(cur.x, cur.y);
+            this._moveToward(obj, cur, CONFIG.GRAB.MAX_SPEED, delta);
+            this._applyDangle(obj, delta);
 
         } else if (this.heldTarget) {
             // Item drag (battery or mine)
             const item = this.heldTarget;
-            this._moveToward(item, pointer, CONFIG.GRAB.MAX_SPEED, delta);
+            if (this._resumeCursorPos) {
+                const d = Phaser.Math.Distance.Between(pointer.x, pointer.y, item.x, item.y);
+                if (d <= CONFIG.GRAB.MAX_CURSOR_DIST) this._resumeCursorPos = null;
+            }
+            const src = this._resumeCursorPos || pointer;
+            const cur = this._clampCursor(src, item);
+            this._lastCur = cur;
+            this._positionCursor(cur.x, cur.y);
+            this._moveToward(item, cur, CONFIG.GRAB.MAX_SPEED, delta);
             this._applyDangle(item, delta);
 
             // Battery-only: auto-release when max drag distance is exceeded
@@ -296,7 +347,10 @@ export default class GrabHandSystem {
             }
 
         } else {
-            // No hold: pick cursor based on proximity + cooldown state
+            // No hold: cursor follows raw pointer
+            this._positionCursor(pointer.x, pointer.y);
+
+            // Pick cursor based on proximity + cooldown state
             let nearGrabbable = false;
 
             const battery = this.getBattery();
@@ -322,6 +376,7 @@ export default class GrabHandSystem {
                 if (d <= CONFIG.GRAB.MAX_PICKUP_DISTANCE) nearGrabbable = true;
             }
 
+            this._nearGrabbable = nearGrabbable;
             if (nearGrabbable) {
                 this._showCursor(this.onCooldown ? 'cancel' : 'grab');
             } else {
@@ -329,6 +384,25 @@ export default class GrabHandSystem {
             }
         }
     }
+
+    // ── Pause / resume ────────────────────────────────────────────────────────
+
+    /** Called when GameScene is paused. Saves cursor position and restores OS cursor. */
+    onPause() {
+        this._resumeCursorPos = this._lastCur ? { ...this._lastCur } : null;
+        this.canvas.style.cursor = 'default';
+    }
+
+    /** Called when GameScene is resumed. Hides OS cursor and re-locks cursor to saved position. */
+    onResume() {
+        this.canvas.style.cursor = 'none';
+        // _resumeCursorPos is already set from onPause; update() will clear it once mouse returns
+    }
+
+    // ── Public state ──────────────────────────────────────────────────────────
+
+    /** True when the cursor is directly over a grabbable object (used by GameScene to gate shooting). */
+    get hovering() { return this._nearGrabbable || this.heldTarget !== null; }
 
     // ── HUD helpers ───────────────────────────────────────────────────────────
 

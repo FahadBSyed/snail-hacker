@@ -18,6 +18,9 @@ export default class HUD {
         }).setDepth(100);
         this.healthBarBg   = scene.add.rectangle(10, 28, 204, 14, 0x333333).setOrigin(0, 0).setDepth(100);
         this.healthBarFill = scene.add.rectangle(12, 30, 200, 10, 0x44ff44).setOrigin(0, 0).setDepth(100);
+        this._regenLabel   = scene.add.text(216, 28, '▲ REGEN', {
+            fontSize: '9px', fontFamily: 'monospace', color: '#88ffcc',
+        }).setDepth(100).setVisible(false);
 
         // ── Wave label — top-centre-left ──────────────────────────────────────
         this.waveLabel = scene.add.text(510, 10, `WAVE ${wave}`, {
@@ -85,6 +88,9 @@ export default class HUD {
         else if (pct > 0.25) this.healthBarFill.fillColor = 0xffdd44;
         else                 this.healthBarFill.fillColor = 0xff4444;
     }
+
+    showRegen() { this._regenLabel.setVisible(true); }
+    hideRegen() { this._regenLabel.setVisible(false); }
 
     updateScore(score) {
         this.scoreLabel.setText(`SCORE: ${score}`);

@@ -15,9 +15,11 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
         super(scene, x, y);
         scene.add.existing(this);
 
-        this.stationType = opts.type;
-        this.getAliens = opts.getAliens;
-        this.alienFilter = opts.alienFilter || (() => true);
+        this.stationType    = opts.type;
+        this.getAliens      = opts.getAliens;
+        this.alienFilter    = opts.alienFilter || (() => true);
+        this.fireInterval   = opts.fireInterval   || CONFIG.CANNON.FIRE_INTERVAL;
+        this.activeDuration = opts.activeDuration || CONFIG.TERMINALS.CANNON.DURATION;
         this.isActive = false;
         this.isOnCooldown = false;
         this.cooldownDuration = CONFIG.CANNON.COOLDOWN;
@@ -58,7 +60,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
         g.clear();
         this.barrelGfx.clear();
 
-        if (this.stationType === 'CANNON') {
+        if (this.stationType === 'CANNON' || this.stationType === 'CANNON II') {
             // Colour palette matching station-gun / station-mainframe SVG sprites
             const BODY_COL  = 0x556070; // gunmetal
             const BODY_LIT  = 0x7a8898; // lit top face
@@ -178,9 +180,9 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
         this.statusText.setText('FIRING').setColor('#ff4444');
         this.labelText.setColor('#ff4444');
 
-        let shotsRemaining = Math.floor(CONFIG.TERMINALS.CANNON.DURATION / CONFIG.CANNON.FIRE_INTERVAL);
+        let shotsRemaining = Math.floor(this.activeDuration / this.fireInterval);
         const fireTimer = this.scene.time.addEvent({
-            delay: CONFIG.CANNON.FIRE_INTERVAL,
+            delay: this.fireInterval,
             repeat: shotsRemaining - 1,
             callback: () => {
                 this.fireAtNearest();
@@ -188,7 +190,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
         });
 
         // After duration, stop and start cooldown
-        this.scene.time.delayedCall(CONFIG.TERMINALS.CANNON.DURATION, () => {
+        this.scene.time.delayedCall(this.activeDuration, () => {
             this.isActive = false;
             this.startCooldown();
         });
@@ -225,6 +227,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
                 if (!this.active) return;
                 this.scene.soundSynth?.play('shootTurret');
                 const proj = new Projectile(this.scene, this.x, this.y, nearest.x, nearest.y);
+                proj.fromCannon = true;
                 if (this.scene.projectiles) {
                     this.scene.projectiles.push(proj);
                 }

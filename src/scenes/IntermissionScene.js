@@ -14,12 +14,36 @@ const FLAVOR_TEXT = {
 };
 
 // Passive upgrades apply instantly on selection — no terminal is spawned.
-const PASSIVE_UPGRADES = new Set(['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET', 'QUICK_GRAB']);
+const PASSIVE_UPGRADES = new Set(['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET', 'QUICK_GRAB', 'QUICK_GRAB_2', 'AMMO_2', 'HEALTH_2', 'RICOCHET_2', 'LASER_2']);
 
 const ACTIVE_POOL  = ['CANNON', 'SHIELD', 'SLOWFIELD', 'REPAIR', 'DRONE', 'DECOY', 'EMP_MINES'];
 const PASSIVE_POOL = ['HEALTH_BOOST', 'AMMO_BOOST', 'LASER', 'SPEED_BOOST', 'RICOCHET', 'QUICK_GRAB'];
 
-// All upgrade types that can be offered.
+// Tier II actives — each maps to the Tier I prerequisite that must be owned first.
+// DRONE and DRONE_2 have no physical terminal (handled like DRONE in angle calc).
+const T2_PREREQS = {
+    CANNON_2:    'CANNON',
+    SHIELD_2:    'SHIELD',
+    SLOWFIELD_2: 'SLOWFIELD',
+    REPAIR_2:    'REPAIR',
+    DRONE_2:     'DRONE',
+    DECOY_2:     'DECOY',
+    EMP_MINES_2: 'EMP_MINES',
+    // Tier II passives (apply instantly, offered on even waves)
+    SPEED_2:      'SPEED_BOOST',
+    QUICK_GRAB_2: 'QUICK_GRAB',
+    AMMO_2:       'AMMO_BOOST',
+    HEALTH_2:     'HEALTH_BOOST',
+    RICOCHET_2:   'RICOCHET',
+    LASER_2:      'LASER',
+};
+const ACTIVE_POOL_T2  = ['CANNON_2', 'SHIELD_2', 'SLOWFIELD_2', 'REPAIR_2', 'DRONE_2', 'DECOY_2', 'EMP_MINES_2'];
+const PASSIVE_POOL_T2 = ['SPEED_2', 'QUICK_GRAB_2', 'AMMO_2', 'HEALTH_2', 'RICOCHET_2', 'LASER_2'];
+
+// No-terminal upgrades (excluded from orbital angle placement).
+const NO_TERMINAL_UPGRADES = new Set(['DRONE', 'DRONE_2', ...PASSIVE_UPGRADES]);
+
+// All upgrade types that can be offered (used in startup/pre-game mode).
 const UPGRADE_POOL = [...ACTIVE_POOL, ...PASSIVE_POOL];
 
 function getUpgradeDefs() {
@@ -31,6 +55,7 @@ function getUpgradeDefs() {
     const droneFirstSecs = Math.round(CONFIG.TERMINALS.DRONE.FIRST_SHOT_MAX / 1000);
     const droneCoolSecs  = Math.round(CONFIG.TERMINALS.DRONE.COOLDOWN / 1000);
     return {
+        // ── Tier I ────────────────────────────────────────────────────────
         CANNON:       { label: 'AUTO TURRET',    color: 0xff8844, desc: `Hack to unleash an\nauto-targeting cannon\nfor ${cannonSecs}s.` },
         SHIELD:       { label: 'FORCE SHIELD',   color: 0x4488ff, desc: `Hack to project a shield\nthat blocks alien damage\nfor ${shieldSecs}s.` },
         SLOWFIELD:    { label: 'SLOW FIELD',     color: 0xaa44ff, desc: `Hack to slow all aliens\nto ${slowPct}% speed\nfor ${slowSecs}s.` },
@@ -44,7 +69,53 @@ function getUpgradeDefs() {
         AMMO_BOOST:   { label: 'AMMO BOOST',     color: 0xffcc44, desc: `Gun capacity increases\nby 50% more bullets\nbefore reload.` },
         LASER:        { label: 'HITSCAN LASER',  color: 0xff3333, desc: `Replaces bullets with\na piercing laser beam\nthat hits all enemies.` },
         SPEED_BOOST:  { label: 'SPEED BOOST',    color: 0x44ffdd, desc: `Gerald moves\nat double speed.` },
+
+        // ── Tier II passives ──────────────────────────────────────────────
+        QUICK_GRAB_2: { label: 'QUICK GRAB II',  color: 0xdd99ff,
+            desc: `Grab cooldown drops\nto just ${CONFIG.GRAB.QUICK_GRAB_2_COOLDOWN}s\nbetween grabs.` },
+        AMMO_2:       { label: 'AMMO BOOST II',  color: 0xffdd88,
+            desc: `Bullets slowly regenerate\nat ${CONFIG.PLAYER.AMMO_2_REGEN_RATE}/s.\nNo reload wait.` },
+        HEALTH_2:     { label: 'HEALTH BOOST II', color: 0xff8888,
+            desc: `Passively regen ${CONFIG.SNAIL.HEALTH_2_REGEN_RATE} HP/s.\nHealth drops home\ntoward you.` },
+        RICOCHET_2:   { label: 'RICOCHET II',      color: 0x88ffff,
+            desc: `Ricochet chance never\nreduces. Search radius\ndoubled to ${CONFIG.RICOCHET_2.SEARCH_RADIUS}px.` },
+        LASER_2:      { label: 'HITSCAN LASER II', color: 0xff6666,
+            desc: `Laser passes through\nsurviving enemies.\nAuto-aims near cursor.` },
+        SPEED_2: { label: 'SPEED BOOST II', color: 0x00ffdd,
+            desc: `Skip the rhythm\nminigame on every\nterminal activation.` },
+
+        // ── Tier II actives ───────────────────────────────────────────────
+        CANNON_2:    { label: 'AUTO TURRET II',  color: 0xffaa66,
+            desc: `2× fire rate, 1.5× duration.\nIgnores alien shields.` },
+        SHIELD_2:    { label: 'FORCE SHIELD II', color: 0x88bbff,
+            desc: `Shield kills on contact.\nLasts ${Math.round(CONFIG.TERMINALS.SHIELD_2.DURATION / 1000)}s.` },
+        SLOWFIELD_2: { label: 'SLOW FIELD II',   color: 0xcc88ff,
+            desc: `Slows aliens to ${Math.round(CONFIG.TERMINALS.SLOW_2.SPEED_MULTIPLIER * 100)}% speed\nfor ${Math.round(CONFIG.TERMINALS.SLOW_2.DURATION / 1000)}s.` },
+        REPAIR_2:    { label: 'REPAIR KIT II',   color: 0x88ffcc,
+            desc: `+${CONFIG.TERMINALS.REPAIR_2.HEAL} HP instantly,\nthen +${CONFIG.TERMINALS.REPAIR_2.REGEN_RATE} HP/s\nfor ${CONFIG.TERMINALS.REPAIR_2.REGEN_DURATION / 1000}s.` },
+        DRONE_2:     { label: 'AUTO DRONE II',   color: 0xffee88,
+            desc: `Drone activates every\n${Math.round(CONFIG.TERMINALS.DRONE_2.COOLDOWN / 1000)}s\n(was ${Math.round(CONFIG.TERMINALS.DRONE.COOLDOWN / 1000)}s).` },
+        DECOY_2:     { label: 'DECOY LURE II',   color: 0xff88ee,
+            desc: `Invulnerable lure.\nLasts ${Math.round(CONFIG.TERMINALS.DECOY_2.DURATION / 1000)}s.` },
+        EMP_MINES_2: { label: 'EMP MINES II',    color: 0xaaff44,
+            desc: `Spawns 2 mines per event,\nopposite each other.\n1.5× blast radius.` },
     };
+}
+
+const ALL_T2 = new Set([...ACTIVE_POOL_T2, ...PASSIVE_POOL_T2]);
+
+/**
+ * Build the offered-card list from an available pool.
+ * T2 upgrades are always included when present; remaining slots are filled
+ * with shuffled T1 options. At most CONFIG.UPGRADES.CARDS_OFFERED cards total.
+ */
+function buildOffered(available) {
+    const limit = CONFIG.UPGRADES.CARDS_OFFERED;
+    const t2s   = available.filter(t =>  ALL_T2.has(t));
+    const t1s   = available.filter(t => !ALL_T2.has(t));
+    const guaranteed = Phaser.Utils.Array.Shuffle(t2s.slice());  // shuffle if > limit
+    const filler     = Phaser.Utils.Array.Shuffle(t1s.slice()).slice(0, limit - guaranteed.length);
+    return [...guaranteed, ...filler].slice(0, limit);
 }
 
 export default class IntermissionScene extends Phaser.Scene {
@@ -60,6 +131,7 @@ export default class IntermissionScene extends Phaser.Scene {
                          : data.stationHealth !== undefined ? data.stationHealth
                          : CONFIG.SNAIL.MAX_HEALTH;
         this.upgrades       = data.upgrades    || [];
+        this.world          = data.world       || 1;
         this._advanced      = false;
         this.countdownTimer = null;
         // Pre-game setup mode: pick upgrades before starting at a later wave
@@ -92,7 +164,12 @@ export default class IntermissionScene extends Phaser.Scene {
 
         if (this._startupMode) {
             // Pre-game upgrade selection — always show upgrade picker
-            const available = UPGRADE_POOL.filter(t => !this.upgrades.some(u => u.type === t));
+            const startupOwned = new Set(this.upgrades.map(u => u.type));
+            const available = [
+                ...UPGRADE_POOL.filter(t => !startupOwned.has(t)),
+                ...ACTIVE_POOL_T2.filter(t => startupOwned.has(T2_PREREQS[t]) && !startupOwned.has(t)),
+                ...PASSIVE_POOL_T2.filter(t => startupOwned.has(T2_PREREQS[t]) && !startupOwned.has(t)),
+            ];
             this._buildStartupUpgradeLayout(cx, available);
             return;
         }
@@ -102,9 +179,14 @@ export default class IntermissionScene extends Phaser.Scene {
         this._spawnEscapeShip();
 
         // Determine available upgrades and whether this is an upgrade selection wave.
-        // Odd waves offer actives; even waves offer passives.
-        const pool      = this.wave % 2 === 0 ? PASSIVE_POOL : ACTIVE_POOL;
-        const available = pool.filter(t => !this.upgrades.some(u => u.type === t));
+        // Odd waves offer actives (+ any Tier II whose Tier I is owned); even waves offer passives.
+        const ownedTypes = new Set(this.upgrades.map(u => u.type));
+        const pool = this.wave % 2 === 0 ? PASSIVE_POOL : ACTIVE_POOL;
+        const t2Pool = this.wave % 2 === 0 ? PASSIVE_POOL_T2 : ACTIVE_POOL_T2;
+        const available = [
+            ...pool.filter(t => !ownedTypes.has(t)),
+            ...t2Pool.filter(t => ownedTypes.has(T2_PREREQS[t]) && !ownedTypes.has(t)),
+        ];
         const isUpgradeWave = available.length > 0;
 
         if (isUpgradeWave) {
@@ -146,8 +228,7 @@ export default class IntermissionScene extends Phaser.Scene {
             fontSize: '24px', fontFamily: 'monospace', color: '#cc88ff',
         }).setOrigin(0.5);
 
-        const offered = Phaser.Utils.Array.Shuffle(available.slice())
-            .slice(0, CONFIG.UPGRADES.CARDS_OFFERED);
+        const offered = buildOffered(available);
         this._showUpgradeCards(offered, cx, 390);
     }
 
@@ -259,9 +340,7 @@ export default class IntermissionScene extends Phaser.Scene {
             fontSize: '13px', fontFamily: 'monospace', color: '#776688',
         }).setOrigin(0.5);
 
-        // Shuffle and limit to CARDS_OFFERED
-        const offered = Phaser.Utils.Array.Shuffle(available.slice())
-            .slice(0, CONFIG.UPGRADES.CARDS_OFFERED);
+        const offered = buildOffered(available);
 
         this._showUpgradeCards(offered, cx, 390);
     }
@@ -419,7 +498,7 @@ export default class IntermissionScene extends Phaser.Scene {
         do {
             angle = Math.random() * Math.PI * 2;
             const safe = this.upgrades.every(u => {
-                if (u.type === 'DRONE' || PASSIVE_UPGRADES.has(u.type)) return true; // no physical terminal
+                if (NO_TERMINAL_UPGRADES.has(u.type)) return true; // no physical terminal
                 const dx = r * (Math.cos(angle) - Math.cos(u.angle));
                 const dy = r * (Math.sin(angle) - Math.sin(u.angle));
                 return Math.sqrt(dx * dx + dy * dy) >= minSep;
@@ -465,6 +544,7 @@ export default class IntermissionScene extends Phaser.Scene {
                 // Need more upgrades — loop back
                 this.scene.start('IntermissionScene', {
                     wave: 0, score: 0, upgrades: this.upgrades,
+                    world: this.world,
                     _startupMode: true, _targetWave: this._targetWave,
                 });
             } else {
@@ -474,6 +554,7 @@ export default class IntermissionScene extends Phaser.Scene {
                     score:       0,
                     snailHealth: CONFIG.SNAIL.MAX_HEALTH,
                     upgrades:    this.upgrades,
+                    world:       this.world,
                 });
             }
             return;
@@ -484,6 +565,7 @@ export default class IntermissionScene extends Phaser.Scene {
             score:       this.score,
             snailHealth: Math.min(CONFIG.SNAIL.MAX_HEALTH, this.snailHealth + CONFIG.INTERMISSION.HEAL_AMOUNT),
             upgrades:    this.upgrades,
+            world:       this.world,
         });
     }
 }
