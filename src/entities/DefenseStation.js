@@ -9,15 +9,15 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
      * @param {number} y
      * @param {object} opts
      * @param {string} opts.type — 'CANNON' | 'SHIELD' | 'SLOWFIELD'
-     * @param {function} opts.getAliens — returns current aliens array for targeting
+     * @param {function} opts.getEnemies — returns current enemies array for targeting
      */
     constructor(scene, x, y, opts) {
         super(scene, x, y);
         scene.add.existing(this);
 
         this.stationType    = opts.type;
-        this.getAliens      = opts.getAliens;
-        this.alienFilter    = opts.alienFilter || (() => true);
+        this.getEnemies     = opts.getEnemies;
+        this.enemyFilter    = opts.enemyFilter || (() => true);
         this.fireInterval   = opts.fireInterval   || CONFIG.CANNON.FIRE_INTERVAL;
         this.activeDuration = opts.activeDuration || CONFIG.TERMINALS.CANNON.DURATION;
         this.isActive = false;
@@ -111,7 +111,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
             g.fillStyle(EDGE, 1);
             g.fillCircle(0, 0, 2.5);
 
-            // ── Barrel group (rotates toward nearest alien) ────────────────
+            // ── Barrel group (rotates toward nearest enemy) ────────────────
             // All coords are relative to the barrelGfx origin (= container centre).
             // At rotation=0 the barrel points UP (negative Y).
             const bg = this.barrelGfx;
@@ -173,7 +173,7 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
         }
     }
 
-    /** Fire the cannon effect — auto-target nearest alien for duration */
+    /** Fire the cannon effect — auto-target nearest enemy for duration */
     activate() {
         if (this.isActive || this.isOnCooldown) return;
         this.isActive = true;
@@ -197,17 +197,17 @@ export default class DefenseStation extends Phaser.GameObjects.Container {
     }
 
     fireAtNearest() {
-        const aliens = this.getAliens().filter(a => a.active && this.alienFilter(a));
-        if (!aliens || aliens.length === 0) return;
+        const enemies = this.getEnemies().filter(e => e.active && this.enemyFilter(e));
+        if (!enemies || enemies.length === 0) return;
 
-        // Find nearest alive alien
+        // Find nearest alive enemy
         let nearest = null;
         let nearestDist = Infinity;
-        for (const alien of aliens) {
-            const dist = Phaser.Math.Distance.Between(this.x, this.y, alien.x, alien.y);
+        for (const enemy of enemies) {
+            const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
             if (dist < nearestDist) {
                 nearestDist = dist;
-                nearest = alien;
+                nearest = enemy;
             }
         }
 

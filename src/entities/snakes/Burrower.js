@@ -112,7 +112,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
         if (this._state === 'SURFACE') {
             this._setVisible(true);
             const snail    = this.scene.snail;
-            const mult     = this.scene.alienSpeedMultiplier || 1.0;
+            const mult     = this.scene.enemySpeedMultiplier || 1.0;
             const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
             let moveAngle;
 
@@ -168,7 +168,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
             this._setVisible(false);
             this.setAlpha(1);
             const snail    = this.scene.snail;
-            const mult     = this.scene.alienSpeedMultiplier || 1.0;
+            const mult     = this.scene.enemySpeedMultiplier || 1.0;
             const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
             let moveAngle;
 
