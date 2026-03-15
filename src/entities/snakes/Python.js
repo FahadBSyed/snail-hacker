@@ -58,21 +58,21 @@ export default class Python extends Phaser.GameObjects.Container {
         const shadow = scene.add.graphics();
         shadow.fillStyle(0x000000, 0.25);
         shadow.fillEllipse(1, 5, 28, 9);
-        shadow.setScale(1.3);
+        shadow.setScale(1.69);
         this.add(shadow);
 
         this._headImg = scene.add.image(0, 0, 'snake-python-head');
-        this._headImg.setOrigin(0.5, 0.5).setScale(0.65);
+        this._headImg.setOrigin(0.5, 0.5).setScale(0.845);
         this.add(this._headImg);
 
         this._bodyImgs = [];
         for (let i = 0; i < segCount; i++) {
             const img = scene.add.image(this.x, this.y, 'snake-python-body');
-            img.setOrigin(0.5, 0.5).setScale(1.3).setDepth(this.depth - 1);
+            img.setOrigin(0.5, 0.5).setScale(1.69).setDepth(this.depth - 1);
             this._bodyImgs.push(img);
         }
         this._tailImg = scene.add.image(this.x, this.y, 'snake-python-tail');
-        this._tailImg.setOrigin(0.5, 0.5).setScale(1.3).setDepth(this.depth - 2);
+        this._tailImg.setOrigin(0.5, 0.5).setScale(1.69).setDepth(this.depth - 2);
     }
 
     /** Rebuild `_bodyHitboxes` from current segment positions. */
