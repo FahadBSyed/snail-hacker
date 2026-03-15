@@ -191,9 +191,10 @@ export function applyWiggleToSegments(snake) {
  * @param {number}       [opts.upBias=22]     extra upward displacement (px)
  * @param {number}       [opts.duration=560]  base fade duration (ms)
  * @param {number}       [opts.depth=46]      render depth
+ * @param {number[]}     [opts.colors]        override colour palette
  */
 export function spawnDustCloud(scene, x, y, opts = {}) {
-    const COLORS   = [0xd4b483, 0xc8a06e, 0xbbaa88, 0xe0cc9a, 0x9e7c52];
+    const COLORS   = opts.colors ?? [0xd4b483, 0xc8a06e, 0xbbaa88, 0xe0cc9a, 0x9e7c52];
     const count    = opts.count    ?? 16;
     const spreadX  = opts.spreadX  ?? 54;
     const spreadY  = opts.spreadY  ?? 20;

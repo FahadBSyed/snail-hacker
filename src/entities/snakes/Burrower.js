@@ -159,6 +159,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
                 // Going under — soil displaced outward and slightly upward
                 spawnDustCloud(this.scene, this.x, this.y, {
                     count: 14, spreadX: 50, spreadY: 18, upBias: 18, duration: 500,
+                    colors: [0x88aacc, 0x6699bb, 0xaaccdd, 0x5577aa, 0x99bbcc],
                 });
                 this._transition('UNDERGROUND');
             }
@@ -209,6 +210,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
                 // Emerging — soil erupts upward and outward more forcefully
                 spawnDustCloud(this.scene, this.x, this.y, {
                     count: 18, spreadX: 58, spreadY: 22, upBias: 38, duration: 580,
+                    colors: [0x88aacc, 0x6699bb, 0xaaccdd, 0x5577aa, 0x99bbcc],
                 });
                 this._setVisible(true);
                 this.setAlpha(1);
