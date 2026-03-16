@@ -69,9 +69,21 @@ export default class SnakeWorldScene extends BaseGameScene {
             [310, 240],   // 11 o'clock
         ];
 
-        const n = Math.min(count, SLOTS.length);
+        // Clearance: terminal collision radius + bush occupy radius + small margin
+        const CLEAR = CONFIG.PROPS.TERMINAL_RADIUS + CONFIG.BUSHES.OCCUPY_RADIUS + 10;
+
+        const validSlots = SLOTS.filter(([r, deg]) => {
+            const rad = deg * Math.PI / 180;
+            const sx  = CX + r * Math.cos(rad);
+            const sy  = CY + r * Math.sin(rad);
+            return !(this.terminals ?? []).some(t =>
+                Phaser.Math.Distance.Between(sx, sy, t.x, t.y) < CLEAR
+            );
+        });
+
+        const n = Math.min(count, validSlots.length);
         for (let i = 0; i < n; i++) {
-            const [r, deg] = SLOTS[i];
+            const [r, deg] = validSlots[i];
             const rad = deg * Math.PI / 180;
             const x = CX + r * Math.cos(rad);
             const y = CY + r * Math.sin(rad);
