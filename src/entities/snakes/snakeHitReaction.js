@@ -22,20 +22,27 @@
 const HIT_STUN_MS   = 130;   // ms frozen after being hit
 const HIT_WIGGLE_MS = 220;   // ms of body-wiggle that follows the freeze
 
-// ── Red texture generation ────────────────────────────────────────────────────
+// ── Hit-flash texture generation ──────────────────────────────────────────────
 
-function _redKey(key) { return `${key}-hit-red`; }
+// Default flash colour for all snakes. Spitter overrides with 'white'.
+const DEFAULT_FLASH_CSS = 'rgb(255, 60, 60)';
+
+const FLASH_CSS = {
+    red:   'rgb(255, 60, 60)',
+    white: 'rgb(255, 255, 255)',
+};
+
+function _flashKey(key, color) { return `${key}-hit-${color}`; }
 
 /**
- * Generates a red-tinted version of a Phaser texture and caches it.
+ * Generates a colour-tinted version of a Phaser texture and caches it.
  * Uses the same Canvas-2D multiply-then-destination-in technique as
  * GameScene._colorisePropTexture() for rocks and mushrooms.
+ * @param {string} [color='red']  Key into FLASH_CSS ('red' | 'white').
  */
-export function ensureRedTexture(scene, key) { return _ensureRed(scene, key); }
-
-function _ensureRed(scene, key) {
-    const rk = _redKey(key);
-    if (scene.textures.exists(rk)) return;
+function _ensureFlash(scene, key, color = 'red') {
+    const fk = _flashKey(key, color);
+    if (scene.textures.exists(fk)) return;
 
     const src = scene.textures.get(key).source[0];
     const { width: w, height: h, image: img } = src;
@@ -45,20 +52,18 @@ function _ensureRed(scene, key) {
     canvas.height = h;
     const ctx = canvas.getContext('2d');
 
-    // 1. Draw greyscale / coloured source
     ctx.drawImage(img, 0, 0);
-
-    // 2. Multiply with red — colourises but makes transparent regions opaque
     ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = 'rgb(255, 60, 60)';
+    ctx.fillStyle = FLASH_CSS[color] ?? DEFAULT_FLASH_CSS;
     ctx.fillRect(0, 0, w, h);
-
-    // 3. Restore original alpha mask
     ctx.globalCompositeOperation = 'destination-in';
     ctx.drawImage(img, 0, 0);
 
-    scene.textures.addCanvas(rk, canvas);
+    scene.textures.addCanvas(fk, canvas);
 }
+
+// Legacy export used by external callers (keeps existing call-sites working).
+export function ensureRedTexture(scene, key) { _ensureFlash(scene, key, 'red'); }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -71,11 +76,12 @@ function _ensureRed(scene, key) {
  */
 export function applyHitReaction(snake) {
     const scene   = snake.scene;
+    const color   = snake.hitFlashColor ?? 'red';
     const bodyKey = snake._bodyImgs[0]?.texture.key;
     const tailKey = snake._tailImg?.texture.key;
 
     if (!snake._hitReacting) {
-        // First hit: swap every visible part to its red twin
+        // First hit: swap every visible part to its flash-colour twin
         snake._hitReacting = true;
 
         // Stash original keys BEFORE any swap (body/tail may be hidden on Python)
@@ -83,15 +89,15 @@ export function applyHitReaction(snake) {
         snake._origBodyKey = bodyKey;
         snake._origTailKey = tailKey;
 
-        _ensureRed(scene, snake._origHeadKey);
-        if (bodyKey) _ensureRed(scene, bodyKey);
-        if (tailKey) _ensureRed(scene, tailKey);
+        _ensureFlash(scene, snake._origHeadKey, color);
+        if (bodyKey) _ensureFlash(scene, bodyKey, color);
+        if (tailKey) _ensureFlash(scene, tailKey, color);
 
-        snake._headImg.setTexture(_redKey(snake._origHeadKey));
+        snake._headImg.setTexture(_flashKey(snake._origHeadKey, color));
         for (const img of snake._bodyImgs) {
-            if (img.visible) img.setTexture(_redKey(bodyKey));
+            if (img.visible) img.setTexture(_flashKey(bodyKey, color));
         }
-        if (snake._tailImg) snake._tailImg.setTexture(_redKey(tailKey));
+        if (snake._tailImg) snake._tailImg.setTexture(_flashKey(tailKey, color));
     }
 
     // Always extend freeze on repeat hits
