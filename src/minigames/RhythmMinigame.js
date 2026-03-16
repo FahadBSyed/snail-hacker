@@ -44,7 +44,7 @@ export default class RhythmMinigame {
         const by = 630; // bar y-center
 
         // Backdrop
-        this._add(this.scene.add.rectangle(cx, by - 38, 450, 128, 0x000011, 0.92)
+        this.backdrop = this._add(this.scene.add.rectangle(cx, by - 38, 450, 128, 0x000011, 0.92)
             .setStrokeStyle(1.5, 0xff88ff, 0.7).setDepth(200));
 
         // Title
@@ -182,8 +182,44 @@ export default class RhythmMinigame {
     _finish(success) {
         if (this.cancelled) return;
         this.cancelled = true;
-        this._cleanup();
-        if (success) this.onSuccess(); else this.onFailure();
+
+        if (!success) {
+            this._cleanup();
+            this.onFailure();
+            return;
+        }
+
+        // Stop bounce during success feedback
+        if (this.indicatorTween) { this.indicatorTween.stop(); this.indicatorTween = null; }
+
+        this.scene.soundSynth?.play('wordSuccess');
+
+        // Flash a white overlay across the bar then fade it out
+        const cx = 640, by = 630;
+        const flashRect = this._add(
+            this.scene.add.rectangle(cx, by, BAR_WIDTH, 20, 0xffffff, 0.9).setDepth(204));
+        this.scene.tweens.add({
+            targets: flashRect,
+            alpha: 0,
+            duration: 380,
+            ease: 'Sine.easeOut',
+        });
+
+        // Shake the backdrop then clean up and fire callback
+        const origX = this.backdrop.x;
+        this.scene.tweens.add({
+            targets: this.backdrop,
+            x: origX + 7,
+            duration: 45,
+            yoyo: true,
+            repeat: 4,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+                if (this.backdrop.active) this.backdrop.x = origX;
+                this._cleanup();
+                this.onSuccess();
+            },
+        });
     }
 
     cancel() {
