@@ -498,7 +498,7 @@ export default class FrogWorldScene extends BaseGameScene {
             const delay = Phaser.Math.Between(3500, 9000);
             this._ribbetTimer = this.time.delayedCall(delay, () => {
                 if (this.enemies.some(e => e.active)) {
-                    this.soundSynth?.play('alienRibbet');
+                    this.soundSynth?.play('frogRibbet');
                 }
                 scheduleNext();
             });
@@ -518,7 +518,7 @@ export default class FrogWorldScene extends BaseGameScene {
         if (this.frogEscapes.filter(f => f.active).length >= 5) return;
         const frog = new FrogEscape(this, x, y);
         this.frogEscapes.push(frog);
-        this.soundSynth.play('alienRibbet');
+        this.soundSynth.play('frogRibbet');
     }
 
     /**
@@ -529,6 +529,6 @@ export default class FrogWorldScene extends BaseGameScene {
         if (this.frogEscapes.filter(f => f.active).length >= 5) return;
         const frog = new FrogEscape(this, bx, by);
         this.frogEscapes.push(frog);
-        this.soundSynth?.play('alienRibbet');
+        this.soundSynth?.play('frogRibbet');
     }
 }

@@ -618,7 +618,7 @@ export default class SoundSynth {
     }
 
     /** Alien arrives on screen — descending saucer tone + noise impact. */
-    _alienSpawn() {
+    _frogSpawn() {
         const ctx = this._ctx_get(), t = ctx.currentTime;
         const g = this._gain(ctx, 0.26, t, 0.30);
         this._osc(ctx, 'sawtooth', 560, 110, t, 0.26, g);
@@ -628,7 +628,7 @@ export default class SoundSynth {
     }
 
     /** Frog ribbet — low guttural gurgle then high chirp. */
-    _alienRibbet() {
+    _frogRibbet() {
         const ctx = this._ctx_get(), t = ctx.currentTime;
         // Low "rrr" gurgle
         const g1 = this._gain(ctx, 0.20, t, 0.22);

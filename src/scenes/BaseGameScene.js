@@ -1811,7 +1811,7 @@ export default class BaseGameScene extends Phaser.Scene {
         }
 
         // Play a single warning sound for the whole formation
-        this.soundSynth?.play('alienSpawn');
+        this.soundSynth?.play('frogSpawn');
 
         // Stagger each member spawn
         formation.members.forEach((member, i) => {
@@ -1858,9 +1858,9 @@ export default class BaseGameScene extends Phaser.Scene {
         // Spawn sound: always for the first alien of a wave, 30% chance after
         if (!this._waveFirstAlienSpawned) {
             this._waveFirstAlienSpawned = true;
-            this.soundSynth.play('alienSpawn');
+            this.soundSynth.play('frogSpawn');
         } else if (Math.random() < 0.3) {
-            this.soundSynth.play('alienSpawn');
+            this.soundSynth.play('frogSpawn');
         }
 
     }
