@@ -207,17 +207,17 @@ export default class RhythmMinigame {
             ease: 'Sine.easeOut',
         });
 
-        // Shake the backdrop then clean up and fire callback
-        const origX = this.backdrop.x;
+        // Shake the backdrop up-and-down then clean up and fire callback
+        const origY = this.backdrop.y;
         this.scene.tweens.add({
             targets: this.backdrop,
-            x: origX + 7,
-            duration: 45,
+            y: origY - 12,
+            duration: 40,
             yoyo: true,
-            repeat: 4,
+            repeat: 5,
             ease: 'Sine.easeInOut',
             onComplete: () => {
-                if (this.backdrop.active) this.backdrop.x = origX;
+                if (this.backdrop.active) this.backdrop.y = origY;
                 this._cleanup();
                 this.onSuccess();
             },
