@@ -285,16 +285,16 @@ export const DEFAULTS = {
         },
 
         PYTHON: {
-            HEALTH:            150,   // total (15 × 10 per segment)
+            HEALTH:            120,   // total (12 × 10 per segment)
             HP_PER_SEGMENT:     10,
-            SEGMENT_COUNT:      15,   // total body segments after head (excludes head)
+            SEGMENT_COUNT:      12,   // total body segments after head (excludes head)
             SPEED:              40,   // px/s
             RADIUS:             10,   // head collision radius
             BODY_RADIUS:        12,   // per body-segment hit radius (for body-only intercept)
             BODY_SPACING:       18,   // px between history samples used for segment positions
             TAIL_HITBOX_SEGS:    3,   // how many tail segments also count as hittable head when few remain
             SLITHER_AMPLITUDE: 0.75,  // radians — peak lateral angle deviation from direct path
-            SLITHER_FREQUENCY:  1.8,  // Hz — sine wave cycles per second
+            SLITHER_FREQUENCY:  0.5,  // Hz — sine wave cycles per second
         },
 
         BURROWER: {
