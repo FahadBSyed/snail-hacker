@@ -1,6 +1,7 @@
 import { CONFIG } from '../../config.js';
 import AcidGlob from '../AcidGlob.js';
 import { applyHitReaction, tickHitWiggle, applyWiggleToSegments } from './snakeHitReaction.js';
+import { initPath, tickSnakePath } from './snakePathfinding.js';
 
 /**
  * Spitter — World 2 snake that kites Gerald and fires acid globs.
@@ -55,6 +56,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
         this._history  = [{ x, y }];
 
         this._buildVisuals(scene, segCount);
+        initPath(this);
     }
 
     _buildVisuals(scene, segCount) {
@@ -204,7 +206,11 @@ export default class Spitter extends Phaser.GameObjects.Container {
                         this._state = 'KITE';   // bush scorched — resume kiting
                     }
                 } else {
-                    this._moveToward(this._targetBush, cfg.SPEED * 2, dt);
+                    const fleeAngle = tickSnakePath(this, delta, this._targetBush.x, this._targetBush.y);
+                    const mult = this.scene.enemySpeedMultiplier || 1.0;
+                    this.x += Math.cos(fleeAngle) * cfg.SPEED * 2 * mult * dt;
+                    this.y += Math.sin(fleeAngle) * cfg.SPEED * 2 * mult * dt;
+                    this._headImg.setRotation(fleeAngle);
                 }
             }
             this._pushHistory(time);
@@ -226,8 +232,8 @@ export default class Spitter extends Phaser.GameObjects.Container {
             this.y += Math.sin(angle) * cfg.SPEED * mult * dt;
             this._headImg.setRotation(angle + Math.PI);
         } else if (dist > cfg.PREFERRED_MAX) {
-            // Too far — close in with jitter
-            const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+            // Too far — close in with jitter + pathfinding
+            const toTarget = tickSnakePath(this, delta, snail.x, snail.y);
             let moveAngle;
 
             if (this._jitterMs > 0) {

@@ -1,5 +1,6 @@
 import { CONFIG } from '../../config.js';
 import { applyHitReaction, tickHitWiggle, applyWiggleToSegments } from './snakeHitReaction.js';
+import { initPath, tickSnakePath } from './snakePathfinding.js';
 
 /**
  * Sidewinder — World 2 snake that hops between bushes when P2's cursor is not watching.
@@ -58,6 +59,8 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         // Pick first target bush immediately
         this._targetBush = this._nearestFreeBush();
         if (!this._targetBush) this._state = 'ATTACK';
+
+        initPath(this);
     }
 
     _buildVisuals(scene, segCount) {
@@ -188,8 +191,8 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                         if (!this._targetBush) this._state = 'ATTACK';
                     }
                 } else {
-                    // Approach with jitter
-                    const toTarget = Phaser.Math.Angle.Between(this.x, this.y, this._targetBush.x, this._targetBush.y);
+                    // Approach with jitter + pathfinding
+                    const toTarget = tickSnakePath(this, delta, this._targetBush.x, this._targetBush.y);
                     let moveAngle;
                     if (this._jitterMs > 0) {
                         this._jitterMs -= delta;
@@ -219,12 +222,12 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
             return 'alive';
         }
 
-        // ATTACK — direct fast dash at Gerald, with jitter
+        // ATTACK — fast dash at Gerald with pathfinding + jitter
         if (this._state === 'ATTACK') {
             if (this._lastBushPos) this._tickBushReveal(this._lastBushPos.x, this._lastBushPos.y);
             const snail    = this.scene.snail;
             const mult     = this.scene.enemySpeedMultiplier || 1.0;
-            const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+            const toTarget = tickSnakePath(this, delta, snail.x, snail.y);
             let moveAngle;
 
             if (this._jitterMs > 0) {

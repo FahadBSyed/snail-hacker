@@ -1,5 +1,6 @@
 import { CONFIG } from '../../config.js';
 import { applyHitReaction, tickHitWiggle, applyWiggleToSegments, spawnDustCloud } from './snakeHitReaction.js';
+import { initPath, tickSnakePath } from './snakePathfinding.js';
 
 /**
  * Burrower — World 2 snake that phases underground to become invulnerable.
@@ -52,6 +53,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
         this._history  = [{ x, y }];
 
         this._buildVisuals(scene, segCount);
+        initPath(this);
 
         // Ground ripple — shown while underground
         this._ripple = scene.add.graphics();
@@ -113,7 +115,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
             this._setVisible(true);
             const snail    = this.scene.snail;
             const mult     = this.scene.enemySpeedMultiplier || 1.0;
-            const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+            const toTarget = tickSnakePath(this, delta, snail.x, snail.y);
             let moveAngle;
 
             if (this._jitterMs > 0) {
