@@ -323,7 +323,8 @@ export function checkProjectileCollisions(scene) {
 
             const bx = hitImg.x, by = hitImg.y;
             proj.destroy();
-            const died = enemy.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+            // forceAllow=true: segment visibility was already confirmed above
+            const died = enemy.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN, true);
 
             const hitFlash = scene.add.arc(bx, by, enemy.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
             scene.tweens.add({ targets: hitFlash, alpha: 0, duration: 200, onComplete: () => hitFlash.destroy() });
