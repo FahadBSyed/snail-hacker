@@ -168,10 +168,6 @@ export default class BaseGameScene extends Phaser.Scene {
         this.hackThreshold = this._wordsForWave(this.startWave);
         this._hackMode     = 'typing'; // alternates to 'math' on each battery spawn
 
-        // ── Boss ──────────────────────────────────────────────────────────────
-        this.boss            = null;
-        this.bossProjectiles = [];
-
         // ── Enemy speed multiplier / slow field ───────────────────────────────
         this.enemySpeedMultiplier = 1.0;
         this.slowFieldActive = false;
@@ -364,7 +360,6 @@ export default class BaseGameScene extends Phaser.Scene {
         this.acidGlobs   = [];
         this.acidPuddles = [];
         this.healthDrops = [];
-        this.frogEscapes = [];
 
         // World 2 venom state
         this._venomActive = false;
@@ -1140,19 +1135,7 @@ export default class BaseGameScene extends Phaser.Scene {
             }
         }
 
-        // Also damage the boss if in blast radius (boss is not in this.enemies)
-        if (this.boss && this.boss.active && !this.boss._dying) {
-            const dist = Phaser.Math.Distance.Between(x, y, this.boss.x, this.boss.y);
-            if (dist < blastRadius) {
-                const bx = this.boss.x, by = this.boss.y;
-                const hitFlash = this.add.arc(bx, by, this.boss.radius, 0, 360, false, 0x00ff88, 0.75).setDepth(58);
-                this.tweens.add({ targets: hitFlash, alpha: 0, duration: 240, onComplete: () => hitFlash.destroy() });
-                this.tweens.add({ targets: this.boss, x: bx + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
-                const dead = this.boss.takeDamageRaw(CONFIG.EMP.MINE_DAMAGE); // 30% reduction applied in BossAlien.takeDamageRaw
-                if (this.hud) this.hud.updateBossBar(this.boss.health);
-                if (dead) this._bossDeath();
-            }
-        }
+        this._handleEmpBossCheck(x, y, blastRadius);
     }
 
     _startHack() {
@@ -1388,51 +1371,7 @@ export default class BaseGameScene extends Phaser.Scene {
             this._fireLaserRicochet(ricochetOriginX, ricochetOriginY, 0, hitSet);
         }
 
-        // Boss hit check (laser mode) — only if beam reaches the boss
-        if (this.boss && this.boss.active && !this.boss._dying) {
-            const rx    = this.boss.x - sx;
-            const ry    = this.boss.y - sy;
-            const along = rx * cos + ry * sin;
-            if (along > 0 && along <= laserEnd) {
-                const perp = Math.abs(rx * sin - ry * cos);
-                if (perp <= this.boss.radius) {
-                    if (this.boss.shielded) {
-                        this.boss.flashShield();
-                        this.soundSynth.play('shieldReflect');
-                    } else {
-                        const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
-                        this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
-                        this.boss.sprite.setAlpha(0.2);
-                        this.time.delayedCall(80, () => { if (this.boss?.sprite) this.boss.sprite.setAlpha(1); });
-                        const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
-                        console.log(`[boss] laser hit! hp=${this.boss.health} dead=${dead}`);
-                        if (this.hud) this.hud.updateBossBar(this.boss.health);
-                        if (dead) this._bossDeath();
-                    }
-                }
-            }
-        }
-
-        // Boss projectile (black hole) hit check (laser mode)
-        this.bossProjectiles = this.bossProjectiles.filter(bp => {
-            if (!bp.active) return false;
-            const rx    = bp.x - sx;
-            const ry    = bp.y - sy;
-            const along = rx * cos + ry * sin;
-            if (along <= 0 || along > laserEnd) return true;
-            const perp = Math.abs(rx * sin - ry * cos);
-            if (perp > bp.radius + HIT_RADIUS) return true;
-
-            const dead = bp.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
-            this.soundSynth?.play('shieldReflect');
-            if (dead) {
-                spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
-                bp.destroy();
-                return false;
-            }
-            bp.onHit();
-            return true;
-        });
+        this._handleLaserBossChecks(sx, sy, cos, sin, laserEnd, HIT_RADIUS);
 
         // Laser beam visual — outer glow + inner beam + bright core, quick fade
         const gfx = this.add.graphics().setDepth(200);
@@ -1583,7 +1522,7 @@ export default class BaseGameScene extends Phaser.Scene {
         this._startEscapePhase();
     }
 
-    // ── Boss fight ────────────────────────────────────────────────────────────
+    // ── Wave end / escape phase ───────────────────────────────────────────────
 
     _startEscapePhase() {
         this.escapePhase = true;
@@ -1767,13 +1706,8 @@ export default class BaseGameScene extends Phaser.Scene {
         this.scene.pause();
     }
 
-    // ── Frog escape (decorative) ───────────────────────────────────────────────
+    // ── Snail / world obstacle collision ─────────────────────────────────────
 
-    /**
-     * Spawn a decorative escape frog at (x, y) — called by spawnDeathBurst's
-     * onComplete once the explosion has fully faded.
-     * Capped at 5 concurrent frogs so late-wave kills don't flood the screen.
-     */
     /**
      * Push the snail out of any overlapping world obstacles (station, terminals, props).
      * Skipped entirely while the snail is being dragged by P2's grab hand.
@@ -2043,10 +1977,7 @@ export default class BaseGameScene extends Phaser.Scene {
                     const d = Phaser.Math.Distance.Between(mine.x, mine.y, enemy.x, enemy.y);
                     if (d < triggerR) { triggered = true; break; }
                 }
-                if (!triggered && this.boss && this.boss.active && !this.boss._dying) {
-                    const d = Phaser.Math.Distance.Between(mine.x, mine.y, this.boss.x, this.boss.y);
-                    if (d < triggerR) triggered = true;
-                }
+                if (!triggered) triggered = this._checkBossForMineTrigger(mine, triggerR);
 
                 if (triggered) {
                     this._empExplode(mine); // mine.destroy() called inside
@@ -2140,98 +2071,6 @@ export default class BaseGameScene extends Phaser.Scene {
             return true;
         });
 
-        // Boss update + projectile collision (boss is NOT in this.enemies)
-        if (this.boss && this.boss.active && !this.boss._dying) {
-            this.boss.update(time, delta);
-
-            // Projectile vs boss
-            if (this.projectiles.length > 0) {
-                console.log(`[boss] checking ${this.projectiles.length} proj vs boss @ (${Math.round(this.boss.x)},${Math.round(this.boss.y)}) shielded=${this.boss.shielded}`);
-            }
-            this.projectiles = this.projectiles.filter(proj => {
-                if (!proj.active) return false;
-                const dist = Phaser.Math.Distance.Between(proj.x, proj.y, this.boss.x, this.boss.y);
-                if (dist < this.boss.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
-                    proj.destroy();
-                    if (this.boss.shielded) {
-                        this.boss.flashShield();
-                        this.soundSynth.play('shieldReflect');
-                    } else {
-                        // Red hit flash at boss position
-                        const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
-                        this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
-                        // Brief sprite flash (no position tween — orbit code owns boss.x/y)
-                        this.boss.sprite.setAlpha(0.2);
-                        this.time.delayedCall(80, () => { if (this.boss?.sprite) this.boss.sprite.setAlpha(1); });
-                        const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
-                        console.log(`[boss] hit! hp=${this.boss.health} dead=${dead} shielded=${this.boss.shielded}`);
-                        if (this.hud) this.hud.updateBossBar(this.boss.health);
-                        if (dead) this._bossDeath();
-                    }
-                    return false;
-                }
-                return true;
-            });
-        }
-
-        // Boss projectiles — update, P2 shots vs black hole, snail contact
-        this.bossProjectiles = this.bossProjectiles.filter(bp => {
-            if (!bp.active) return false;
-            const alive = bp.update(time, delta, this.snail.x, this.snail.y);
-            if (!alive) return false;
-
-            // P2 projectile vs black hole
-            for (const proj of this.projectiles) {
-                if (!proj.active) continue;
-                const dist = Phaser.Math.Distance.Between(proj.x, proj.y, bp.x, bp.y);
-                if (dist < bp.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
-                    proj.destroy();
-                    const dead = bp.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
-                    this.soundSynth?.play('shieldReflect');
-                    if (dead) {
-                        spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
-                        bp.destroy();
-                        return false;
-                    }
-                    bp.onHit();
-                    break;
-                }
-            }
-
-            // Type-specific contact detection
-            if (bp.active) {
-                if (bp.projType === 'blackhole') {
-                    const snailDist = Phaser.Math.Distance.Between(bp.x, bp.y, this.snail.x, this.snail.y);
-                    if (snailDist < bp.radius + 12) {
-                        this._warpSnail();
-                        spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
-                        bp.destroy();
-                        return false;
-                    }
-                } else if (bp.projType === 'emp') {
-                    const stationDist = Phaser.Math.Distance.Between(bp.x, bp.y, this.station.x, this.station.y);
-                    if (stationDist < bp.radius + this.station.radius) {
-                        this._triggerPowerLoss();
-                        spawnDeathBurst(this, bp.x, bp.y, 0xffcc00);
-                        bp.destroy();
-                        return false;
-                    }
-                } else if (bp.projType === 'terminallock') {
-                    const term = bp._targetTerminal;
-                    if (!term || !term.active) { bp.destroy(); return false; }
-                    const termDist = Phaser.Math.Distance.Between(bp.x, bp.y, term.x, term.y);
-                    if (termDist < bp.radius + 28) {
-                        term.forceLock(CONFIG.BOSS.TERMINAL_LOCK_DURATION);
-                        spawnDeathBurst(this, bp.x, bp.y, 0xff4422);
-                        bp.destroy();
-                        return false;
-                    }
-                }
-            }
-
-            return bp.active;
-        });
-
         // Collision checks (projectile vs alien)
         checkProjectileCollisions(this);
 
@@ -2255,60 +2094,10 @@ export default class BaseGameScene extends Phaser.Scene {
             return true;
         });
 
-        // Frog escapes — update movement and prune destroyed ones
-        for (const frog of this.frogEscapes) {
-            if (frog.active) frog.update(delta);
-        }
-        this.frogEscapes = this.frogEscapes.filter(f => f.active);
-
         // Cleanup
-        this.projectiles     = this.projectiles.filter(p => p.active);
-        this.enemies          = this.enemies.filter(e => e.active && !e._dying);
-        this.healthDrops     = this.healthDrops.filter(d => d.active);
-        this.bossProjectiles = this.bossProjectiles.filter(bp => bp.active);
-    }
-
-    // ── Black hole warp ───────────────────────────────────────────────────────
-
-    /** Teleport Gerald to a random position far from the station. */
-    _warpSnail() {
-        // Cancel any active hack — same effect as P2 teleporting the snail
-        if (this.activeHack)  { this.activeHack.cancel(); this.activeHack = null; }
-        if (this.snail) this.snail.hackingActive = false;
-
-        // Pick a random position at least 260px from station, inside the play area
-        const angle = Math.random() * Math.PI * 2;
-        const dist  = Phaser.Math.Between(260, 380);
-        const wx    = Phaser.Math.Clamp(640 + Math.cos(angle) * dist, 80, 1200);
-        const wy    = Phaser.Math.Clamp(360 + Math.sin(angle) * dist, 80, 460);
-
-        // Collapse rings at origin, expand rings at destination
-        this._spawnWarpRings(this.snail.x, this.snail.y, true);
-        this.snail.x = wx;
-        this.snail.y = wy;
-        this._spawnWarpRings(wx, wy, false);
-
-        this.soundSynth?.play('teleport');
-        this.logDebug(`Black hole warp → (${Math.round(wx)}, ${Math.round(wy)})`);
-    }
-
-    /** Three staggered rings: collapse=true shrinks inward, false expands outward. */
-    _spawnWarpRings(x, y, collapse) {
-        for (let i = 0; i < 3; i++) {
-            const r    = 8 + i * 14;
-            const ring = this.add.arc(x, y, r, 0, 360, false, 0x0a0011, 0)
-                .setStrokeStyle(2, collapse ? 0xbb44ff : 0x7722cc, 0.9).setDepth(62);
-            this.tweens.add({
-                targets:  ring,
-                scaleX:   collapse ? 0.1 : 3.5,
-                scaleY:   collapse ? 0.1 : 3.5,
-                alpha:    0,
-                delay:    i * 55,
-                duration: 380,
-                ease:     'Power2.easeOut',
-                onComplete: () => ring.destroy(),
-            });
-        }
+        this.projectiles = this.projectiles.filter(p => p.active);
+        this.enemies     = this.enemies.filter(e => e.active && !e._dying);
+        this.healthDrops = this.healthDrops.filter(d => d.active);
     }
 
     logDebug(message) {
@@ -2413,6 +2202,24 @@ export default class BaseGameScene extends Phaser.Scene {
      * Override in FrogWorldScene to run the boss death sequence.
      */
     _bossDeath() { }
+
+    /**
+     * Called by _handleEmpBlast after damaging normal enemies.
+     * Override in FrogWorldScene to also damage the boss.
+     */
+    _handleEmpBossCheck(_x, _y, _blastRadius) { }
+
+    /**
+     * Called by _fireLaser after the enemy sweep.
+     * Override in FrogWorldScene to check laser vs boss and boss projectiles.
+     */
+    _handleLaserBossChecks(_sx, _sy, _cos, _sin, _laserEnd, _hitRadius) { }
+
+    /**
+     * Called during mine proximity check; return true if the boss is close enough
+     * to trigger the mine. Override in FrogWorldScene.
+     */
+    _checkBossForMineTrigger(_mine, _triggerR) { return false; }
 
     /**
      * Returns the maximum Y for side-edge enemy spawns.
