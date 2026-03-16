@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 34;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 35;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -356,7 +356,7 @@ export const DEFAULTS = {
         RUSTLE_DURATION:  400,   // ms — bush shake tween when snake enters
         BURN_FLASH_ALPHA: 0.9,   // peak alpha of white flash on burn
         FLUSH_STUN_MS:    600,   // ms the flushed snake is stunned (speed=0)
-        OCCUPY_RADIUS:    28,    // px — snake head must be this close to enter a bush
+        OCCUPY_RADIUS:    35,    // px — snake head must be this close to enter a bush
     },
 
     BOSS: {
