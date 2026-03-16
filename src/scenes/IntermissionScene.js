@@ -539,6 +539,8 @@ export default class IntermissionScene extends Phaser.Scene {
     }
 
     _doAdvance() {
+        const gameKey = this.world === 2 ? 'SnakeWorldScene' : 'FrogWorldScene';
+
         if (this._startupMode) {
             if (this.upgrades.length < this._targetWave - 1) {
                 // Need more upgrades — loop back
@@ -549,7 +551,7 @@ export default class IntermissionScene extends Phaser.Scene {
                 });
             } else {
                 // All upgrades chosen — start at the target wave with full health
-                this.scene.start('GameScene', {
+                this.scene.start(gameKey, {
                     wave:        this._targetWave,
                     score:       0,
                     snailHealth: CONFIG.SNAIL.MAX_HEALTH,
@@ -560,7 +562,7 @@ export default class IntermissionScene extends Phaser.Scene {
             return;
         }
 
-        this.scene.start('GameScene', {
+        this.scene.start(gameKey, {
             wave:        this.wave + 1,
             score:       this.score,
             snailHealth: Math.min(CONFIG.SNAIL.MAX_HEALTH, this.snailHealth + CONFIG.INTERMISSION.HEAL_AMOUNT),

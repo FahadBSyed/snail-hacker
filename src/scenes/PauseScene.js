@@ -3,6 +3,10 @@ export default class PauseScene extends Phaser.Scene {
         super('PauseScene');
     }
 
+    init(data = {}) {
+        this._callerKey = data.callerKey || 'FrogWorldScene';
+    }
+
     create() {
         const cx = 640, cy = 360;
 
@@ -34,7 +38,7 @@ export default class PauseScene extends Phaser.Scene {
         // MAIN MENU button
         const menuBtn = this._makeButton(cx, cy + 105, '[ MAIN MENU ]', '#aaaaaa');
         menuBtn.on('pointerdown', () => {
-            this.scene.stop('GameScene');
+            this.scene.stop(this._callerKey);
             this.scene.start('MenuScene');
         });
 
@@ -54,7 +58,7 @@ export default class PauseScene extends Phaser.Scene {
     }
 
     _resume() {
-        this.scene.resume('GameScene');
+        this.scene.resume(this._callerKey);
         this.scene.stop();          // stop PauseScene itself
     }
 }

@@ -6,28 +6,17 @@ import FastFrog from '../entities/aliens/FastAlien.js';
 import TankFrog from '../entities/aliens/TankAlien.js';
 import BomberFrog from '../entities/aliens/BomberAlien.js';
 import ShieldFrog from '../entities/aliens/ShieldAlien.js';
-import BossAlien from '../entities/aliens/BossAlien.js';
-import BossProjectile from '../entities/BossProjectile.js';
 import HackingStation from '../entities/HackingStation.js';
 import GrabHandSystem from '../systems/GrabHandSystem.js';
 import SlimeTrail from '../systems/SlimeTrail.js';
 import Terminal from '../entities/Terminal.js';
 import DefenseStation from '../entities/DefenseStation.js';
 import HackMinigame from '../minigames/HackMinigame.js';
-import FroggerMinigame from '../minigames/FroggerMinigame.js';
 import MathMinigame from '../minigames/MathMinigame.js';
 import RhythmMinigame from '../minigames/RhythmMinigame.js';
 import HelicopterMinigame from '../minigames/HelicopterMinigame.js';
 import Battery from '../entities/Battery.js';
 import HealthDrop from '../entities/HealthDrop.js';
-import FrogEscape from '../entities/FrogEscape.js'; // decorative escape frogs
-import Bush from '../entities/Bush.js';
-import BasicSnake from '../entities/snakes/BasicSnake.js';
-import Sidewinder from '../entities/snakes/Sidewinder.js';
-import Python from '../entities/snakes/Python.js';
-import Burrower from '../entities/snakes/Burrower.js';
-import Spitter from '../entities/snakes/Spitter.js';
-import AcidGlob from '../entities/AcidGlob.js';
 import WaveManager from '../systems/WaveManager.js';
 import EscapeShip from '../entities/EscapeShip.js';
 import Decoy from '../entities/Decoy.js';
@@ -35,13 +24,14 @@ import EmpMine from '../entities/EmpMine.js';
 import HUD from './HUD.js';
 import { spawnDeathBurst, checkBomberBlast, checkProjectileCollisions, BURST_COLORS } from '../systems/CollisionSystem.js';
 import { spawnSnakeDeathAnimation } from '../entities/snakes/snakeHitReaction.js';
-const SNAKE_TYPES = new Set(['basic-snake', 'sidewinder', 'spitter', 'burrower', 'python']);
 import { PROP_PALETTES } from '../data/propPalettes.js';
 import { ASSET_MANIFEST } from '../data/assetManifest.js';
 
-export default class GameScene extends Phaser.Scene {
-    constructor() {
-        super('GameScene');
+const SNAKE_TYPES = new Set(['basic-snake', 'sidewinder', 'spitter', 'burrower', 'python']);
+
+export default class BaseGameScene extends Phaser.Scene {
+    constructor(key = 'BaseGameScene') {
+        super(key);
     }
 
     init(data = {}) {
@@ -177,10 +167,6 @@ export default class GameScene extends Phaser.Scene {
         this.hackProgress  = 0;      // words completed this wave (persists across cancels)
         this.hackThreshold = this._wordsForWave(this.startWave);
         this._hackMode     = 'typing'; // alternates to 'math' on each battery spawn
-
-        // ── Boss ──────────────────────────────────────────────────────────────
-        this.boss            = null;
-        this.bossProjectiles = [];
 
         // ── Enemy speed multiplier / slow field ───────────────────────────────
         this.enemySpeedMultiplier = 1.0;
@@ -374,7 +360,6 @@ export default class GameScene extends Phaser.Scene {
         this.acidGlobs   = [];
         this.acidPuddles = [];
         this.healthDrops = [];
-        this.frogEscapes = [];
 
         // World 2 venom state
         this._venomActive = false;
@@ -439,10 +424,7 @@ export default class GameScene extends Phaser.Scene {
             onWaveStart: (wave) => {
                 this.wave          = wave;
                 this._spawnProps(wave);
-                if (this.world === 2) {
-                    const bushCount = this.waveManager.getConfig().bushCount || 0;
-                    this._spawnBushes(bushCount);
-                }
+                this._spawnWorldEntities(this.waveManager.getConfig().bushCount || 0);
                 this.hackProgress  = 0;
                 this.hackThreshold = this._wordsForWave(wave);
                 this.escapePhase  = false;
@@ -591,44 +573,6 @@ export default class GameScene extends Phaser.Scene {
         for (let i = 0; i < mushroomCount; i++) tryPlace(mushroomKeys[Math.floor(rng() * mushroomKeys.length)]);
     }
 
-    /**
-     * Spawn World 2 bushes for the current wave.
-     * Places bushes at fixed concentric clock positions around the station:
-     *   Ring 1 (r=350): 10 o'clock, 3 o'clock, 7 o'clock
-     *   Ring 2 (r=250): 1 o'clock, 9 o'clock, 5 o'clock
-     *   Slot 7  (r=310): 11 o'clock (used only when count ≥ 7)
-     * Sidewinders naturally hop inward from ring 1 → ring 2 → attack.
-     */
-    _spawnBushes(count) {
-        for (const b of this.bushes) { if (b.active) b.destroy(); }
-        this.bushes = [];
-        if (!count) return;
-
-        const CX = 640, CY = 360;
-        // Pre-defined positions: [radius, angleDeg]
-        // Angles: 0=right, clockwise positive (Phaser convention, Y-down)
-        const SLOTS = [
-            // Ring 1 — outer (r=350)
-            [350, 210],   // 10 o'clock
-            [350,   0],   // 3  o'clock
-            [350, 120],   // 7  o'clock
-            // Ring 2 — inner (r=250)
-            [250, 300],   // 1  o'clock
-            [250, 180],   // 9  o'clock
-            [250,  60],   // 5  o'clock
-            // Slot 7 — mid (r=310)
-            [310, 240],   // 11 o'clock
-        ];
-
-        const n = Math.min(count, SLOTS.length);
-        for (let i = 0; i < n; i++) {
-            const [r, deg] = SLOTS[i];
-            const rad = deg * Math.PI / 180;
-            const x = CX + r * Math.cos(rad);
-            const y = CY + r * Math.sin(rad);
-            this.bushes.push(new Bush(this, x, y));
-        }
-    }
 
     /**
      * Creates a colourised copy of a greyscale prop texture and registers it
@@ -668,7 +612,6 @@ export default class GameScene extends Phaser.Scene {
     }
 
     _wordsForWave(wave) {
-        if (wave === 10) return CONFIG.MINIGAMES.FROGGER_CROSSINGS;
         return CONFIG.HACK.BASE_WORDS + (wave - 1) * CONFIG.HACK.WORDS_GROWTH;
     }
 
@@ -1188,42 +1131,11 @@ export default class GameScene extends Phaser.Scene {
                 this.score++;
                 this.hud.updateScore(this.score);
                 enemy._dying = true;
-                if (SNAKE_TYPES.has(enemy.alienType)) {
-                    if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
-                        this.time.delayedCall(120, () => {
-                            this.healthDrops.push(new HealthDrop(this, bx, by));
-                        });
-                    }
-                    spawnSnakeDeathAnimation(this, enemy);
-                } else {
-                    const burstColor = BURST_COLORS[enemy.alienType] || 0xffffff;
-                    this.time.delayedCall(200, () => {
-                        if (!enemy.active) return;
-                        spawnDeathBurst(this, bx, by, burstColor,
-                            () => this.spawnFrogEscape(bx, by));
-                        if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
-                            this.healthDrops.push(new HealthDrop(this, bx, by));
-                        }
-                        if (isBomber) checkBomberBlast(this, bx, by);
-                        enemy.destroy();
-                    });
-                }
+                this._handleEnemyKilled(enemy, bx, by, isBomber);
             }
         }
 
-        // Also damage the boss if in blast radius (boss is not in this.enemies)
-        if (this.boss && this.boss.active && !this.boss._dying) {
-            const dist = Phaser.Math.Distance.Between(x, y, this.boss.x, this.boss.y);
-            if (dist < blastRadius) {
-                const bx = this.boss.x, by = this.boss.y;
-                const hitFlash = this.add.arc(bx, by, this.boss.radius, 0, 360, false, 0x00ff88, 0.75).setDepth(58);
-                this.tweens.add({ targets: hitFlash, alpha: 0, duration: 240, onComplete: () => hitFlash.destroy() });
-                this.tweens.add({ targets: this.boss, x: bx + 5, duration: 50, ease: 'Sine.easeOut', yoyo: true, repeat: 1 });
-                const dead = this.boss.takeDamageRaw(CONFIG.EMP.MINE_DAMAGE); // 30% reduction applied in BossAlien.takeDamageRaw
-                if (this.hud) this.hud.updateBossBar(this.boss.health);
-                if (dead) this._bossDeath();
-            }
-        }
+        this._handleEmpBossCheck(x, y, blastRadius);
     }
 
     _startHack() {
@@ -1231,45 +1143,8 @@ export default class GameScene extends Phaser.Scene {
         this.snail.hackingActive = true;
         this.snail.setState('HACKING');
 
-        // ── Wave 10: Frogger minigame breaks boss shield ───────────────────────
-        if (this.wave === 10) {
-            this.activeHack = new FroggerMinigame(this, {
-                pointsNeeded: this.hackThreshold,  // = BOSS.SHIELD_DROP_WORDS (3)
-                onCrossing: (count) => {
-                    this.hackProgress = count;
-                    this.hud.updateHack(this.hackProgress, this.hackThreshold, 'SHIELD');
-                    this.station.setHackProgress(this.hackProgress / this.hackThreshold);
-                },
-                onSuccess: () => {
-                    this.activeHack = null;
-                    this.snail.hackingActive = false;
-                    this.snail.setState('IDLE');
-                    // Drop the boss shield; it auto-re-raises after SHIELD_DOWN_DURATION
-                    if (this.boss && this.boss.active && !this.boss._dying) {
-                        this.boss.dropShield();
-                        this.soundSynth.play('shieldReflect');
-                        console.log('[boss] shield dropped by Frogger success');
-                        this.logDebug('Boss shield broken! Shield down for 5s.');
-                        this.time.delayedCall(CONFIG.BOSS.SHIELD_DOWN_DURATION, () => {
-                            if (this.boss && this.boss.active && !this.boss._dying) {
-                                this.boss.raiseShield();
-                                this.logDebug('Boss shield back up.');
-                            }
-                        });
-                    }
-                    // Reset progress bar so player can break shield again
-                    this.hackProgress = 0;
-                    this.hud.updateHack(0, this.hackThreshold, 'SHIELD');
-                    this.station.setHackProgress(0);
-                },
-                onFailure: () => {
-                    this.activeHack = null;
-                    this.snail.hackingActive = false;
-                    this.snail.setState('IDLE');
-                },
-            });
-            return;
-        }
+        // ── Wave 10: world-specific boss hack (e.g. Frogger in FrogWorldScene) ──
+        if (this.wave === 10 && this._tryWave10Hack()) return;
 
         // ── Waves 1–9: typing / math / helicopter rotation ────────────────────
         const remaining   = this.hackThreshold - this.hackProgress;
@@ -1496,51 +1371,7 @@ export default class GameScene extends Phaser.Scene {
             this._fireLaserRicochet(ricochetOriginX, ricochetOriginY, 0, hitSet);
         }
 
-        // Boss hit check (laser mode) — only if beam reaches the boss
-        if (this.boss && this.boss.active && !this.boss._dying) {
-            const rx    = this.boss.x - sx;
-            const ry    = this.boss.y - sy;
-            const along = rx * cos + ry * sin;
-            if (along > 0 && along <= laserEnd) {
-                const perp = Math.abs(rx * sin - ry * cos);
-                if (perp <= this.boss.radius) {
-                    if (this.boss.shielded) {
-                        this.boss.flashShield();
-                        this.soundSynth.play('shieldReflect');
-                    } else {
-                        const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
-                        this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
-                        this.boss.sprite.setAlpha(0.2);
-                        this.time.delayedCall(80, () => { if (this.boss?.sprite) this.boss.sprite.setAlpha(1); });
-                        const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
-                        console.log(`[boss] laser hit! hp=${this.boss.health} dead=${dead}`);
-                        if (this.hud) this.hud.updateBossBar(this.boss.health);
-                        if (dead) this._bossDeath();
-                    }
-                }
-            }
-        }
-
-        // Boss projectile (black hole) hit check (laser mode)
-        this.bossProjectiles = this.bossProjectiles.filter(bp => {
-            if (!bp.active) return false;
-            const rx    = bp.x - sx;
-            const ry    = bp.y - sy;
-            const along = rx * cos + ry * sin;
-            if (along <= 0 || along > laserEnd) return true;
-            const perp = Math.abs(rx * sin - ry * cos);
-            if (perp > bp.radius + HIT_RADIUS) return true;
-
-            const dead = bp.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
-            this.soundSynth?.play('shieldReflect');
-            if (dead) {
-                spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
-                bp.destroy();
-                return false;
-            }
-            bp.onHit();
-            return true;
-        });
+        this._handleLaserBossChecks(sx, sy, cos, sin, laserEnd, HIT_RADIUS);
 
         // Laser beam visual — outer glow + inner beam + bright core, quick fade
         const gfx = this.add.graphics().setDepth(200);
@@ -1597,16 +1428,7 @@ export default class GameScene extends Phaser.Scene {
             this.score++;
             this.hud.updateScore(this.score);
             nearest._dying = true;
-            this.time.delayedCall(200, () => {
-                if (!nearest.active) return;
-                spawnDeathBurst(this, bx, by, BURST_COLORS[nearest.alienType] || 0xffffff,
-                    () => this.spawnFrogEscape(bx, by));
-                if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
-                    this.healthDrops.push(new HealthDrop(this, bx, by));
-                }
-                if (isBomber) checkBomberBlast(this, bx, by);
-                nearest.destroy();
-            });
+            this._handleEnemyKilled(nearest, bx, by, isBomber);
         }
 
         // Chain to next ricochet
@@ -1700,198 +1522,7 @@ export default class GameScene extends Phaser.Scene {
         this._startEscapePhase();
     }
 
-    // ── Boss fight ────────────────────────────────────────────────────────────
-
-    _spawnBoss() {
-        // ── Target orbit position ──────────────────────────────────────────────
-        const orbitAngle = 0; // enter from the right
-        const targetX = 640 + Math.cos(orbitAngle) * CONFIG.BOSS.ORBIT_RADIUS_X;
-        const targetY = 360 + Math.sin(orbitAngle) * CONFIG.BOSS.ORBIT_RADIUS_Y;
-
-        // ── Lock player + hide HUD for cutscene ───────────────────────────────
-        this.snail.hackingActive = true;
-        this.hud.hide();
-
-        // ── Create boss off-screen right, frozen until cutscene ends ──────────
-        this.boss = new BossAlien(this, 1480, targetY, {
-            onEnemyBurst: (bx, by) => {
-                const count  = CONFIG.BOSS.ALIEN_BURST_COUNT;
-                const spread = CONFIG.BOSS.ALIEN_BURST_SPREAD;
-                const toStation = Phaser.Math.Angle.Between(bx, by, 640, 360);
-                const perp      = toStation + Math.PI / 2;
-                const halfOff   = (count - 1) / 2;
-                for (let i = 0; i < count; i++) {
-                    const off = (i - halfOff) * spread;
-                    this.spawnEnemy('fast', bx + Math.cos(perp) * off, by + Math.sin(perp) * off);
-                }
-                this.soundSynth?.play('bossAlienBurst');
-                this.logDebug(`Boss fires enemy burst! (${count} FastFrogs)`);
-            },
-            onBlackHole: (bx, by) => {
-                this.bossProjectiles.push(new BossProjectile(this, bx, by, 'blackhole'));
-                this.soundSynth?.play('bossBlackHole');
-                this.logDebug('Boss fires black hole!');
-            },
-            onEMP: (bx, by) => {
-                this.bossProjectiles.push(new BossProjectile(this, bx, by, 'emp', {
-                    targetX: this.station.x, targetY: this.station.y,
-                }));
-                this.soundSynth?.play('bossEMP');
-                this.logDebug('Boss fires EMP!');
-            },
-            onTerminalLockEMP: (bx, by) => {
-                const eligible = this.terminals.filter(t =>
-                    t.active && t.terminalState === 'IDLE' &&
-                    t.label !== 'RELOAD' && t.label !== 'REPAIR',
-                );
-                if (eligible.length === 0) return;
-                const target = Phaser.Math.RND.pick(eligible);
-                this.bossProjectiles.push(new BossProjectile(this, bx, by, 'terminallock', {
-                    targetX: target.x, targetY: target.y, targetTerminal: target,
-                }));
-                this.soundSynth?.play('bossTerminalLock');
-                this.logDebug(`Boss fires terminal lock EMP at ${target.label}!`);
-            },
-        });
-        // Freeze AI and start invisible
-        this.boss._phaseShifting = true;
-        this.boss.setAlpha(0);
-
-        // ── Alert sound + flashing WARNING text ───────────────────────────────
-        this.soundSynth?.play('bossAlert');
-
-        const warnText = this.add.text(640, 300, '!! WARNING !!', {
-            fontSize: '34px', fontFamily: 'monospace', color: '#ff2200',
-            stroke: '#000000', strokeThickness: 7,
-        }).setOrigin(0.5).setDepth(200).setAlpha(0);
-
-        // Flash 4 times over ~1 second
-        this.tweens.add({
-            targets: warnText, alpha: 1, duration: 180,
-            ease: 'Sine.easeOut', yoyo: true, repeat: 3, hold: 150,
-        });
-
-        // ── Anger particles — spawn continuously during the float-in ──────────
-        const ANGER_COLORS = [0xff2200, 0xff5500, 0xffaa00, 0xff0044];
-        const particleTimer = this.time.addEvent({
-            delay: 70, loop: true,
-            callback: () => {
-                if (!this.boss?.active) return;
-                const angle = Math.random() * Math.PI * 2;
-                const dist  = Phaser.Math.Between(12, 55);
-                const speed = Phaser.Math.Between(70, 200);
-                const color = ANGER_COLORS[Math.floor(Math.random() * ANGER_COLORS.length)];
-                const sz    = Phaser.Math.Between(4, 11);
-                const px    = this.boss.x + Math.cos(angle) * dist;
-                const py    = this.boss.y + Math.sin(angle) * dist;
-                const p     = this.add.circle(px, py, sz, color, 0.9).setDepth(55);
-                this.tweens.add({
-                    targets:  p,
-                    x:        px + Math.cos(angle) * speed,
-                    y:        py + Math.sin(angle) * speed,
-                    alpha:    0,
-                    scaleX:   0.15,
-                    scaleY:   0.15,
-                    duration: Phaser.Math.Between(300, 600),
-                    ease:     'Power2.easeOut',
-                    onComplete: () => p.destroy(),
-                });
-            },
-        });
-
-        // ── Boss float-in — delayed slightly so alert plays first ─────────────
-        this.time.delayedCall(350, () => {
-            this.tweens.add({
-                targets:  this.boss,
-                x:        targetX,
-                alpha:    1,
-                duration: 1600,
-                ease:     'Power2.easeOut',
-                onComplete: () => {
-                    // Stop particles
-                    particleTimer.remove(false);
-
-                    // Swap WARNING for arrival title card
-                    warnText.setText('THE OVERLORD').setFontSize('44px').setColor('#ff2200').setAlpha(1);
-                    this.soundSynth?.play('bossSpawn');
-
-                    // Hold title, then fade out and hand control back to players
-                    this.time.delayedCall(900, () => {
-                        this.tweens.add({
-                            targets: warnText, alpha: 0, duration: 400,
-                            onComplete: () => warnText.destroy(),
-                        });
-                        this.boss._phaseShifting = false;
-                        this.snail.hackingActive = false;
-                        this.hud.show();
-                        this.hud.showBossBar(this.boss.health, CONFIG.BOSS.HP);
-                        this.logDebug('The Overlord has arrived!');
-                    });
-                },
-            });
-        });
-    }
-
-    _bossDeath() {
-        if (!this.boss || !this.boss.active) return;
-        this.boss._dying = true;
-        this.boss._phaseShifting = false;
-
-        const bx = this.boss.x;
-        const by = this.boss.y;
-
-        // Heavy screen shake
-        this.cameras.main.shake(600, 0.02);
-        this.soundSynth?.play('bossDeath');
-
-        // Three staggered expanding rings
-        for (let i = 0; i < 3; i++) {
-            this.time.delayedCall(i * 150, () => {
-                const ring = this.add.arc(bx, by, this.boss ? this.boss.radius : 36, 0, 360, false, 0xff2200, 0).setDepth(60);
-                ring.setStrokeStyle(4, 0xff4400, 1);
-                this.tweens.add({
-                    targets: ring, scaleX: 5, scaleY: 5, alpha: 0,
-                    duration: 500, ease: 'Power2.easeOut',
-                    onComplete: () => ring.destroy(),
-                });
-            });
-        }
-
-        // Rapid white flash (8 flashes over 800ms)
-        const flashTimer = this.time.addEvent({
-            delay: 100, repeat: 7,
-            callback: () => {
-                if (this.boss && this.boss.active) {
-                    this.boss.alpha = this.boss.alpha < 0.5 ? 1 : 0.15;
-                }
-            },
-        });
-
-        // Clear any lingering black holes immediately
-        for (const bp of this.bossProjectiles) { if (bp.active) bp.destroy(); }
-        this.bossProjectiles = [];
-
-        // Final explosion + wave end
-        this.time.delayedCall(900, () => {
-            if (this.boss && this.boss.active) {
-                spawnDeathBurst(this, bx, by, 0xff2200);
-                spawnDeathBurst(this, bx, by, 0xff8800);
-                this.cameras.main.flash(500, 255, 100, 0);
-                this.boss.destroy();
-                this.boss = null;
-            }
-            // Always spawn an escape frog on boss death (100% chance, bypasses random gate)
-            if (this.sys.isActive() && this.frogEscapes.filter(f => f.active).length < 5) {
-                const frog = new FrogEscape(this, bx, by);
-                this.frogEscapes.push(frog);
-                this.soundSynth?.play('alienRibbet');
-            }
-            this.hud.hideBossBar();
-            this.score += 50;
-            this.hud.updateScore(this.score);
-            this._completeWave();
-        });
-    }
+    // ── Wave end / escape phase ───────────────────────────────────────────────
 
     _startEscapePhase() {
         this.escapePhase = true;
@@ -2013,15 +1644,7 @@ export default class GameScene extends Phaser.Scene {
         }
         this.enemies = [];
 
-        // Destroy World 2 bushes + acid
-        for (const bush of this.bushes)   { if (bush.active) bush.destroy(); }
-        for (const g    of this.acidGlobs) { if (g.active) g.destroy(); }
-        for (const p    of this.acidPuddles) { if (p.active) p.destroy(); }
-        this.bushes      = [];
-        this.acidGlobs   = [];
-        this.acidPuddles = [];
-        this._venomActive = false;
-        if (this._venomTimer) { this._venomTimer.remove(false); this._venomTimer = null; }
+        this._clearWorldEntities();
 
         // Move snail onto the ship
         this.escapeShip.setPromptVisible(false);
@@ -2079,17 +1702,12 @@ export default class GameScene extends Phaser.Scene {
     _openPause() {
         if (this.scene.isActive('PauseScene')) return;
         this.grabSystem.onPause();
-        this.scene.launch('PauseScene');
+        this.scene.launch('PauseScene', { callerKey: this.scene.key });
         this.scene.pause();
     }
 
-    // ── Frog escape (decorative) ───────────────────────────────────────────────
+    // ── Snail / world obstacle collision ─────────────────────────────────────
 
-    /**
-     * Spawn a decorative escape frog at (x, y) — called by spawnDeathBurst's
-     * onComplete once the explosion has fully faded.
-     * Capped at 5 concurrent frogs so late-wave kills don't flood the screen.
-     */
     /**
      * Push the snail out of any overlapping world obstacles (station, terminals, props).
      * Skipped entirely while the snail is being dragged by P2's grab hand.
@@ -2140,71 +1758,15 @@ export default class GameScene extends Phaser.Scene {
         this.snail.x = Phaser.Math.Clamp(this.snail.x, margin, 1280 - margin);
         this.snail.y = Phaser.Math.Clamp(this.snail.y, margin, 720 - margin);
 
-        // World 2: Gerald walking through an occupied bush flushes the hiding snake
-        if (this.world === 2) {
-            for (const bush of this.bushes) {
-                if (!bush.active || !bush.isOccupied) continue;
-                const d = Phaser.Math.Distance.Between(this.snail.x, this.snail.y, bush.x, bush.y);
-                if (d < CONFIG.PROPS.SNAIL_RADIUS + CONFIG.BUSHES.OCCUPY_RADIUS) {
-                    bush.flush();
-                }
-            }
-        }
+        this._resolveWorldSpecificCollisions();
     }
 
-    /**
-     * Apply the World 2 venom debuff to Gerald for VENOM.DURATION ms.
-     * Re-calling while active simply refreshes the timer.
-     * The speed penalty is applied directly in Snail.update() via scene._venomActive.
-     */
-    _applyVenom() {
-        this._venomActive = true;
-        if (this._venomTimer) this._venomTimer.remove(false);
-        this._venomTimer = this.time.delayedCall(CONFIG.SNAKES.VENOM.DURATION, () => {
-            this._venomActive = false;
-            this._venomTimer  = null;
-        });
-        // Visual indicator — brief purple text over Gerald
-        if (!this._venomLabel || !this._venomLabel.active) {
-            this._venomLabel = this.add.text(0, -36, 'VENOMED', {
-                fontSize: '10px', fontFamily: 'monospace', color: '#cc44ff',
-            }).setOrigin(0.5).setDepth(60);
-        }
-        this._venomLabel.setPosition(this.snail.x, this.snail.y - 36);
-        this._venomLabel.setAlpha(1);
-        this.tweens.killTweensOf(this._venomLabel);
-        this.tweens.add({
-            targets:  this._venomLabel,
-            alpha:    0,
-            delay:    CONFIG.SNAKES.VENOM.DURATION - 400,
-            duration: 400,
-        });
-    }
 
-    /** Schedule a sporadic ribbet while aliens are alive; re-schedules itself. */
-    _startRibbetTimer() {
-        if (this._ribbetTimer) { this._ribbetTimer.remove(false); this._ribbetTimer = null; }
-        const scheduleNext = () => {
-            const delay = Phaser.Math.Between(3500, 9000);
-            this._ribbetTimer = this.time.delayedCall(delay, () => {
-                if (this.enemies.some(e => e.active)) {
-                    this.soundSynth?.play('alienRibbet');
-                }
-                scheduleNext();
-            });
-        };
-        scheduleNext();
-    }
+    /** No-op in base — overridden by FrogWorldScene to schedule sporadic ribbet sounds. */
+    _startRibbetTimer() { }
 
-    spawnFrogEscape(x, y) {
-        if (this.world === 2) return;
-        if (!this.sys.isActive()) return;
-        if (Math.random() >= 0.25) return;
-        if (this.frogEscapes.filter(f => f.active).length >= 5) return;
-        const frog = new FrogEscape(this, x, y);
-        this.frogEscapes.push(frog);
-        this.soundSynth.play('alienRibbet');
-    }
+    /** No-op in base — overridden by FrogWorldScene to spawn decorative escape frogs. */
+    spawnFrogEscape(_x, _y) { }
 
     // ── Enemy spawning ─────────────────────────────────────────────────────────
 
@@ -2260,10 +1822,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     _randomEdgePosition() {
-        // On wave 10 the FroggerMinigame occupies the bottom third (y > 480),
-        // so clamp side-edge spawns to the top two-thirds to keep the boss
-        // and its projectiles out of that region.
-        const maxY = this.wave === 10 ? 460 : 670;
+        const maxY = this._spawnMaxY();
         const edge = Phaser.Math.Between(0, 2);
         if (edge === 0) return { x: Phaser.Math.Between(50, 1230), y: -20 };
         if (edge === 1) return { x: -20,  y: Phaser.Math.Between(50, maxY) };
@@ -2271,22 +1830,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     spawnEnemy(type = 'basic', spawnX, spawnY) {
-        // Hard cap on total simultaneous snakes
-        if (SNAKE_TYPES.has(type)) {
-            const snakeCount = this.enemies.filter(e => e.active && SNAKE_TYPES.has(e.alienType)).length;
-            if (snakeCount >= CONFIG.SNAKES.MAX_SNAKES) return;
-        }
-
-        // Cap concurrent spitters
-        if (type === 'spitter') {
-            const spitterCount = this.enemies.filter(e => e.active && e.alienType === 'spitter').length;
-            if (spitterCount >= 3) return;
-        }
-        // Cap concurrent pythons
-        if (type === 'python') {
-            const pythonCount = this.enemies.filter(e => e.active && e.alienType === 'python').length;
-            if (pythonCount >= 2) return;
-        }
+        if (!this._canSpawnEnemyType(type)) return;
 
         const pos = (spawnX !== undefined)
             ? { x: spawnX, y: spawnY }
@@ -2294,16 +1838,12 @@ export default class GameScene extends Phaser.Scene {
         const { x, y } = pos;
         let enemy;
         switch (type) {
-            case 'fast':         enemy = new FastFrog(this, x, y);    break;
-            case 'tank':         enemy = new TankFrog(this, x, y);    break;
-            case 'bomber':       enemy = new BomberFrog(this, x, y);  break;
-            case 'shield':       enemy = new ShieldFrog(this, x, y);  break;
-            case 'basic-snake':  enemy = new BasicSnake(this, x, y);  break;
-            case 'sidewinder':   enemy = new Sidewinder(this, x, y);  break;
-            case 'python':       enemy = new Python(this, x, y);      break;
-            case 'burrower':     enemy = new Burrower(this, x, y);    break;
-            case 'spitter':      enemy = new Spitter(this, x, y);     break;
-            default:             enemy = new BasicFrog(this, x, y);
+            case 'fast':   enemy = new FastFrog(this, x, y);   break;
+            case 'tank':   enemy = new TankFrog(this, x, y);   break;
+            case 'bomber': enemy = new BomberFrog(this, x, y); break;
+            case 'shield': enemy = new ShieldFrog(this, x, y); break;
+            default:
+                enemy = this._createWorldSpecificEnemy(type, x, y) ?? new BasicFrog(this, x, y);
         }
         if (this.slowFieldActive) {
             enemy._origSpeed = enemy.speed;
@@ -2437,10 +1977,7 @@ export default class GameScene extends Phaser.Scene {
                     const d = Phaser.Math.Distance.Between(mine.x, mine.y, enemy.x, enemy.y);
                     if (d < triggerR) { triggered = true; break; }
                 }
-                if (!triggered && this.boss && this.boss.active && !this.boss._dying) {
-                    const d = Phaser.Math.Distance.Between(mine.x, mine.y, this.boss.x, this.boss.y);
-                    if (d < triggerR) triggered = true;
-                }
+                if (!triggered) triggered = this._checkBossForMineTrigger(mine, triggerR);
 
                 if (triggered) {
                     this._empExplode(mine); // mine.destroy() called inside
@@ -2517,146 +2054,27 @@ export default class GameScene extends Phaser.Scene {
                     enemy._bounceUntil = time + 3000;
                     return true;
                 } else {
-                    // Snakes bounce away instead of despawning
-                    if (SNAKE_TYPES.has(enemy.alienType)) {
-                        const bounceAngle = Phaser.Math.Angle.Between(this.snail.x, this.snail.y, bx, by);
-                        const bounceSpeed = enemy.speed * 2;
-                        enemy._bounceVx    = Math.cos(bounceAngle) * bounceSpeed;
-                        enemy._bounceVy    = Math.sin(bounceAngle) * bounceSpeed;
-                        enemy._bounceUntil = time + 3000;
-                    } else {
-                        enemy.destroy();
-                    }
+                    const staysAlive = this._handleEnemySnailContact(enemy, bx, by, time);
                     const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
                     this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
                     this.soundSynth.play('damage');
-                    // World 2: snake contact applies venom
-                    if (this.world === 2) this._applyVenom();
+                    this._applyContactEffect();
                     if (died) {
                         if (this.waveManager) this.waveManager.active = false;
                         if (this.activeHack)  { this.activeHack.cancel(); this.activeHack = null; }
                         this.scene.start('GameOverScene', { wave: this.wave, score: this.score, world: this.world });
                         return false;
                     }
-                    return SNAKE_TYPES.has(enemy.alienType); // snakes persist; others removed
+                    return staysAlive;
                 }
             }
             return true;
-        });
-
-        // Boss update + projectile collision (boss is NOT in this.enemies)
-        if (this.boss && this.boss.active && !this.boss._dying) {
-            this.boss.update(time, delta);
-
-            // Projectile vs boss
-            if (this.projectiles.length > 0) {
-                console.log(`[boss] checking ${this.projectiles.length} proj vs boss @ (${Math.round(this.boss.x)},${Math.round(this.boss.y)}) shielded=${this.boss.shielded}`);
-            }
-            this.projectiles = this.projectiles.filter(proj => {
-                if (!proj.active) return false;
-                const dist = Phaser.Math.Distance.Between(proj.x, proj.y, this.boss.x, this.boss.y);
-                if (dist < this.boss.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
-                    proj.destroy();
-                    if (this.boss.shielded) {
-                        this.boss.flashShield();
-                        this.soundSynth.play('shieldReflect');
-                    } else {
-                        // Red hit flash at boss position
-                        const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
-                        this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
-                        // Brief sprite flash (no position tween — orbit code owns boss.x/y)
-                        this.boss.sprite.setAlpha(0.2);
-                        this.time.delayedCall(80, () => { if (this.boss?.sprite) this.boss.sprite.setAlpha(1); });
-                        const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
-                        console.log(`[boss] hit! hp=${this.boss.health} dead=${dead} shielded=${this.boss.shielded}`);
-                        if (this.hud) this.hud.updateBossBar(this.boss.health);
-                        if (dead) this._bossDeath();
-                    }
-                    return false;
-                }
-                return true;
-            });
-        }
-
-        // Boss projectiles — update, P2 shots vs black hole, snail contact
-        this.bossProjectiles = this.bossProjectiles.filter(bp => {
-            if (!bp.active) return false;
-            const alive = bp.update(time, delta, this.snail.x, this.snail.y);
-            if (!alive) return false;
-
-            // P2 projectile vs black hole
-            for (const proj of this.projectiles) {
-                if (!proj.active) continue;
-                const dist = Phaser.Math.Distance.Between(proj.x, proj.y, bp.x, bp.y);
-                if (dist < bp.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
-                    proj.destroy();
-                    const dead = bp.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
-                    this.soundSynth?.play('shieldReflect');
-                    if (dead) {
-                        spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
-                        bp.destroy();
-                        return false;
-                    }
-                    bp.onHit();
-                    break;
-                }
-            }
-
-            // Type-specific contact detection
-            if (bp.active) {
-                if (bp.projType === 'blackhole') {
-                    const snailDist = Phaser.Math.Distance.Between(bp.x, bp.y, this.snail.x, this.snail.y);
-                    if (snailDist < bp.radius + 12) {
-                        this._warpSnail();
-                        spawnDeathBurst(this, bp.x, bp.y, 0x7722cc);
-                        bp.destroy();
-                        return false;
-                    }
-                } else if (bp.projType === 'emp') {
-                    const stationDist = Phaser.Math.Distance.Between(bp.x, bp.y, this.station.x, this.station.y);
-                    if (stationDist < bp.radius + this.station.radius) {
-                        this._triggerPowerLoss();
-                        spawnDeathBurst(this, bp.x, bp.y, 0xffcc00);
-                        bp.destroy();
-                        return false;
-                    }
-                } else if (bp.projType === 'terminallock') {
-                    const term = bp._targetTerminal;
-                    if (!term || !term.active) { bp.destroy(); return false; }
-                    const termDist = Phaser.Math.Distance.Between(bp.x, bp.y, term.x, term.y);
-                    if (termDist < bp.radius + 28) {
-                        term.forceLock(CONFIG.BOSS.TERMINAL_LOCK_DURATION);
-                        spawnDeathBurst(this, bp.x, bp.y, 0xff4422);
-                        bp.destroy();
-                        return false;
-                    }
-                }
-            }
-
-            return bp.active;
         });
 
         // Collision checks (projectile vs alien)
         checkProjectileCollisions(this);
 
-        // ── World 2: Acid globs update ────────────────────────────────────────
-        this.acidGlobs = this.acidGlobs.filter(g => {
-            if (!g.active) return false;
-            g.update(delta);
-            return g.active;
-        });
-
-        // ── World 2: Acid puddles update + snail slow ─────────────────────────
-        let inPuddle = false;
-        this.acidPuddles = this.acidPuddles.filter(p => {
-            if (!p.active) return false;
-            p.update(delta);
-            if (!p.active) return false;
-            const d = Phaser.Math.Distance.Between(this.snail.x, this.snail.y, p.x, p.y);
-            if (d < p.radius + 12) inPuddle = true;
-            return true;
-        });
-        this._snailInPuddle = inPuddle;
+        this._updateWorldSpecific(time, delta);
 
         // Health drop pickups (+ gravitation when Health Boost II is owned)
         this.healthDrops = this.healthDrops.filter(drop => {
@@ -2676,63 +2094,136 @@ export default class GameScene extends Phaser.Scene {
             return true;
         });
 
-        // Frog escapes — update movement and prune destroyed ones
-        for (const frog of this.frogEscapes) {
-            if (frog.active) frog.update(delta);
-        }
-        this.frogEscapes = this.frogEscapes.filter(f => f.active);
-
         // Cleanup
-        this.projectiles     = this.projectiles.filter(p => p.active);
-        this.enemies          = this.enemies.filter(e => e.active && !e._dying);
-        this.healthDrops     = this.healthDrops.filter(d => d.active);
-        this.bossProjectiles = this.bossProjectiles.filter(bp => bp.active);
-    }
-
-    // ── Black hole warp ───────────────────────────────────────────────────────
-
-    /** Teleport Gerald to a random position far from the station. */
-    _warpSnail() {
-        // Cancel any active hack — same effect as P2 teleporting the snail
-        if (this.activeHack)  { this.activeHack.cancel(); this.activeHack = null; }
-        if (this.snail) this.snail.hackingActive = false;
-
-        // Pick a random position at least 260px from station, inside the play area
-        const angle = Math.random() * Math.PI * 2;
-        const dist  = Phaser.Math.Between(260, 380);
-        const wx    = Phaser.Math.Clamp(640 + Math.cos(angle) * dist, 80, 1200);
-        const wy    = Phaser.Math.Clamp(360 + Math.sin(angle) * dist, 80, 460);
-
-        // Collapse rings at origin, expand rings at destination
-        this._spawnWarpRings(this.snail.x, this.snail.y, true);
-        this.snail.x = wx;
-        this.snail.y = wy;
-        this._spawnWarpRings(wx, wy, false);
-
-        this.soundSynth?.play('teleport');
-        this.logDebug(`Black hole warp → (${Math.round(wx)}, ${Math.round(wy)})`);
-    }
-
-    /** Three staggered rings: collapse=true shrinks inward, false expands outward. */
-    _spawnWarpRings(x, y, collapse) {
-        for (let i = 0; i < 3; i++) {
-            const r    = 8 + i * 14;
-            const ring = this.add.arc(x, y, r, 0, 360, false, 0x0a0011, 0)
-                .setStrokeStyle(2, collapse ? 0xbb44ff : 0x7722cc, 0.9).setDepth(62);
-            this.tweens.add({
-                targets:  ring,
-                scaleX:   collapse ? 0.1 : 3.5,
-                scaleY:   collapse ? 0.1 : 3.5,
-                alpha:    0,
-                delay:    i * 55,
-                duration: 380,
-                ease:     'Power2.easeOut',
-                onComplete: () => ring.destroy(),
-            });
-        }
+        this.projectiles = this.projectiles.filter(p => p.active);
+        this.enemies     = this.enemies.filter(e => e.active && !e._dying);
+        this.healthDrops = this.healthDrops.filter(d => d.active);
     }
 
     logDebug(message) {
         console.log(`[GameScene] ${message}`);
     }
+
+    // ── World-specific hooks — override in subclasses ─────────────────────────
+
+    /**
+     * Called at wave start to spawn world-specific entities (e.g. bushes in World 2).
+     * @param {number} bushCount - from wave config (ignored in World 1)
+     */
+    _spawnWorldEntities(_bushCount) { }
+
+    /**
+     * Called when a non-boss enemy is lethally hit. Handles death VFX,
+     * health drop chance, bomber chain, and enemy.destroy().
+     * Override in SnakeWorldScene to route snakes through spawnSnakeDeathAnimation.
+     */
+    _handleEnemyKilled(enemy, bx, by, isBomber = false) {
+        const burstColor = BURST_COLORS[enemy.alienType] || 0xffffff;
+        this.time.delayedCall(200, () => {
+            if (!enemy.active) return;
+            spawnDeathBurst(this, bx, by, burstColor, () => this.spawnFrogEscape(bx, by));
+            if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                this.healthDrops.push(new HealthDrop(this, bx, by));
+            }
+            if (isBomber) checkBomberBlast(this, bx, by);
+            enemy.destroy();
+        });
+    }
+
+    /**
+     * Called when an enemy reaches the snail (not bomber, not shielded).
+     * Returns true if the enemy should stay alive (snake bounce), false if destroyed.
+     * Override in SnakeWorldScene to implement snake bounce behaviour.
+     */
+    _handleEnemySnailContact(enemy, _bx, _by, _time) {
+        enemy.destroy();
+        return false;
+    }
+
+    /**
+     * Called after snail takes damage from enemy contact.
+     * Override in SnakeWorldScene to apply venom.
+     */
+    _applyContactEffect() { }
+
+    /**
+     * Called once per frame for world-specific update logic (acid globs, puddles).
+     * Override in SnakeWorldScene.
+     */
+    _updateWorldSpecific(_time, _delta) { }
+
+    /**
+     * Called in _resolveSnailCollisions for world-specific obstacle checks.
+     * Override in SnakeWorldScene to flush hiding snakes from bushes on contact.
+     */
+    _resolveWorldSpecificCollisions() { }
+
+    /**
+     * Called in _boardEscapeShip to destroy world-specific entities.
+     * Override in SnakeWorldScene.
+     */
+    _clearWorldEntities() { }
+
+    /**
+     * Called at the end of _bossDeath with the boss's final position.
+     * Override in FrogWorldScene to spawn a guaranteed decorative frog.
+     */
+    _onBossDeathFx(_bx, _by) { }
+
+    /**
+     * Called by spawnEnemy before creating an enemy to enforce world-specific caps.
+     * Return false to cancel the spawn. Override in SnakeWorldScene.
+     */
+    _canSpawnEnemyType(_type) { return true; }
+
+    /**
+     * Called by spawnEnemy for unknown type strings (snake types in World 2).
+     * Return the constructed enemy, or null to fall back to BasicFrog.
+     * Override in SnakeWorldScene.
+     */
+    _createWorldSpecificEnemy(_type, _x, _y) { return null; }
+
+    /**
+     * Called when wave === 10 and the snail activates the station hack.
+     * Override in FrogWorldScene to launch the Frogger boss-shield minigame.
+     * Return true to signal that the wave-10 hack was handled (suppresses the
+     * normal typing/math path); return false to fall through to the base logic.
+     */
+    _tryWave10Hack() { return false; }
+
+    /**
+     * Called after drop-in completes on wave 10 to spawn the world boss.
+     * Override in FrogWorldScene.
+     */
+    _spawnBoss() { }
+
+    /**
+     * Called when the boss takes lethal damage.
+     * Override in FrogWorldScene to run the boss death sequence.
+     */
+    _bossDeath() { }
+
+    /**
+     * Called by _handleEmpBlast after damaging normal enemies.
+     * Override in FrogWorldScene to also damage the boss.
+     */
+    _handleEmpBossCheck(_x, _y, _blastRadius) { }
+
+    /**
+     * Called by _fireLaser after the enemy sweep.
+     * Override in FrogWorldScene to check laser vs boss and boss projectiles.
+     */
+    _handleLaserBossChecks(_sx, _sy, _cos, _sin, _laserEnd, _hitRadius) { }
+
+    /**
+     * Called during mine proximity check; return true if the boss is close enough
+     * to trigger the mine. Override in FrogWorldScene.
+     */
+    _checkBossForMineTrigger(_mine, _triggerR) { return false; }
+
+    /**
+     * Returns the maximum Y for side-edge enemy spawns.
+     * Override in FrogWorldScene to clamp wave-10 spawns above the Frogger lane.
+     */
+    _spawnMaxY() { return 670; }
 }

@@ -84,6 +84,7 @@ export default class MenuScene extends Phaser.Scene {
             btn.on('pointerdown', () => {
                 this.registry.get('soundSynth')?.warmup();
                 const startWave = CONFIG.DEV_MODE ? Math.max(1, CONFIG.DEV_START_WAVE || 1) : 1;
+                const gameKey = world === 2 ? 'SnakeWorldScene' : 'FrogWorldScene';
                 if (startWave > 1) {
                     this.scene.start('IntermissionScene', {
                         wave: 0, score: 0, upgrades: [],
@@ -91,7 +92,7 @@ export default class MenuScene extends Phaser.Scene {
                         _startupMode: true, _targetWave: startWave,
                     });
                 } else {
-                    this.scene.start('GameScene', { world });
+                    this.scene.start(gameKey, { world });
                 }
             });
             return btn;
