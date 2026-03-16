@@ -84,7 +84,7 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
     takeDamage(amount, forceAllow = false) {
         // Block damage only when the head has fully entered the bush.
         // forceAllow = true when the caller already confirmed a visible segment was hit.
-        if (!forceAllow && this.hidingInBush && this._fadedParts.has(this)) return false;
+        if (!forceAllow && this.hidingInBush && this.alpha < 0.1) return false;
         this.health -= amount;
         if (this.health <= 0) return true;
         applyHitReaction(this);
