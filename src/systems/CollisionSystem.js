@@ -224,7 +224,8 @@ export function checkProjectileCollisions(scene) {
         if (!proj.active) continue;
         for (const enemy of scene.enemies) {
             if (!enemy.active) continue;
-            if (enemy.hidingInBush) continue;   // World 2: invulnerable while hiding
+            // World 2: only block head hits when the head is fully invisible
+            if (enemy.hidingInBush && enemy.alpha < 0.1) continue;
             const dist = Phaser.Math.Distance.Between(proj.x, proj.y, enemy.x, enemy.y);
             if (dist >= enemy.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) continue;
 
@@ -306,12 +307,14 @@ export function checkProjectileCollisions(scene) {
         // Projectile still alive — check body segments of non-Python snakes.
         // Each segment that is hit deals full damage to the snake.
         for (const enemy of scene.enemies) {
-            if (!enemy.active || enemy.hidingInBush || enemy._dying) continue;
+            if (!enemy.active || enemy._dying) continue;
             if (enemy._bodyHitboxes || !enemy._bodyImgs) continue; // skip Python & non-snakes
             let hitImg = null;
             for (const img of enemy._bodyImgs) {
+                // Skip segments that are fully invisible (faded into a bush)
+                if (img.alpha < 0.1) continue;
                 if (Phaser.Math.Distance.Between(proj.x, proj.y, img.x, img.y)
-                        < enemy.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
+                        < enemy.radius * 1.25 + CONFIG.PLAYER.PROJECTILE_RADIUS) {
                     hitImg = img;
                     break;
                 }
@@ -320,7 +323,8 @@ export function checkProjectileCollisions(scene) {
 
             const bx = hitImg.x, by = hitImg.y;
             proj.destroy();
-            const died = enemy.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+            // forceAllow=true: segment visibility was already confirmed above
+            const died = enemy.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN, true);
 
             const hitFlash = scene.add.arc(bx, by, enemy.radius, 0, 360, false, 0xff2222, 0.75).setDepth(58);
             scene.tweens.add({ targets: hitFlash, alpha: 0, duration: 200, onComplete: () => hitFlash.destroy() });
@@ -358,6 +362,20 @@ export function checkProjectileCollisions(scene) {
         // If projectile is still alive after the alien loop, check Python body
         // hitboxes.  A hit destroys the projectile with a spark but does NOT
         // damage the Python.  (Head hits are handled above in the normal loop.)
+        //
+        // Grace distance: skip body-hitbox checks until the bullet has visibly appeared.
+        // Trail particles are emitted every 25 ms; at PROJECTILE_SPEED=3200 px/s that
+        // is 80 px per tick.  At 30 fps one frame moves ~107 px.  Using 120 px ensures
+        // at least one trail particle has appeared away from the station before the body
+        // can block the bullet — otherwise the block is completely invisible (the only
+        // trail tick is at the station origin, hidden behind the station graphic).
+        // This also covers the common case where a Python's body trail lingers near the
+        // station long after the Python has moved away (especially with slow field active).
+        const BULLET_GRACE = 120;
+        if (proj.originX !== undefined &&
+            Phaser.Math.Distance.Between(proj.x, proj.y, proj.originX, proj.originY) < BULLET_GRACE) {
+            // bullet hasn't traveled far enough to be visible yet — skip body check
+        } else
         for (const enemy of scene.enemies) {
             if (!enemy.active || !enemy._bodyHitboxes) continue;
             let blocked = false;
@@ -401,7 +419,11 @@ export function checkProjectileCollisions(scene) {
 
         // ── World 2: AcidGlob intercept ───────────────────────────────────────
         // P2 projectiles can shoot down acid globs mid-air.
-        if (scene.acidGlobs) {
+        // Same BULLET_GRACE as the body-hitbox check: skip until the bullet has
+        // visibly appeared, so a glob near the station doesn't silently eat the shot.
+        if (scene.acidGlobs &&
+            (proj.originX === undefined ||
+             Phaser.Math.Distance.Between(proj.x, proj.y, proj.originX, proj.originY) >= BULLET_GRACE)) {
             for (let gi = scene.acidGlobs.length - 1; gi >= 0; gi--) {
                 const glob = scene.acidGlobs[gi];
                 if (!glob.active) continue;

@@ -10,6 +10,12 @@ export default class Projectile extends Phaser.GameObjects.Arc {
         this.vx = Math.cos(angle) * CONFIG.PLAYER.PROJECTILE_SPEED;
         this.vy = Math.sin(angle) * CONFIG.PLAYER.PROJECTILE_SPEED;
 
+        // Spawn origin — used by CollisionSystem to skip body-hitbox checks until the
+        // bullet has cleared the station (prevents instant-destroy when a Python body
+        // segment overlaps the spawn point on the same frame the bullet is created).
+        this.originX = x;
+        this.originY = y;
+
         // Incremented each time the projectile ricochets; used to decay ricochet chance.
         this.ricochetBounces = 0;
     }

@@ -1,5 +1,6 @@
 import { CONFIG } from '../../config.js';
 import { applyHitReaction, tickHitWiggle, applyWiggleToSegments, spawnDustCloud } from './snakeHitReaction.js';
+import { initPath, tickSnakePath } from './snakePathfinding.js';
 
 /**
  * Burrower — World 2 snake that phases underground to become invulnerable.
@@ -52,6 +53,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
         this._history  = [{ x, y }];
 
         this._buildVisuals(scene, segCount);
+        initPath(this);
 
         // Ground ripple — shown while underground
         this._ripple = scene.add.graphics();
@@ -81,7 +83,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
     }
 
     takeDamage(amount) {
-        if (this._state === 'UNDERGROUND' || this._state === 'WARN_BURROW') return false;
+        if (this._state === 'UNDERGROUND' || this._state === 'WARN_EMERGE') return false;
         this.health -= amount;
         if (this.health <= 0) return true;
         applyHitReaction(this);
@@ -113,7 +115,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
             this._setVisible(true);
             const snail    = this.scene.snail;
             const mult     = this.scene.enemySpeedMultiplier || 1.0;
-            const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+            const toTarget = tickSnakePath(this, delta, snail.x, snail.y);
             let moveAngle;
 
             if (this._jitterMs > 0) {
@@ -135,8 +137,8 @@ export default class Burrower extends Phaser.GameObjects.Container {
                 }
             }
 
-            this.x += Math.cos(moveAngle) * cfg.SPEED_SURFACE * mult * dt;
-            this.y += Math.sin(moveAngle) * cfg.SPEED_SURFACE * mult * dt;
+            this.x += Math.cos(moveAngle) * this.speed * mult * dt;
+            this.y += Math.sin(moveAngle) * this.speed * mult * dt;
             this._headImg.setRotation(moveAngle);
 
             const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
@@ -191,8 +193,9 @@ export default class Burrower extends Phaser.GameObjects.Container {
                 }
             }
 
-            this.x += Math.cos(moveAngle) * cfg.SPEED_UNDERGROUND * mult * dt;
-            this.y += Math.sin(moveAngle) * cfg.SPEED_UNDERGROUND * mult * dt;
+            const undergroundSpd = cfg.SPEED_UNDERGROUND * (this.speed / cfg.SPEED_SURFACE);
+            this.x += Math.cos(moveAngle) * undergroundSpd * mult * dt;
+            this.y += Math.sin(moveAngle) * undergroundSpd * mult * dt;
 
             // Animate ground ripple
             this._drawRipple(this.x, this.y, time);

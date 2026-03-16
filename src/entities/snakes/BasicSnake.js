@@ -1,5 +1,6 @@
 import { CONFIG } from '../../config.js';
 import { applyHitReaction, tickHitWiggle, applyWiggleToSegments } from './snakeHitReaction.js';
+import { initPath, tickSnakePath } from './snakePathfinding.js';
 
 /**
  * BasicSnake — World 2 ground enemy.
@@ -56,6 +57,8 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         this._buildVisuals(scene, bc.SEGMENT_COUNT);
 
         if (Math.random() < bc.HIDE_CHANCE) this._state = 'TO_BUSH';
+
+        initPath(this);
     }
 
     _buildVisuals(scene, segCount) {
@@ -122,8 +125,10 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
         if (this._fadedParts.size === 0) this._lastBushPos = null;
     }
 
-    takeDamage(amount) {
-        if (this.hidingInBush) return false;
+    takeDamage(amount, forceAllow = false) {
+        // Block damage only when the head has fully entered the bush.
+        // forceAllow = true when the caller already confirmed a visible segment was hit.
+        if (!forceAllow && this.hidingInBush && this.alpha < 0.1) return false;
         this.health -= amount;
         if (this.health <= 0) return true;
         applyHitReaction(this);
@@ -205,7 +210,7 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
 
             const speedMult = this.scene.enemySpeedMultiplier || 1.0;
             const snail     = this.scene.snail;
-            const toTarget  = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+            const toTarget  = tickSnakePath(this, delta, snail.x, snail.y);
             let moveAngle;
 
             if (this._jitterMs > 0) {
@@ -246,7 +251,7 @@ export default class BasicSnake extends Phaser.GameObjects.Container {
                 this.y += Math.sin(this._bushEntryAngle) * this.speed * speedMult * dt;
                 this._headImg.setRotation(this._bushEntryAngle);
             } else {
-                const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
+                const angle = tickSnakePath(this, delta, targetX, targetY);
                 this.x += Math.cos(angle) * this.speed * speedMult * dt;
                 this.y += Math.sin(angle) * this.speed * speedMult * dt;
                 this._headImg.setRotation(angle);

@@ -8,6 +8,7 @@ import Burrower from '../entities/snakes/Burrower.js';
 import Spitter from '../entities/snakes/Spitter.js';
 import { spawnSnakeDeathAnimation } from '../entities/snakes/snakeHitReaction.js';
 import { spawnDeathBurst, checkBomberBlast, BURST_COLORS } from '../systems/CollisionSystem.js';
+import { buildNavGrid } from '../systems/PathfindingSystem.js';
 import BaseGameScene from './BaseGameScene.js';
 
 const SNAKE_TYPES = new Set(['basic-snake', 'sidewinder', 'spitter', 'burrower', 'python']);
@@ -45,6 +46,8 @@ export default class SnakeWorldScene extends BaseGameScene {
      */
     _spawnWorldEntities(bushCount) {
         this._spawnBushes(bushCount);
+        // Build nav grid after all static obstacles (station, terminals, bushes) are placed
+        this.navGrid = buildNavGrid(this);
     }
 
     _spawnBushes(count) {
@@ -132,6 +135,13 @@ export default class SnakeWorldScene extends BaseGameScene {
      * Also tracks whether the snail is currently inside a puddle (slows movement).
      */
     _updateWorldSpecific(_time, delta) {
+        // Rebuild nav grid every 5 s to pick up mid-wave bush-scorch changes
+        this._navRebuildMs = (this._navRebuildMs ?? 0) + delta;
+        if (this._navRebuildMs >= 5000) {
+            this._navRebuildMs = 0;
+            this.navGrid = buildNavGrid(this);
+        }
+
         // Acid globs — update position / landing; remove inactive
         this.acidGlobs = this.acidGlobs.filter(g => {
             if (!g.active) return false;

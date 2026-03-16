@@ -1,6 +1,7 @@
 import { CONFIG } from '../../config.js';
 import AcidGlob from '../AcidGlob.js';
 import { applyHitReaction, tickHitWiggle, applyWiggleToSegments } from './snakeHitReaction.js';
+import { initPath, tickSnakePath } from './snakePathfinding.js';
 
 /**
  * Spitter — World 2 snake that kites Gerald and fires acid globs.
@@ -20,9 +21,10 @@ export default class Spitter extends Phaser.GameObjects.Container {
 
         const cfg = CONFIG.SNAKES.SPITTER;
         this.health    = cfg.HEALTH;
-        this.speed     = cfg.SPEED;
-        this.radius    = cfg.RADIUS;
-        this.alienType = 'spitter';
+        this.speed         = cfg.SPEED;
+        this.radius        = cfg.RADIUS;
+        this.alienType     = 'spitter';
+        this.hitFlashColor = 'white';
 
         this.hidingInBush = false;
         this.currentBush  = null;
@@ -55,6 +57,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
         this._history  = [{ x, y }];
 
         this._buildVisuals(scene, segCount);
+        initPath(this);
     }
 
     _buildVisuals(scene, segCount) {
@@ -112,8 +115,10 @@ export default class Spitter extends Phaser.GameObjects.Container {
         if (this._fadedParts.size === 0) this._lastBushPos = null;
     }
 
-    takeDamage(amount) {
-        if (this.hidingInBush) return false;
+    takeDamage(amount, forceAllow = false) {
+        // Block damage only when the head has fully entered the bush.
+        // forceAllow = true when the caller already confirmed a visible segment was hit.
+        if (!forceAllow && this.hidingInBush && this.alpha < 0.1) return false;
         const died = (this.health -= amount) <= 0;
         if (!died) {
             this._fleeToHide();
@@ -173,8 +178,8 @@ export default class Spitter extends Phaser.GameObjects.Container {
                 if (this._fadedParts.size >= 2 + this._bodyImgs.length) {
                     this._state = 'HIDING';
                 } else {
-                    this.x += Math.cos(this._bushEntryAngle) * cfg.SPEED * mult * dt;
-                    this.y += Math.sin(this._bushEntryAngle) * cfg.SPEED * mult * dt;
+                    this.x += Math.cos(this._bushEntryAngle) * this.speed * mult * dt;
+                    this.y += Math.sin(this._bushEntryAngle) * this.speed * mult * dt;
                 }
                 this._pushHistory(time);
                 this._updateSegments();
@@ -202,7 +207,11 @@ export default class Spitter extends Phaser.GameObjects.Container {
                         this._state = 'KITE';   // bush scorched — resume kiting
                     }
                 } else {
-                    this._moveToward(this._targetBush, cfg.SPEED * 2, dt);
+                    const fleeAngle = tickSnakePath(this, delta, this._targetBush.x, this._targetBush.y);
+                    const mult = this.scene.enemySpeedMultiplier || 1.0;
+                    this.x += Math.cos(fleeAngle) * this.speed * 2 * mult * dt;
+                    this.y += Math.sin(fleeAngle) * this.speed * 2 * mult * dt;
+                    this._headImg.setRotation(fleeAngle);
                 }
             }
             this._pushHistory(time);
@@ -220,12 +229,12 @@ export default class Spitter extends Phaser.GameObjects.Container {
         if (dist < cfg.PREFERRED_MIN) {
             // Too close — back away
             const angle = Phaser.Math.Angle.Between(snail.x, snail.y, this.x, this.y);
-            this.x += Math.cos(angle) * cfg.SPEED * mult * dt;
-            this.y += Math.sin(angle) * cfg.SPEED * mult * dt;
+            this.x += Math.cos(angle) * this.speed * mult * dt;
+            this.y += Math.sin(angle) * this.speed * mult * dt;
             this._headImg.setRotation(angle + Math.PI);
         } else if (dist > cfg.PREFERRED_MAX) {
-            // Too far — close in with jitter
-            const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+            // Too far — close in with jitter + pathfinding
+            const toTarget = tickSnakePath(this, delta, snail.x, snail.y);
             let moveAngle;
 
             if (this._jitterMs > 0) {
@@ -247,15 +256,15 @@ export default class Spitter extends Phaser.GameObjects.Container {
                 }
             }
 
-            this.x += Math.cos(moveAngle) * cfg.SPEED * mult * dt;
-            this.y += Math.sin(moveAngle) * cfg.SPEED * mult * dt;
+            this.x += Math.cos(moveAngle) * this.speed * mult * dt;
+            this.y += Math.sin(moveAngle) * this.speed * mult * dt;
             this._headImg.setRotation(moveAngle);
         } else {
             // In preferred range — strafe (perpendicular to snail direction)
             const toSnail = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
             const perp    = toSnail + Math.PI / 2;
-            this.x += Math.cos(perp) * cfg.SPEED * 0.6 * mult * dt;
-            this.y += Math.sin(perp) * cfg.SPEED * 0.6 * mult * dt;
+            this.x += Math.cos(perp) * this.speed * 0.6 * mult * dt;
+            this.y += Math.sin(perp) * this.speed * 0.6 * mult * dt;
             this._headImg.setRotation(toSnail);
         }
 

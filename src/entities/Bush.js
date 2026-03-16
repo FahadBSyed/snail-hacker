@@ -27,19 +27,20 @@ export default class Bush extends Phaser.GameObjects.Container {
 
         // Sprite child — swaps between 'bush' and 'bush-scorched' textures
         this._sprite = scene.add.image(0, 0, 'bush');
-        this._sprite.setOrigin(0.5, 0.5);
+        this._sprite.setOrigin(0.5, 0.5).setScale(1.25);
         this.add(this._sprite);
 
-        // White flash overlay for burn effect
-        const cfg = CONFIG.BUSHES;
+        // White flash overlay for burn effect (scaled up 25% to match sprite)
         this._flash = scene.add.graphics();
         this._flash.fillStyle(0xffffff, 1);
-        this._flash.fillEllipse(0, -4, 60, 48);
+        this._flash.fillEllipse(0, -5, 75, 60);
         this._flash.setAlpha(0);
         this.add(this._flash);
 
-        // Rustle tween (created once, replayed on enter)
-        this._rustleTween = null;
+        this._swayTween = null;
+        this._jerkTween = null;
+
+        this._startSway();
     }
 
     // ── Backward-compat getters ─────────────────────────────────────────────
@@ -59,13 +60,12 @@ export default class Bush extends Phaser.GameObjects.Container {
         if (this._scorched) return false;
 
         this.occupants.push(snake);
-        if (this.occupants.length === 1) this._playRustle();
+        this._playJerk();
         return true;
     }
 
     /**
      * A specific snake leaves voluntarily (e.g., resuming hunt).
-     * Rustle stops only when the last occupant exits.
      */
     exit(snake) {
         const idx = this.occupants.indexOf(snake);
@@ -73,7 +73,7 @@ export default class Bush extends Phaser.GameObjects.Container {
         this.occupants.splice(idx, 1);
         // Cache position so the snake can reveal parts as they physically exit the radius
         if (snake && snake.active) snake._lastBushPos = { x: this.x, y: this.y };
-        if (this.occupants.length === 0) this._stopRustle();
+        this._playJerk();
     }
 
     /**
@@ -85,7 +85,7 @@ export default class Bush extends Phaser.GameObjects.Container {
 
         const toEject  = this.occupants.slice();
         this.occupants = [];
-        this._stopRustle();
+        this._playJerk();
 
         for (const snake of toEject) {
             if (snake && snake.active) {
@@ -108,30 +108,55 @@ export default class Bush extends Phaser.GameObjects.Container {
 
         this._scorched = true;
         this._sprite.setTexture('bush-scorched');
+
+        // Stop all motion
+        if (this._swayTween) { this._swayTween.stop(); this._swayTween = null; }
+        if (this._jerkTween) { this._jerkTween.stop(); this._jerkTween = null; }
+        this.angle = 0;
+
         this._doFlash(CONFIG.BUSHES.BURN_FLASH_ALPHA, 300);
     }
 
     // ── Private ─────────────────────────────────────────────────────────────
 
-    _playRustle() {
-        const dur = CONFIG.BUSHES.RUSTLE_DURATION;
-        this._rustleTween = this.scene.tweens.add({
+    /** Continuous gentle sway — staggered per bush so they don't all move in sync. */
+    _startSway() {
+        if (this._swayTween) { this._swayTween.stop(); this._swayTween = null; }
+        const period = 1800 + Math.random() * 600;   // 1.8–2.4 s per half-swing
+        this._swayTween = this.scene.tweens.add({
             targets:  this,
-            angle:    { from: -4, to: 4 },
-            duration: dur / 4,
+            angle:    { from: -2.5, to: 2.5 },
+            duration: period,
             yoyo:     true,
-            repeat:   1,
+            repeat:   -1,
             ease:     'Sine.easeInOut',
-            onComplete: () => { this.angle = 0; },
+            delay:    Math.random() * period * 2,   // random phase offset
         });
     }
 
-    _stopRustle() {
-        if (this._rustleTween) {
-            this._rustleTween.stop();
-            this._rustleTween = null;
-        }
+    /**
+     * Quick damped jerk — played whenever a snake enters or exits.
+     * Interrupts the sway tween and restarts it afterward.
+     */
+    _playJerk() {
+        if (this._swayTween) { this._swayTween.stop(); this._swayTween = null; }
+        if (this._jerkTween) { this._jerkTween.stop(); this._jerkTween = null; }
         this.angle = 0;
+
+        this._jerkTween = this.scene.tweens.add({
+            targets:  this,
+            angle:    { from: -9, to: 9 },
+            duration: 45,
+            yoyo:     true,
+            repeat:   4,
+            ease:     'Sine.easeOut',
+            onComplete: () => {
+                this._jerkTween = null;
+                this.angle = 0;
+                if (!this.scene) return;
+                this._startSway();
+            },
+        });
     }
 
     _doFlash(peakAlpha, duration) {

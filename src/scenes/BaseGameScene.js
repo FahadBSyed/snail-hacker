@@ -347,7 +347,10 @@ export default class BaseGameScene extends Phaser.Scene {
 
         // ── ESC: cancel active hack, or pause ────────────────────────────────
         this.input.keyboard.on('keydown-ESC', () => {
-            if (this.snail.hackingActive) {
+            if (this.activeTerminalMinigame) {
+                this.activeTerminalMinigame.cancel();
+                this.activeTerminalMinigame = null;
+            } else if (this.snail.hackingActive) {
                 this._cancelHack();
             } else {
                 this._openPause();
@@ -1140,6 +1143,7 @@ export default class BaseGameScene extends Phaser.Scene {
 
     _startHack() {
         if (!this.stationPowered) return; // station offline — need battery first
+        if (this.activeHack)      return; // already hacking — prevent double-activation
         this.snail.hackingActive = true;
         this.snail.setState('HACKING');
 
@@ -1917,6 +1921,15 @@ export default class BaseGameScene extends Phaser.Scene {
 
         // Station proximity (shows/hides E prompt) — suppress during escape phase
         if (!this.escapePhase) this.station.updateProximity(this.snail);
+
+        // Cancel the station hack if the snail wanders out of proximity range
+        if (this.activeHack) {
+            const hackDist = Phaser.Math.Distance.Between(
+                this.station.x, this.station.y, this.snail.x, this.snail.y);
+            if (hackDist > CONFIG.TERMINALS.PROXIMITY + this.station.radius) {
+                this._cancelHack();
+            }
+        }
 
         // Gun tracking — rotate gun to face the current cursor position
         const ptr = this.input.activePointer;

@@ -1,5 +1,6 @@
 import { CONFIG } from '../../config.js';
 import { applyHitReaction, tickHitWiggle, applyWiggleToSegments } from './snakeHitReaction.js';
+import { initPath, tickSnakePath } from './snakePathfinding.js';
 
 const PYTHON_RED_SEGS = 3;  // last N body segments are always red and targetable
 
@@ -55,6 +56,7 @@ export default class Python extends Phaser.GameObjects.Container {
         this._buildVisuals(scene, cfg.SEGMENT_COUNT);
         this._applySegmentColors();
         this._rebuildBodyHitboxes();
+        initPath(this);
     }
 
     _buildVisuals(scene, segCount) {
@@ -166,7 +168,7 @@ export default class Python extends Phaser.GameObjects.Container {
         const mult  = this.scene.enemySpeedMultiplier || 1.0;
         const snail = this.scene.snail;
 
-        const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+        const toTarget = tickSnakePath(this, delta, snail.x, snail.y);
         let moveAngle;
 
         if (this._jitterMs > 0) {

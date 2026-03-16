@@ -1,5 +1,6 @@
 import { CONFIG } from '../../config.js';
 import { applyHitReaction, tickHitWiggle, applyWiggleToSegments } from './snakeHitReaction.js';
+import { initPath, tickSnakePath } from './snakePathfinding.js';
 
 /**
  * Sidewinder — World 2 snake that hops between bushes when P2's cursor is not watching.
@@ -58,6 +59,8 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         // Pick first target bush immediately
         this._targetBush = this._nearestFreeBush();
         if (!this._targetBush) this._state = 'ATTACK';
+
+        initPath(this);
     }
 
     _buildVisuals(scene, segCount) {
@@ -81,8 +84,10 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         this._tailImg.setOrigin(0.5, 0.5).setScale(1.3).setDepth(this.depth - 2);
     }
 
-    takeDamage(amount) {
-        if (this.hidingInBush) return false;
+    takeDamage(amount, forceAllow = false) {
+        // Block damage only when the head has fully entered the bush.
+        // forceAllow = true when the caller already confirmed a visible segment was hit.
+        if (!forceAllow && this.hidingInBush && this.alpha < 0.1) return false;
         this.health -= amount;
         if (this.health <= 0) return true;
         applyHitReaction(this);
@@ -116,8 +121,8 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
             const watched = cdist <= CONFIG.SNAKES.SIDEWINDER.WATCH_RADIUS;
 
             if (watched) {
-                // Slowly creep toward Gerald
-                this._moveToward(this.scene.snail, CONFIG.SNAKES.SIDEWINDER.SPEED_SLOW, dt);
+                // Slowly creep toward Gerald — use this.speed (already scaled by slow field)
+                this._moveToward(this.scene.snail, this.speed, dt);
             } else {
                 // Cursor looked away — find next bush closer to station
                 const nextBush = this._nextBushCloserToStation();
@@ -141,7 +146,10 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         }
 
         if (this._state === 'ENTERING' || this._state === 'DASHING') {
-            const spd  = CONFIG.SNAKES.SIDEWINDER.SPEED_SEARCH;
+            // Scale all speed modes by the same ratio as this.speed / SPEED_SLOW so
+            // the slow-field (which modifies enemy.speed) affects every state equally.
+            const slowRatio = this.speed / CONFIG.SNAKES.SIDEWINDER.SPEED_SLOW;
+            const spd  = CONFIG.SNAKES.SIDEWINDER.SPEED_SEARCH * slowRatio;
             const mult = this.scene.enemySpeedMultiplier || 1.0;
 
             // ── Entry phase: slither through the bush so the whole body follows ──
@@ -186,8 +194,8 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                         if (!this._targetBush) this._state = 'ATTACK';
                     }
                 } else {
-                    // Approach with jitter
-                    const toTarget = Phaser.Math.Angle.Between(this.x, this.y, this._targetBush.x, this._targetBush.y);
+                    // Approach with jitter + pathfinding
+                    const toTarget = tickSnakePath(this, delta, this._targetBush.x, this._targetBush.y);
                     let moveAngle;
                     if (this._jitterMs > 0) {
                         this._jitterMs -= delta;
@@ -217,12 +225,12 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
             return 'alive';
         }
 
-        // ATTACK — direct fast dash at Gerald, with jitter
+        // ATTACK — fast dash at Gerald with pathfinding + jitter
         if (this._state === 'ATTACK') {
             if (this._lastBushPos) this._tickBushReveal(this._lastBushPos.x, this._lastBushPos.y);
             const snail    = this.scene.snail;
             const mult     = this.scene.enemySpeedMultiplier || 1.0;
-            const toTarget = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
+            const toTarget = tickSnakePath(this, delta, snail.x, snail.y);
             let moveAngle;
 
             if (this._jitterMs > 0) {
@@ -244,8 +252,9 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                 }
             }
 
-            this.x += Math.cos(moveAngle) * CONFIG.SNAKES.SIDEWINDER.SPEED_DASH * mult * dt;
-            this.y += Math.sin(moveAngle) * CONFIG.SNAKES.SIDEWINDER.SPEED_DASH * mult * dt;
+            const dashSpd = CONFIG.SNAKES.SIDEWINDER.SPEED_DASH * (this.speed / CONFIG.SNAKES.SIDEWINDER.SPEED_SLOW);
+            this.x += Math.cos(moveAngle) * dashSpd * mult * dt;
+            this.y += Math.sin(moveAngle) * dashSpd * mult * dt;
             this._headImg.setRotation(moveAngle);
 
             const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);

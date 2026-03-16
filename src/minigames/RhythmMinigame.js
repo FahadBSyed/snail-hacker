@@ -28,6 +28,8 @@ export default class RhythmMinigame {
         this.beatTimer  = null;
         this.keyHandler = null;
         this.allObjects = [];
+        // Pick the first key before creating UI so it's visible immediately
+        this.currentKey = Phaser.Utils.Array.GetRandom(VALID_KEYS);
 
         this._createUI();
         // Brief grace period — prevents the E keypress that opened this terminal
@@ -42,7 +44,7 @@ export default class RhythmMinigame {
         const by = 630; // bar y-center
 
         // Backdrop
-        this._add(this.scene.add.rectangle(cx, by - 38, 450, 128, 0x000011, 0.92)
+        this.backdrop = this._add(this.scene.add.rectangle(cx, by - 38, 450, 128, 0x000011, 0.92)
             .setStrokeStyle(1.5, 0xff88ff, 0.7).setDepth(200));
 
         // Title
@@ -61,18 +63,17 @@ export default class RhythmMinigame {
         }).setOrigin(1, 0.5).setDepth(201));
 
         // Key to press
-        this.keyDisplay = this._add(this.scene.add.text(cx, by - 48, '?', {
+        this.keyDisplay = this._add(this.scene.add.text(cx, by - 48, this.currentKey, {
             fontSize: '34px', fontFamily: 'monospace', fontStyle: 'bold', color: '#ffffff',
         }).setOrigin(0.5).setDepth(201));
 
         // Bar background
         this._add(this.scene.add.rectangle(cx, by, BAR_WIDTH, 20, 0x222233).setDepth(201));
 
-        // Target zone fill + border
+        // Target zone — outline only so the success flash is clearly visible against it
         this.targetZone = this._add(
-            this.scene.add.rectangle(cx, by, TARGET_HALF * 2, 20, 0x44ff88, 0.35).setDepth(202));
-        this._add(this.scene.add.rectangle(cx, by, TARGET_HALF * 2, 20, 0x44ff88, 0)
-            .setStrokeStyle(1.5, 0x44ff88, 0.9).setDepth(202));
+            this.scene.add.rectangle(cx, by, TARGET_HALF * 2, 20, 0x000000, 0)
+                .setStrokeStyle(2, 0x44ff88, 1).setDepth(202));
 
         // Bouncing indicator
         this.indicator = this._add(
@@ -105,11 +106,13 @@ export default class RhythmMinigame {
         this.beatCounter.setText(`BEAT ${this.currentBeat} / ${this.totalBeats}`);
         this.resultText.setText('');
 
-        this.currentKey = Phaser.Utils.Array.GetRandom(VALID_KEYS);
+        // Re-pick only after the first beat (first key was pre-selected in constructor)
+        if (this.currentBeat > 1) {
+            this.currentKey = Phaser.Utils.Array.GetRandom(VALID_KEYS);
+        }
         this.keyDisplay.setText(this.currentKey).setColor('#ffffff');
         this.indicator.setFillStyle(0xffffff);
-        this.targetZone.fillColor = 0x44ff88;
-        this.targetZone.fillAlpha = 0.35;
+        this.targetZone.setStrokeStyle(2, 0x44ff88, 1);
 
         this.awaitingInput = true;
 
@@ -142,10 +145,14 @@ export default class RhythmMinigame {
         if (key === this.currentKey && inZone) {
             this.scene.soundSynth?.play('rhythmHit');
             this.indicator.setFillStyle(0x44ff88);
-            this.targetZone.fillColor = 0x44ff88;
-            this.targetZone.fillAlpha = 0.7;
+            this.targetZone.setStrokeStyle(2, 0xffffff, 1);
             this.resultText.setText('HIT!').setColor('#44ff88');
-            this.scene.time.delayedCall(450, () => this._advanceBeat());
+            // Last beat: fire success immediately so flash/shake happen on the hit
+            if (this.currentBeat >= this.totalBeats) {
+                this._finish(true);
+            } else {
+                this.scene.time.delayedCall(450, () => this._advanceBeat());
+            }
         } else {
             this.scene.soundSynth?.play('error');
             this._recordMiss(key !== this.currentKey ? 'WRONG KEY!' : 'OFF BEAT!');
@@ -177,8 +184,42 @@ export default class RhythmMinigame {
     _finish(success) {
         if (this.cancelled) return;
         this.cancelled = true;
-        this._cleanup();
-        if (success) this.onSuccess(); else this.onFailure();
+
+        if (!success) {
+            this._cleanup();
+            this.onFailure();
+            return;
+        }
+
+        // Stop bounce during success feedback
+        if (this.indicatorTween) { this.indicatorTween.stop(); this.indicatorTween = null; }
+
+        this.scene.soundSynth?.play('wordSuccess');
+
+        // Flash a white overlay across the bar then fade it out
+        const cx = 640, by = 630;
+        const flashRect = this._add(
+            this.scene.add.rectangle(cx, by, BAR_WIDTH, 20, 0xffffff, 0.9).setDepth(204));
+        this.scene.tweens.add({
+            targets: flashRect,
+            alpha: 0,
+            duration: 380,
+            ease: 'Sine.easeOut',
+        });
+
+        // Shake all UI elements up-and-down then clean up and fire callback
+        this.scene.tweens.add({
+            targets: this.allObjects.filter(o => o && o.active),
+            y: '-=12',
+            duration: 40,
+            yoyo: true,
+            repeat: 5,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+                this._cleanup();
+                this.onSuccess();
+            },
+        });
     }
 
     cancel() {
