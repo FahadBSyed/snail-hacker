@@ -14,6 +14,28 @@ Split the monolithic `GameScene.js` into a proper class hierarchy so each world'
 - **`src/scenes/IntermissionScene.js`** — updated to advance to the correct world scene based on `this.world`.
 - Added missing `spawnSnakeDeathAnimation` import and `SNAKE_TYPES` constant to `BaseGameScene.js` (required by the shared laser-hit code path).
 
+### Move all frog-world-specific logic out of BaseGameScene into FrogWorldScene
+
+Continued the scene refactor: `BaseGameScene` now contains zero frog-specific code.
+
+**Moved to `FrogWorldScene`:**
+- `_spawnBoss()` — full 130-line boss cutscene + `BossAlien` / `BossProjectile` construction
+- `_bossDeath()` — boss death VFX, score award, wave completion
+- `_tryWave10Hack()` — `FroggerMinigame` launch that breaks the boss shield (replaces the `if (wave === 10)` branch in `_startHack()`)
+- `_startRibbetTimer()` — sporadic ambient ribbet sound
+- `_wordsForWave()` override — returns `CONFIG.MINIGAMES.FROGGER_CROSSINGS` for wave 10
+- `_spawnMaxY()` override — clamps side-edge spawns to y ≤ 460 on wave 10 (keeps boss clear of the Frogger lane)
+- Imports: `BossAlien`, `BossProjectile`, `FroggerMinigame`
+
+**New hook stubs added to `BaseGameScene`:**
+- `_tryWave10Hack()` — returns `false` (no-op; base always uses typing/math path)
+- `_spawnBoss()` — no-op
+- `_bossDeath()` — no-op (all call-sites are already guarded by `if (this.boss && ...)`)
+- `_spawnMaxY()` — returns `670` (full-height spawn range)
+- `_startRibbetTimer()` — no-op (no ambient ribbets in SnakeWorldScene)
+
+**`_randomEdgePosition()` in BaseGameScene** now delegates to `_spawnMaxY()` instead of branching on `this.wave === 10`.
+
 ## Session — 2026-03-15
 
 ### Dust cloud particles for burrowing
