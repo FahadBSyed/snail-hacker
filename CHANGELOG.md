@@ -2,6 +2,21 @@
 
 ## Session — 2026-03-16
 
+### Python sine-wave slither movement
+
+Replaced the Python's jitter state machine (random bursts of orthogonal movement) with a continuous sine-wave oscillation:
+
+- `_jitterMs`, `_jitterDir`, `_jitterCooldown` fields removed from `Python.js`
+- New `_slitherTime` accumulator drives `moveAngle = toTarget + SLITHER_AMPLITUDE * sin(time * SLITHER_FREQUENCY * 2π)`, giving a smooth S-curve approach toward the player
+- New config keys in `CONFIG.SNAKES.PYTHON`: `SLITHER_AMPLITUDE` (0.75 rad) and `SLITHER_FREQUENCY` (1.8 Hz)
+- `CONFIG_VERSION` bumped to 36
+
+### No overlapping bushes on terminals
+
+`SnakeWorldScene._spawnBushes()` now filters the fixed SLOTS list against all active terminals before placing bushes. Any slot within `TERMINAL_RADIUS + OCCUPY_RADIUS + 10 px` (71 px) of a terminal is skipped, preventing bush sprites from rendering on top of terminals each wave.
+
+
+
 ### Refactor GameScene into BaseGameScene + FrogWorldScene + SnakeWorldScene
 
 Split the monolithic `GameScene.js` into a proper class hierarchy so each world's logic lives in its own file:

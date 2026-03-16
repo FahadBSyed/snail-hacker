@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 35;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 36;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -293,6 +293,8 @@ export const DEFAULTS = {
             BODY_RADIUS:        12,   // per body-segment hit radius (for body-only intercept)
             BODY_SPACING:       18,   // px between history samples used for segment positions
             TAIL_HITBOX_SEGS:    3,   // how many tail segments also count as hittable head when few remain
+            SLITHER_AMPLITUDE: 0.75,  // radians — peak lateral angle deviation from direct path
+            SLITHER_FREQUENCY:  1.8,  // Hz — sine wave cycles per second
         },
 
         BURROWER: {
