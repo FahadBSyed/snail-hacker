@@ -362,6 +362,18 @@ export function checkProjectileCollisions(scene) {
         // If projectile is still alive after the alien loop, check Python body
         // hitboxes.  A hit destroys the projectile with a spark but does NOT
         // damage the Python.  (Head hits are handled above in the normal loop.)
+        //
+        // Grace distance: skip body-hitbox checks until the bullet has moved at
+        // least BODY_RADIUS past its spawn point.  Prevents instant destruction
+        // when a Python body segment overlaps the station (spawn origin) on the
+        // same frame the bullet is created — which otherwise causes the bullet to
+        // silently vanish before rendering, especially while the slow field is active
+        // (the Python's body trail lingers near center much longer when slowed).
+        const bodyGrace = CONFIG.SNAKES.PYTHON.BODY_RADIUS + CONFIG.PLAYER.PROJECTILE_RADIUS;
+        if (proj.originX !== undefined &&
+            Phaser.Math.Distance.Between(proj.x, proj.y, proj.originX, proj.originY) < bodyGrace) {
+            // bullet hasn't cleared the station yet — skip body check this frame
+        } else
         for (const enemy of scene.enemies) {
             if (!enemy.active || !enemy._bodyHitboxes) continue;
             let blocked = false;
