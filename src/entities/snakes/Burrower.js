@@ -81,7 +81,7 @@ export default class Burrower extends Phaser.GameObjects.Container {
     }
 
     takeDamage(amount) {
-        if (this._state === 'UNDERGROUND' || this._state === 'WARN_BURROW') return false;
+        if (this._state === 'UNDERGROUND' || this._state === 'WARN_EMERGE') return false;
         this.health -= amount;
         if (this.health <= 0) return true;
         applyHitReaction(this);
