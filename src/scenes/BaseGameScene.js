@@ -347,7 +347,10 @@ export default class BaseGameScene extends Phaser.Scene {
 
         // ── ESC: cancel active hack, or pause ────────────────────────────────
         this.input.keyboard.on('keydown-ESC', () => {
-            if (this.snail.hackingActive) {
+            if (this.activeTerminalMinigame) {
+                this.activeTerminalMinigame.cancel();
+                this.activeTerminalMinigame = null;
+            } else if (this.snail.hackingActive) {
                 this._cancelHack();
             } else {
                 this._openPause();
