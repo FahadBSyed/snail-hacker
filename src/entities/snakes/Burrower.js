@@ -137,8 +137,8 @@ export default class Burrower extends Phaser.GameObjects.Container {
                 }
             }
 
-            this.x += Math.cos(moveAngle) * cfg.SPEED_SURFACE * mult * dt;
-            this.y += Math.sin(moveAngle) * cfg.SPEED_SURFACE * mult * dt;
+            this.x += Math.cos(moveAngle) * this.speed * mult * dt;
+            this.y += Math.sin(moveAngle) * this.speed * mult * dt;
             this._headImg.setRotation(moveAngle);
 
             const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
@@ -193,8 +193,9 @@ export default class Burrower extends Phaser.GameObjects.Container {
                 }
             }
 
-            this.x += Math.cos(moveAngle) * cfg.SPEED_UNDERGROUND * mult * dt;
-            this.y += Math.sin(moveAngle) * cfg.SPEED_UNDERGROUND * mult * dt;
+            const undergroundSpd = cfg.SPEED_UNDERGROUND * (this.speed / cfg.SPEED_SURFACE);
+            this.x += Math.cos(moveAngle) * undergroundSpd * mult * dt;
+            this.y += Math.sin(moveAngle) * undergroundSpd * mult * dt;
 
             // Animate ground ripple
             this._drawRipple(this.x, this.y, time);

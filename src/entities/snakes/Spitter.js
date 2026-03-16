@@ -21,7 +21,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
 
         const cfg = CONFIG.SNAKES.SPITTER;
         this.health    = cfg.HEALTH;
-        this.speed     = cfg.SPEED;
+        this.speed     = this.speed;
         this.radius    = cfg.RADIUS;
         this.alienType = 'spitter';
 
@@ -177,8 +177,8 @@ export default class Spitter extends Phaser.GameObjects.Container {
                 if (this._fadedParts.size >= 2 + this._bodyImgs.length) {
                     this._state = 'HIDING';
                 } else {
-                    this.x += Math.cos(this._bushEntryAngle) * cfg.SPEED * mult * dt;
-                    this.y += Math.sin(this._bushEntryAngle) * cfg.SPEED * mult * dt;
+                    this.x += Math.cos(this._bushEntryAngle) * this.speed * mult * dt;
+                    this.y += Math.sin(this._bushEntryAngle) * this.speed * mult * dt;
                 }
                 this._pushHistory(time);
                 this._updateSegments();
@@ -208,8 +208,8 @@ export default class Spitter extends Phaser.GameObjects.Container {
                 } else {
                     const fleeAngle = tickSnakePath(this, delta, this._targetBush.x, this._targetBush.y);
                     const mult = this.scene.enemySpeedMultiplier || 1.0;
-                    this.x += Math.cos(fleeAngle) * cfg.SPEED * 2 * mult * dt;
-                    this.y += Math.sin(fleeAngle) * cfg.SPEED * 2 * mult * dt;
+                    this.x += Math.cos(fleeAngle) * this.speed * 2 * mult * dt;
+                    this.y += Math.sin(fleeAngle) * this.speed * 2 * mult * dt;
                     this._headImg.setRotation(fleeAngle);
                 }
             }
@@ -228,8 +228,8 @@ export default class Spitter extends Phaser.GameObjects.Container {
         if (dist < cfg.PREFERRED_MIN) {
             // Too close — back away
             const angle = Phaser.Math.Angle.Between(snail.x, snail.y, this.x, this.y);
-            this.x += Math.cos(angle) * cfg.SPEED * mult * dt;
-            this.y += Math.sin(angle) * cfg.SPEED * mult * dt;
+            this.x += Math.cos(angle) * this.speed * mult * dt;
+            this.y += Math.sin(angle) * this.speed * mult * dt;
             this._headImg.setRotation(angle + Math.PI);
         } else if (dist > cfg.PREFERRED_MAX) {
             // Too far — close in with jitter + pathfinding
@@ -255,15 +255,15 @@ export default class Spitter extends Phaser.GameObjects.Container {
                 }
             }
 
-            this.x += Math.cos(moveAngle) * cfg.SPEED * mult * dt;
-            this.y += Math.sin(moveAngle) * cfg.SPEED * mult * dt;
+            this.x += Math.cos(moveAngle) * this.speed * mult * dt;
+            this.y += Math.sin(moveAngle) * this.speed * mult * dt;
             this._headImg.setRotation(moveAngle);
         } else {
             // In preferred range — strafe (perpendicular to snail direction)
             const toSnail = Phaser.Math.Angle.Between(this.x, this.y, snail.x, snail.y);
             const perp    = toSnail + Math.PI / 2;
-            this.x += Math.cos(perp) * cfg.SPEED * 0.6 * mult * dt;
-            this.y += Math.sin(perp) * cfg.SPEED * 0.6 * mult * dt;
+            this.x += Math.cos(perp) * this.speed * 0.6 * mult * dt;
+            this.y += Math.sin(perp) * this.speed * 0.6 * mult * dt;
             this._headImg.setRotation(toSnail);
         }
 
