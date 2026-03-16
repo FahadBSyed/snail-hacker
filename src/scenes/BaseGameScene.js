@@ -1763,7 +1763,7 @@ export default class BaseGameScene extends Phaser.Scene {
     _openPause() {
         if (this.scene.isActive('PauseScene')) return;
         this.grabSystem.onPause();
-        this.scene.launch('PauseScene');
+        this.scene.launch('PauseScene', { callerKey: this.scene.key });
         this.scene.pause();
     }
 
