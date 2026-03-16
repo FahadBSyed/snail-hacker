@@ -62,6 +62,9 @@ export const SOUND_OVERRIDES = {
     shootTurret: [
          { url: 'assets/sounds/shoot-d.mp3', volume: 0.085 }
     ],
+    acidSpawn: [
+        { url: 'assets/sounds/venom-a.mp3', volume: 0.35 },
+    ],
     snakeSpawn: [
         { url: 'assets/sounds/hiss-a.mp3', volume: 0.3 },
         { url: 'assets/sounds/hiss-b.mp3', volume: 0.3 },

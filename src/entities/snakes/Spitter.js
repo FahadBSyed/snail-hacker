@@ -291,7 +291,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
         if (!snail || !snail.active) return;
         const glob = new AcidGlob(this.scene, this.x, this.y, snail.x, snail.y);
         this.scene.acidGlobs.push(glob);
-        this.scene.soundSynth?.play?.('bossProjectile');
+        this.scene.soundSynth?.play?.('acidSpawn');
     }
 
     _moveToward(target, speed, dt) {

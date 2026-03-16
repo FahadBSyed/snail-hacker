@@ -638,6 +638,19 @@ export default class SoundSynth {
         this._osc(ctx, 'sine', 340, 210, t + 0.17, 0.18, g2);
     }
 
+    /** Spitter fires an acid glob — wet noise burst with a low gurgly pitch drop. */
+    _acidSpawn() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Wet noise splat
+        const ng  = this._gain(ctx, 0.20, t, 0.22);
+        const bpf = this._filter(ctx, 'bandpass', 600, ng);
+        bpf.Q.value = 3.0;
+        this._noise(ctx, 0.20, bpf);
+        // Gurgly pitch drop
+        const g = this._gain(ctx, 0.16, t, 0.18);
+        this._osc(ctx, 'triangle', 220, 70, t, 0.16, g);
+    }
+
     /** Snake arrives on screen — slithery noise sweep + low body-thud. */
     _snakeSpawn() {
         const ctx = this._ctx_get(), t = ctx.currentTime;
