@@ -1,0 +1,246 @@
+import { CONFIG } from '../config.js';
+import HealthDrop from '../entities/HealthDrop.js';
+import Bush from '../entities/Bush.js';
+import BasicSnake from '../entities/snakes/BasicSnake.js';
+import Sidewinder from '../entities/snakes/Sidewinder.js';
+import Python from '../entities/snakes/Python.js';
+import Burrower from '../entities/snakes/Burrower.js';
+import Spitter from '../entities/snakes/Spitter.js';
+import { spawnSnakeDeathAnimation } from '../entities/snakes/snakeHitReaction.js';
+import { spawnDeathBurst, checkBomberBlast, BURST_COLORS } from '../systems/CollisionSystem.js';
+import BaseGameScene from './BaseGameScene.js';
+
+const SNAKE_TYPES = new Set(['basic-snake', 'sidewinder', 'spitter', 'burrower', 'python']);
+
+/**
+ * SnakeWorldScene — World 2 (Snake enemies).
+ *
+ * Extends BaseGameScene with snake-world-specific behaviour:
+ *   - Bush props at fixed ring positions for Sidewinders to hide in
+ *   - Acid globs + acid puddles (from Spitters)
+ *   - Venom debuff applied on snake contact
+ *   - Snake bounce on snail contact instead of destroy
+ *   - Snake death animation via spawnSnakeDeathAnimation
+ *   - World-specific enemy caps (total snakes, spitters, pythons)
+ *   - No FrogEscape — spawnFrogEscape is a no-op
+ */
+export default class SnakeWorldScene extends BaseGameScene {
+    constructor() {
+        super('SnakeWorldScene');
+    }
+
+    init(data = {}) {
+        // Force world = 2 regardless of what data says
+        super.init({ ...data, world: 2 });
+    }
+
+    // ── World-specific overrides ───────────────────────────────────────────────
+
+    /**
+     * Spawn bushes at fixed concentric clock positions around the station.
+     *   Ring 1 (r=350): 10 o'clock, 3 o'clock, 7 o'clock
+     *   Ring 2 (r=250): 1 o'clock, 9 o'clock, 5 o'clock
+     *   Slot 7  (r=310): 11 o'clock (used only when count ≥ 7)
+     * Sidewinders naturally hop inward from ring 1 → ring 2 → attack.
+     */
+    _spawnWorldEntities(bushCount) {
+        this._spawnBushes(bushCount);
+    }
+
+    _spawnBushes(count) {
+        for (const b of this.bushes) { if (b.active) b.destroy(); }
+        this.bushes = [];
+        if (!count) return;
+
+        const CX = 640, CY = 360;
+        const SLOTS = [
+            // Ring 1 — outer (r=350)
+            [350, 210],   // 10 o'clock
+            [350,   0],   // 3  o'clock
+            [350, 120],   // 7  o'clock
+            // Ring 2 — inner (r=250)
+            [250, 300],   // 1  o'clock
+            [250, 180],   // 9  o'clock
+            [250,  60],   // 5  o'clock
+            // Slot 7 — mid (r=310)
+            [310, 240],   // 11 o'clock
+        ];
+
+        const n = Math.min(count, SLOTS.length);
+        for (let i = 0; i < n; i++) {
+            const [r, deg] = SLOTS[i];
+            const rad = deg * Math.PI / 180;
+            const x = CX + r * Math.cos(rad);
+            const y = CY + r * Math.sin(rad);
+            this.bushes.push(new Bush(this, x, y));
+        }
+    }
+
+    /**
+     * Handle a non-boss enemy being killed.
+     * Snake types use spawnSnakeDeathAnimation; frog types (if any cross-world)
+     * fall back to the base burst + health-drop logic.
+     */
+    _handleEnemyKilled(enemy, bx, by, isBomber = false) {
+        if (SNAKE_TYPES.has(enemy.alienType)) {
+            if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                this.time.delayedCall(120, () => {
+                    this.healthDrops.push(new HealthDrop(this, bx, by));
+                });
+            }
+            spawnSnakeDeathAnimation(this, enemy);
+        } else {
+            const burstColor = BURST_COLORS[enemy.alienType] || 0xffffff;
+            this.time.delayedCall(200, () => {
+                if (!enemy.active) return;
+                spawnDeathBurst(this, bx, by, burstColor);
+                if (Math.random() < CONFIG.HEALTH_DROP.CHANCE) {
+                    this.healthDrops.push(new HealthDrop(this, bx, by));
+                }
+                if (isBomber) checkBomberBlast(this, bx, by);
+                enemy.destroy();
+            });
+        }
+    }
+
+    /**
+     * Snakes bounce away from the snail instead of despawning.
+     * Returns true to keep the enemy alive in the enemies array.
+     */
+    _handleEnemySnailContact(enemy, bx, by, time) {
+        if (SNAKE_TYPES.has(enemy.alienType)) {
+            const bounceAngle = Phaser.Math.Angle.Between(this.snail.x, this.snail.y, bx, by);
+            const bounceSpeed = enemy.speed * 2;
+            enemy._bounceVx    = Math.cos(bounceAngle) * bounceSpeed;
+            enemy._bounceVy    = Math.sin(bounceAngle) * bounceSpeed;
+            enemy._bounceUntil = time + 3000;
+            return true; // stays alive
+        }
+        enemy.destroy();
+        return false;
+    }
+
+    /**
+     * Apply venom debuff when a snake contacts the snail.
+     */
+    _applyContactEffect() {
+        this._applyVenom();
+    }
+
+    /**
+     * Update acid globs and acid puddles each frame.
+     * Also tracks whether the snail is currently inside a puddle (slows movement).
+     */
+    _updateWorldSpecific(_time, delta) {
+        // Acid globs — update position / landing; remove inactive
+        this.acidGlobs = this.acidGlobs.filter(g => {
+            if (!g.active) return false;
+            g.update(delta);
+            return g.active;
+        });
+
+        // Acid puddles — update fade; slow snail if inside one
+        let inPuddle = false;
+        this.acidPuddles = this.acidPuddles.filter(p => {
+            if (!p.active) return false;
+            p.update(delta);
+            if (!p.active) return false;
+            const d = Phaser.Math.Distance.Between(this.snail.x, this.snail.y, p.x, p.y);
+            if (d < p.radius + 12) inPuddle = true;
+            return true;
+        });
+        this._snailInPuddle = inPuddle;
+    }
+
+    /**
+     * Flush hiding snakes when Gerald walks through an occupied bush.
+     */
+    _resolveWorldSpecificCollisions() {
+        for (const bush of this.bushes) {
+            if (!bush.active || !bush.isOccupied) continue;
+            const d = Phaser.Math.Distance.Between(this.snail.x, this.snail.y, bush.x, bush.y);
+            if (d < CONFIG.PROPS.SNAIL_RADIUS + CONFIG.BUSHES.OCCUPY_RADIUS) {
+                bush.flush();
+            }
+        }
+    }
+
+    /**
+     * Destroy bushes, acid globs, acid puddles, and cancel venom on wave end.
+     */
+    _clearWorldEntities() {
+        for (const bush of this.bushes)    { if (bush.active) bush.destroy(); }
+        for (const g    of this.acidGlobs) { if (g.active) g.destroy(); }
+        for (const p    of this.acidPuddles) { if (p.active) p.destroy(); }
+        this.bushes      = [];
+        this.acidGlobs   = [];
+        this.acidPuddles = [];
+        this._venomActive = false;
+        if (this._venomTimer) { this._venomTimer.remove(false); this._venomTimer = null; }
+    }
+
+    /**
+     * Enforce the hard cap on total simultaneous snakes.
+     * Also caps spitters at 3 and pythons at 2.
+     */
+    _canSpawnEnemyType(type) {
+        if (SNAKE_TYPES.has(type)) {
+            const snakeCount = this.enemies.filter(e => e.active && SNAKE_TYPES.has(e.alienType)).length;
+            if (snakeCount >= CONFIG.SNAKES.MAX_SNAKES) return false;
+        }
+        if (type === 'spitter') {
+            const spitterCount = this.enemies.filter(e => e.active && e.alienType === 'spitter').length;
+            if (spitterCount >= 3) return false;
+        }
+        if (type === 'python') {
+            const pythonCount = this.enemies.filter(e => e.active && e.alienType === 'python').length;
+            if (pythonCount >= 2) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Construct snake-type enemies that BaseGameScene's switch doesn't know about.
+     */
+    _createWorldSpecificEnemy(type, x, y) {
+        switch (type) {
+            case 'basic-snake': return new BasicSnake(this, x, y);
+            case 'sidewinder':  return new Sidewinder(this, x, y);
+            case 'python':      return new Python(this, x, y);
+            case 'burrower':    return new Burrower(this, x, y);
+            case 'spitter':     return new Spitter(this, x, y);
+            default:            return null;
+        }
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Apply the World 2 venom debuff to Gerald for VENOM.DURATION ms.
+     * Re-calling while active simply refreshes the timer.
+     * The speed penalty is applied directly in Snail.update() via scene._venomActive.
+     */
+    _applyVenom() {
+        this._venomActive = true;
+        if (this._venomTimer) this._venomTimer.remove(false);
+        this._venomTimer = this.time.delayedCall(CONFIG.SNAKES.VENOM.DURATION, () => {
+            this._venomActive = false;
+            this._venomTimer  = null;
+        });
+        // Visual indicator — brief purple text over Gerald
+        if (!this._venomLabel || !this._venomLabel.active) {
+            this._venomLabel = this.add.text(0, -36, 'VENOMED', {
+                fontSize: '10px', fontFamily: 'monospace', color: '#cc44ff',
+            }).setOrigin(0.5).setDepth(60);
+        }
+        this._venomLabel.setPosition(this.snail.x, this.snail.y - 36);
+        this._venomLabel.setAlpha(1);
+        this.tweens.killTweensOf(this._venomLabel);
+        this.tweens.add({
+            targets:  this._venomLabel,
+            alpha:    0,
+            delay:    CONFIG.SNAKES.VENOM.DURATION - 400,
+            duration: 400,
+        });
+    }
+}

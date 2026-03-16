@@ -1,5 +1,19 @@
 # SNAIL HACKER — Changelog
 
+## Session — 2026-03-16
+
+### Refactor GameScene into BaseGameScene + FrogWorldScene + SnakeWorldScene
+
+Split the monolithic `GameScene.js` into a proper class hierarchy so each world's logic lives in its own file:
+
+- **`src/scenes/BaseGameScene.js`** — new abstract base containing all shared gameplay code (snail, station, terminals, upgrades, HUD, wave manager, boss, projectiles, etc.). Exposes world-specific hook methods (`_spawnWorldEntities`, `_handleEnemyKilled`, `_handleEnemySnailContact`, `_applyContactEffect`, `_updateWorldSpecific`, `_resolveWorldSpecificCollisions`, `_clearWorldEntities`, `_onBossDeathFx`, `_canSpawnEnemyType`, `_createWorldSpecificEnemy`) with safe no-op defaults.
+- **`src/scenes/FrogWorldScene.js`** — extends `BaseGameScene` with Phaser scene key `FrogWorldScene`; overrides `spawnFrogEscape` (25% chance decorative escape frog) and `_onBossDeathFx` (guaranteed escape frog on boss kill).
+- **`src/scenes/SnakeWorldScene.js`** — extends `BaseGameScene` with Phaser scene key `SnakeWorldScene`; overrides all snake-world hooks: bush spawning, snake death animations, snake bounce on contact, venom debuff, acid glob/puddle updates, bush-flush on snail contact, enemy caps for snakes/spitters/pythons, and snake enemy construction.
+- **`src/main.js`** — updated to register `FrogWorldScene` and `SnakeWorldScene` instead of `GameScene`.
+- **`src/scenes/MenuScene.js`** — updated to start `FrogWorldScene` (world 1) or `SnakeWorldScene` (world 2) instead of `GameScene`.
+- **`src/scenes/IntermissionScene.js`** — updated to advance to the correct world scene based on `this.world`.
+- Added missing `spawnSnakeDeathAnimation` import and `SNAKE_TYPES` constant to `BaseGameScene.js` (required by the shared laser-hit code path).
+
 ## Session — 2026-03-15
 
 ### Dust cloud particles for burrowing
