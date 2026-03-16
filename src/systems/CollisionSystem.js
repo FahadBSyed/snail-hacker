@@ -224,7 +224,8 @@ export function checkProjectileCollisions(scene) {
         if (!proj.active) continue;
         for (const enemy of scene.enemies) {
             if (!enemy.active) continue;
-            if (enemy.hidingInBush) continue;   // World 2: invulnerable while hiding
+            // World 2: only block head hits when the head has fully faded into the bush
+            if (enemy.hidingInBush && enemy._fadedParts?.has(enemy)) continue;
             const dist = Phaser.Math.Distance.Between(proj.x, proj.y, enemy.x, enemy.y);
             if (dist >= enemy.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) continue;
 
@@ -306,10 +307,12 @@ export function checkProjectileCollisions(scene) {
         // Projectile still alive — check body segments of non-Python snakes.
         // Each segment that is hit deals full damage to the snake.
         for (const enemy of scene.enemies) {
-            if (!enemy.active || enemy.hidingInBush || enemy._dying) continue;
+            if (!enemy.active || enemy._dying) continue;
             if (enemy._bodyHitboxes || !enemy._bodyImgs) continue; // skip Python & non-snakes
             let hitImg = null;
             for (const img of enemy._bodyImgs) {
+                // Skip segments that have fully faded into a bush
+                if (enemy._fadedParts?.has(img)) continue;
                 if (Phaser.Math.Distance.Between(proj.x, proj.y, img.x, img.y)
                         < enemy.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
                     hitImg = img;
