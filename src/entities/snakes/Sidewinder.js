@@ -121,8 +121,8 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
             const watched = cdist <= CONFIG.SNAKES.SIDEWINDER.WATCH_RADIUS;
 
             if (watched) {
-                // Slowly creep toward Gerald
-                this._moveToward(this.scene.snail, CONFIG.SNAKES.SIDEWINDER.SPEED_SLOW, dt);
+                // Slowly creep toward Gerald — use this.speed (already scaled by slow field)
+                this._moveToward(this.scene.snail, this.speed, dt);
             } else {
                 // Cursor looked away — find next bush closer to station
                 const nextBush = this._nextBushCloserToStation();
@@ -146,7 +146,10 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
         }
 
         if (this._state === 'ENTERING' || this._state === 'DASHING') {
-            const spd  = CONFIG.SNAKES.SIDEWINDER.SPEED_SEARCH;
+            // Scale all speed modes by the same ratio as this.speed / SPEED_SLOW so
+            // the slow-field (which modifies enemy.speed) affects every state equally.
+            const slowRatio = this.speed / CONFIG.SNAKES.SIDEWINDER.SPEED_SLOW;
+            const spd  = CONFIG.SNAKES.SIDEWINDER.SPEED_SEARCH * slowRatio;
             const mult = this.scene.enemySpeedMultiplier || 1.0;
 
             // ── Entry phase: slither through the bush so the whole body follows ──
@@ -249,8 +252,9 @@ export default class Sidewinder extends Phaser.GameObjects.Container {
                 }
             }
 
-            this.x += Math.cos(moveAngle) * CONFIG.SNAKES.SIDEWINDER.SPEED_DASH * mult * dt;
-            this.y += Math.sin(moveAngle) * CONFIG.SNAKES.SIDEWINDER.SPEED_DASH * mult * dt;
+            const dashSpd = CONFIG.SNAKES.SIDEWINDER.SPEED_DASH * (this.speed / CONFIG.SNAKES.SIDEWINDER.SPEED_SLOW);
+            this.x += Math.cos(moveAngle) * dashSpd * mult * dt;
+            this.y += Math.sin(moveAngle) * dashSpd * mult * dt;
             this._headImg.setRotation(moveAngle);
 
             const dist = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
