@@ -153,6 +153,7 @@ export default class Bush extends Phaser.GameObjects.Container {
             onComplete: () => {
                 this._jerkTween = null;
                 this.angle = 0;
+                if (!this.scene) return;
                 this._startSway();
             },
         });
