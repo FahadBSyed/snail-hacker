@@ -21,7 +21,7 @@ export default class Spitter extends Phaser.GameObjects.Container {
 
         const cfg = CONFIG.SNAKES.SPITTER;
         this.health    = cfg.HEALTH;
-        this.speed     = this.speed;
+        this.speed     = cfg.SPEED;
         this.radius    = cfg.RADIUS;
         this.alienType = 'spitter';
 
