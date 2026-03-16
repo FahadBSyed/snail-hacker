@@ -1769,6 +1769,9 @@ export default class BaseGameScene extends Phaser.Scene {
     /** No-op in base — overridden by FrogWorldScene to schedule sporadic ribbet sounds. */
     _startRibbetTimer() { }
 
+    /** Returns the sound name to play on enemy spawn. Override per world. */
+    _spawnSoundName() { return 'frogSpawn'; }
+
     /** No-op in base — overridden by FrogWorldScene to spawn decorative escape frogs. */
     spawnFrogEscape(_x, _y) { }
 
@@ -1858,9 +1861,9 @@ export default class BaseGameScene extends Phaser.Scene {
         // Spawn sound: always for the first alien of a wave, 30% chance after
         if (!this._waveFirstAlienSpawned) {
             this._waveFirstAlienSpawned = true;
-            this.soundSynth.play('frogSpawn');
+            this.soundSynth.play(this._spawnSoundName());
         } else if (Math.random() < 0.3) {
-            this.soundSynth.play('frogSpawn');
+            this.soundSynth.play(this._spawnSoundName());
         }
 
     }

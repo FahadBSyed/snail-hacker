@@ -638,6 +638,32 @@ export default class SoundSynth {
         this._osc(ctx, 'sine', 340, 210, t + 0.17, 0.18, g2);
     }
 
+    /** Snake arrives on screen — slithery noise sweep + low body-thud. */
+    _snakeSpawn() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        // Slithery bandpass noise sweep
+        const ng  = this._gain(ctx, 0.22, t, 0.28);
+        const bpf = this._filter(ctx, 'bandpass', 900, ng);
+        bpf.Q.value = 2.5;
+        this._noise(ctx, 0.24, bpf);
+        // Low body thud
+        const g = this._gain(ctx, 0.18, t, 0.17);
+        this._osc(ctx, 'sine', 130, 48, t, 0.15, g);
+    }
+
+    /** Snake ambient hiss — sustained bandpass noise with slow attack. */
+    _snakeHiss() {
+        const ctx = this._ctx_get(), t = ctx.currentTime;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.19 * this.volume, t + 0.07);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.52);
+        g.connect(ctx.destination);
+        const bpf = this._filter(ctx, 'bandpass', 3200, g);
+        bpf.Q.value = 1.8;
+        this._noise(ctx, 0.52, bpf);
+    }
+
     /** Decorative escape frog hop — soft thud with a little texture. */
     _frogEscapeHop() {
         const ctx = this._ctx_get(), t = ctx.currentTime;

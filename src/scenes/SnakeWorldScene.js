@@ -223,6 +223,26 @@ export default class SnakeWorldScene extends BaseGameScene {
         }
     }
 
+    // ── World-specific sound hooks ─────────────────────────────────────────────
+
+    /** Use snake spawn sound instead of frog spawn sound. */
+    _spawnSoundName() { return 'snakeSpawn'; }
+
+    /** Schedule a sporadic hiss while snakes are alive; re-schedules itself. */
+    _startRibbetTimer() {
+        if (this._hissTimer) { this._hissTimer.remove(false); this._hissTimer = null; }
+        const scheduleNext = () => {
+            const delay = Phaser.Math.Between(8000, 20000);
+            this._hissTimer = this.time.delayedCall(delay, () => {
+                if (this.enemies.some(e => e.active)) {
+                    this.soundSynth?.play('snakeHiss');
+                }
+                scheduleNext();
+            });
+        };
+        scheduleNext();
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /**
