@@ -28,6 +28,8 @@ export default class RhythmMinigame {
         this.beatTimer  = null;
         this.keyHandler = null;
         this.allObjects = [];
+        // Pick the first key before creating UI so it's visible immediately
+        this.currentKey = Phaser.Utils.Array.GetRandom(VALID_KEYS);
 
         this._createUI();
         // Brief grace period — prevents the E keypress that opened this terminal
@@ -61,7 +63,7 @@ export default class RhythmMinigame {
         }).setOrigin(1, 0.5).setDepth(201));
 
         // Key to press
-        this.keyDisplay = this._add(this.scene.add.text(cx, by - 48, '?', {
+        this.keyDisplay = this._add(this.scene.add.text(cx, by - 48, this.currentKey, {
             fontSize: '34px', fontFamily: 'monospace', fontStyle: 'bold', color: '#ffffff',
         }).setOrigin(0.5).setDepth(201));
 
@@ -105,7 +107,10 @@ export default class RhythmMinigame {
         this.beatCounter.setText(`BEAT ${this.currentBeat} / ${this.totalBeats}`);
         this.resultText.setText('');
 
-        this.currentKey = Phaser.Utils.Array.GetRandom(VALID_KEYS);
+        // Re-pick only after the first beat (first key was pre-selected in constructor)
+        if (this.currentBeat > 1) {
+            this.currentKey = Phaser.Utils.Array.GetRandom(VALID_KEYS);
+        }
         this.keyDisplay.setText(this.currentKey).setColor('#ffffff');
         this.indicator.setFillStyle(0xffffff);
         this.targetZone.fillColor = 0x44ff88;
