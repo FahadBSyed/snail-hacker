@@ -314,7 +314,7 @@ export function checkProjectileCollisions(scene) {
                 // Skip segments that have fully faded into a bush
                 if (enemy._fadedParts?.has(img)) continue;
                 if (Phaser.Math.Distance.Between(proj.x, proj.y, img.x, img.y)
-                        < enemy.radius + CONFIG.PLAYER.PROJECTILE_RADIUS) {
+                        < enemy.radius * 1.25 + CONFIG.PLAYER.PROJECTILE_RADIUS) {
                     hitImg = img;
                     break;
                 }
