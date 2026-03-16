@@ -363,16 +363,18 @@ export function checkProjectileCollisions(scene) {
         // hitboxes.  A hit destroys the projectile with a spark but does NOT
         // damage the Python.  (Head hits are handled above in the normal loop.)
         //
-        // Grace distance: skip body-hitbox checks until the bullet has moved at
-        // least BODY_RADIUS past its spawn point.  Prevents instant destruction
-        // when a Python body segment overlaps the station (spawn origin) on the
-        // same frame the bullet is created — which otherwise causes the bullet to
-        // silently vanish before rendering, especially while the slow field is active
-        // (the Python's body trail lingers near center much longer when slowed).
-        const bodyGrace = CONFIG.SNAKES.PYTHON.BODY_RADIUS + CONFIG.PLAYER.PROJECTILE_RADIUS;
+        // Grace distance: skip body-hitbox checks until the bullet has visibly appeared.
+        // Trail particles are emitted every 25 ms; at PROJECTILE_SPEED=3200 px/s that
+        // is 80 px per tick.  At 30 fps one frame moves ~107 px.  Using 120 px ensures
+        // at least one trail particle has appeared away from the station before the body
+        // can block the bullet — otherwise the block is completely invisible (the only
+        // trail tick is at the station origin, hidden behind the station graphic).
+        // This also covers the common case where a Python's body trail lingers near the
+        // station long after the Python has moved away (especially with slow field active).
+        const BULLET_GRACE = 120;
         if (proj.originX !== undefined &&
-            Phaser.Math.Distance.Between(proj.x, proj.y, proj.originX, proj.originY) < bodyGrace) {
-            // bullet hasn't cleared the station yet — skip body check this frame
+            Phaser.Math.Distance.Between(proj.x, proj.y, proj.originX, proj.originY) < BULLET_GRACE) {
+            // bullet hasn't traveled far enough to be visible yet — skip body check
         } else
         for (const enemy of scene.enemies) {
             if (!enemy.active || !enemy._bodyHitboxes) continue;
@@ -417,7 +419,11 @@ export function checkProjectileCollisions(scene) {
 
         // ── World 2: AcidGlob intercept ───────────────────────────────────────
         // P2 projectiles can shoot down acid globs mid-air.
-        if (scene.acidGlobs) {
+        // Same BULLET_GRACE as the body-hitbox check: skip until the bullet has
+        // visibly appeared, so a glob near the station doesn't silently eat the shot.
+        if (scene.acidGlobs &&
+            (proj.originX === undefined ||
+             Phaser.Math.Distance.Between(proj.x, proj.y, proj.originX, proj.originY) >= BULLET_GRACE)) {
             for (let gi = scene.acidGlobs.length - 1; gi >= 0; gi--) {
                 const glob = scene.acidGlobs[gi];
                 if (!glob.active) continue;
