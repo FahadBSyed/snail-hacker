@@ -12,6 +12,9 @@
   <!-- Scale hint -->
   <ellipse cx="20" cy="10" rx="5" ry="8" fill="none" stroke="#1a1a1a" stroke-width="0.9" opacity="0.5"/>
 
+  <!-- Black spots (boss anaconda only) -->
+  <!-- no spots -->
+
   <!-- Spine seam -->
   <line x1="4" y1="10" x2="24" y2="10" stroke="#505050" stroke-width="1" opacity="0.6"/>
 </svg>
