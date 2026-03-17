@@ -124,22 +124,23 @@ const PALETTES = {
         spineLine:   '#ee3333',
     },
     anaconda: {
-        headBase:    '#160822',
-        headMid:     '#220e34',
-        headDark:    '#0a0414',
-        scaleLines:  '#1a0c2c',
-        collar:      '#2a1040',
-        collarLight: '#3c1a58',
-        collarDark:  '#180828',
-        visorFill:   'rgba(160,50,255,0.38)',
-        visorRim:    '#aa44ff',
-        visorGlow:   '#cc88ff',
-        eyeColor:    '#cc44ff',
-        accent:      '#cc44ff',
+        headBase:    '#1a380a',  // dark green
+        headMid:     '#2d5c16',
+        headDark:    '#0c1e06',  // near-black green
+        scaleLines:  '#0e2808',
+        collar:      '#1e4010',
+        collarLight: '#2e5c1a',
+        collarDark:  '#0a1a06',
+        visorFill:   'rgba(60,200,60,0.34)',
+        visorRim:    '#55ee55',
+        visorGlow:   '#99ff88',
+        eyeColor:    '#ffee00',  // bright yellow — classic anaconda
+        accent:      '#3daa22',
         gold:        '#ffcc44',  // boss-only gold trim
-        bodyBase:    '#1e0c30',
-        bodyMid:     '#2c1244',
-        spineLine:   '#aa44ff',
+        bodyBase:    '#1a3810',
+        bodyMid:     '#2c5218',
+        spineLine:   '#4aaa22',
+        spotColor:   '#050e03',  // near-black spots on scales
     },
 };
 
@@ -235,6 +236,13 @@ function buildHead(W, H, pal, isBoss = false) {
   <circle cx="${Math.round(W*0.89)}" cy="${Math.round(H*0.37)}" r="1.2" fill="${headDark}" opacity="0.8"/>
   <circle cx="${Math.round(W*0.89)}" cy="${Math.round(H*0.63)}" r="1.2" fill="${headDark}" opacity="0.8"/>
 
+  <!-- Black spots on head (boss anaconda only) -->
+  ${pal.spotColor ? [
+      { xf: 0.32, yf: 0.38 },
+      { xf: 0.50, yf: 0.60 },
+      { xf: 0.65, yf: 0.36 },
+  ].map(s => `<ellipse cx="${r2(W*s.xf)}" cy="${r2(H*s.yf)}" rx="${r2(W*0.055)}" ry="${r2(H*0.10)}" fill="${pal.spotColor}" opacity="0.78"/>`).join('\n  ') : ''}
+
   ${bossGold ? `<!-- Boss crown -->
   <path d="M${Math.round(W*0.34)},${eyeTopY+eyeR+2} L${Math.round(W*0.38)},${eyeTopY-3} L${Math.round(W*0.42)},${eyeTopY+eyeR+2} L${Math.round(W*0.46)},${eyeTopY-3} L${Math.round(W*0.50)},${eyeTopY+eyeR+2}" fill="none" stroke="${bossGold}" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>` : ''}
 </svg>`;
@@ -268,6 +276,15 @@ function buildBody(W, H, pal) {
   <!-- Scale plate arcs -->
   ${plateX.map(px => `<ellipse cx="${px}" cy="${Math.round(bY + bH*0.55)}" rx="${Math.round(bW*0.18)}" ry="${Math.round(bH*0.42)}" fill="none" stroke="${scaleLines}" stroke-width="1" opacity="0.6"/>`).join('\n  ')}
 
+  <!-- Black spots (boss anaconda only) -->
+  ${pal.spotColor ? [
+      { xf: 0.20, yf: 0.40, rxf: 0.09, ryf: 0.22 },
+      { xf: 0.38, yf: 0.64, rxf: 0.08, ryf: 0.20 },
+      { xf: 0.55, yf: 0.36, rxf: 0.09, ryf: 0.22 },
+      { xf: 0.73, yf: 0.62, rxf: 0.08, ryf: 0.20 },
+      { xf: 0.88, yf: 0.42, rxf: 0.07, ryf: 0.18 },
+  ].map(s => `<ellipse cx="${r2(bX + s.xf*bW)}" cy="${r2(bY + s.yf*bH)}" rx="${r2(s.rxf*bW)}" ry="${r2(s.ryf*bH)}" fill="${pal.spotColor}" opacity="0.82"/>`).join('\n  ') : '<!-- no spots -->'}
+
   <!-- Spine seam (glowing line along body center) -->
   <line x1="${bX + rx}" y1="${Math.round(H/2)}" x2="${bX + bW - rx}" y2="${Math.round(H/2)}" stroke="${spineLine}" stroke-width="1.2" opacity="0.7"/>
   <!-- Seam glow -->
@@ -298,6 +315,12 @@ function buildTail(W, H, pal) {
   <!-- Scale hint -->
   <ellipse cx="${Math.round(W*0.70)}" cy="${Math.round(cy)}" rx="${Math.round(W*0.18)}" ry="${Math.round(H*0.38)}" fill="none" stroke="${scaleLines}" stroke-width="0.9" opacity="0.5"/>
 
+  <!-- Black spots (boss anaconda only) -->
+  ${pal.spotColor ? [
+      { xf: 0.72, yf: 0.38 },
+      { xf: 0.52, yf: 0.64 },
+  ].map(s => `<ellipse cx="${r2(W * s.xf)}" cy="${r2(H * s.yf)}" rx="${r2(W*0.10)}" ry="${r2(H*0.20)}" fill="${pal.spotColor}" opacity="0.80"/>`).join('\n  ') : '<!-- no spots -->'}
+
   <!-- Spine seam -->
   <line x1="${Math.round(W*0.15)}" y1="${Math.round(cy)}" x2="${Math.round(W*0.85)}" y2="${Math.round(cy)}" stroke="${spineLine}" stroke-width="1" opacity="0.6"/>
 </svg>`;
@@ -318,11 +341,11 @@ for (const type of TYPES) {
     console.log(`✔  snake-${type}-{head,body,tail}.svg`);
 }
 
-// Boss anaconda (larger sprites)
+// Boss anaconda — 2× the Python's sprite dimensions (64→128, 32→64, 28→56)
 const bossPal  = PALETTES.anaconda;
-const bossHead = buildHead(80, 60, bossPal, true);
-const bossBody = buildBody(36, 28, bossPal);
-const bossTail = buildTail(32, 24, bossPal);
+const bossHead = buildHead(128, 96, bossPal, true);
+const bossBody = buildBody(64, 48, bossPal);
+const bossTail = buildTail(56, 40, bossPal);
 
 writeFileSync(join(outDir, 'snake-anaconda-head.svg'), bossHead, 'utf-8');
 writeFileSync(join(outDir, 'snake-anaconda-body.svg'), bossBody, 'utf-8');

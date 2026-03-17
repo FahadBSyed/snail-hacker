@@ -93,7 +93,7 @@ The dome ring colour (`#00eeff`) intentionally matches the in-game shield ring g
 | Python | Bright green (`#00aa00` / `#00cc00`) | Green visor, yellow eyes (`#ffff00`) |
 | Burrower | Blue (`#1a4080` / `#2255aa`) | Blue visor, cyan eyes (`#44ccff`) |
 | Spitter | Red (`#8a1010` / `#b01818`) | Red visor, orange eyes (`#ff8800`) |
-| Anaconda (boss) | Deep purple (`#160822` / `#220e34`) | Purple visor, purple eyes + gold trim |
+| Anaconda (boss) | Dark green (`#1a380a` / `#2d5c16`) | Green visor, yellow eyes (`#ffee00`), black spots, gold trim; sprites 2× Python size (128×96 head / 64×48 body / 56×40 tail) |
 
 ---
 

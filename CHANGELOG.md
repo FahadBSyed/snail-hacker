@@ -2,6 +2,21 @@
 
 ## Session — 2026-03-17
 
+### Anaconda boss sprites — dark green with black spots, 2× scale
+
+Redesigned the anaconda's colour palette and doubled its sprite size:
+
+- **Palette** changed from deep purple to dark green scales (`#1a380a` / `#2d5c16`) with near-black spots (`#050e03`), bright yellow eyes (`#ffee00`), green visor, and gold boss crown/trim — visually distinct from the python while keeping the boss crown.
+- **Sprite dimensions** changed to 2× Python's sizes: head 128×96 (was 80×60), body 64×48 (was 36×28), tail 56×40 (was 32×24).
+- **Black spots** added to all three sprite parts via new `pal.spotColor` property in the generator — 5 staggered oval spots on body, 2 on tail, 3 on head.
+- `scripts/generate-snake-sprites.js` updated; sprites regenerated.
+- `assets/sprites/PALETTE_SWAPS.md` updated.
+
+### SnakeMinigame — safe tail growth + wait-for-first-input
+
+- Safe growth: after placing the new head, if keeping the tail (`pendingGrowth > 0`) would leave the head with no valid moves, the tail is popped anyway and growth deferred to a later step.
+- Wait for first input: snake is frozen until the first WASD keypress; the countdown only starts then; the controls overlay is dismissed immediately on first input.
+
 ### SnakeMinigame — wave 10 boss shield-break for SnakeWorldScene
 
 Added the classic Snake game as the boss-fight minigame for World 2, mirroring how FroggerMinigame works in FrogWorldScene:
