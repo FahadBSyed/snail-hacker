@@ -41,7 +41,10 @@ const MOUTH_FRAMES = [
 
 const SCREEN_W     = 1280;
 const SCREEN_H     = 720;
-const PEEK_INSET   = 60;   // px — head sits this far inside the edge during edge peek
+const PEEK_INSET   = 360;  // px — must match SCREEN_W/2 - CIRCLE_RADIUS (640-280) so the
+                            //       second-pass charge starts at the same depth as the first
+                            //       pass (from orbit), equalising charge distances in both
+                            //       directions.
 const OFF_SCREEN_M = 200;  // px past edge that counts as "fully exited"
 const CHARGE_CONT_R = 48;  // px — contact radius against snail during charge
 const EXIT_WAIT_MS  = 1000; // ms to wait after body fully clears before peeking
