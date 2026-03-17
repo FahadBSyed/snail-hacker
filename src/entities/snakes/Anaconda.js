@@ -401,10 +401,10 @@ export default class Anaconda extends Phaser.GameObjects.Container {
     // ── Exiting: wait for entire snake to leave screen, then 1 s pause ───────
 
     _tickExiting(delta, dt, cfg) {
-        // Continue drifting off-screen so body follows the head out
+        // Keep moving at charge speed so the full body clears the screen promptly
         const mult = this.scene.enemySpeedMultiplier || 1.0;
-        this.x += this._chargeDir.nx * cfg.SPEED * 0.6 * mult * dt;
-        this.y += this._chargeDir.ny * cfg.SPEED * 0.6 * mult * dt;
+        this.x += this._chargeDir.nx * cfg.CHARGE_SPEED * mult * dt;
+        this.y += this._chargeDir.ny * cfg.CHARGE_SPEED * mult * dt;
 
         if (!this._bodyAllClear) {
             if (this._allOffScreen()) this._bodyAllClear = true;
