@@ -86,7 +86,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         this._chargeDir        = { nx: 1, ny: 0 };  // normalised direction of current charge
         this._peekPos          = { x: 0, y: 0 };    // head position during peek (edge inset)
         this._chargePassCount  = 0;                  // how many passes completed this cycle
-        this._chargeHitThisPass = false;             // flag: snail already hit this pass
+        this._chargeHitThisSeq = false;             // flag: snail already hit this charge sequence
         this._chargeTouchedSnail = false;            // consumed by update() return value
 
         // Mouth-open animation
@@ -331,6 +331,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         const len = Math.max(1, Math.hypot(dx, dy));
         this._chargeDir       = { nx: dx / len, ny: dy / len };
         this._chargePassCount = 0;
+        this._chargeHitThisSeq = false;   // reset once per full charge sequence
         this._peekPos         = this._computePeekPos();
         this._attackPhase     = 'peek_in';
         this._losOkMs         = 0;
@@ -405,8 +406,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         // Fully open + hold time expired → begin charge
         if (this._mouthFrameIdx >= MOUTH_FRAMES.length - 1 &&
                 this._mouthTimer >= cfg.MOUTH_OPEN_DURATION + cfg.MOUTH_HOLD_MS) {
-            this._attackPhase       = 'charging';
-            this._chargeHitThisPass = false;
+            this._attackPhase = 'charging';
             this.scene.soundSynth?.play('snakeHiss');
         }
     }
@@ -423,11 +423,11 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         this._headImg.setRotation(Math.atan2(ny, nx));
 
         // Check contact with snail once per pass
-        if (!this._chargeHitThisPass) {
+        if (!this._chargeHitThisSeq) {
             const snail = this.scene.snail;
             const dist  = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
             if (dist < this.radius + CHARGE_CONT_R) {
-                this._chargeHitThisPass  = true;
+                this._chargeHitThisSeq   = true;
                 this._chargeTouchedSnail = true;  // consumed by update() return value
             }
         }
