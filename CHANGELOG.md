@@ -2,6 +2,25 @@
 
 ## Session — 2026-03-17
 
+### Anaconda mouth-open animation sprites
+
+Added 4 new head SVGs for an anaconda jaw-opening sequence:
+
+- **`snake-anaconda-head-open-f00.svg`** — jaws just cracking open (openAmount 0.25), no fangs yet
+- **`snake-anaconda-head-open-f01.svg`** — half open (0.55), fangs begin to emerge
+- **`snake-anaconda-head-open-f02.svg`** — nearly full (0.82), fangs and oral cavity clearly visible
+- **`snake-anaconda-head-open.svg`** — fully open (1.0), held state; large ivory fangs with venom-tip glow, deep-red oral cavity
+
+Design: the upper jaw shifts up and the lower jaw shifts down from the resting centre-line. A dark-red oval fills the gap (three-layer depth: cavity `#440011` → `#6e0018` → `#992233`). Two ivory fangs (`#f0edcc`) with bright green venom tips (`#bbff44`) hang from the upper snout. Spots, boss crown, and gold collar trim persist across all frames. Dimensions match the regular anaconda head (138×96).
+
+New `buildHeadOpen(W, H, pal, openAmount)` function added to `scripts/generate-snake-sprites.js`.
+
+Also fixed `assetManifest.js`:
+- `SVG_AH` corrected from `80×60` → `138×96` (was stale from before the 2× resize)
+- `SVG_AB` corrected from `36×28` → `64×48`
+- `SVG_AT` corrected from `32×24` → `56×40`
+- 4 new mouth-open sprite keys registered under World 2.
+
 ### Anaconda boss sprites — dark green with black spots, 2× scale
 
 Redesigned the anaconda's colour palette and doubled its sprite size:

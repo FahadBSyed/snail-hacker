@@ -326,6 +326,142 @@ function buildTail(W, H, pal) {
 </svg>`;
 }
 
+// ── Anaconda mouth-open head frames ───────────────────────────────────────────
+// Produced by splitting the head ellipse into upper and lower jaws and pulling
+// them apart vertically by gapeHalf pixels. A dark-red oral cavity fills the
+// gap; two ivory fangs with venom-tip dots hang from the upper jaw.
+// openAmount: 0.0 = closed (same as buildHead), 1.0 = fully held open.
+function buildHeadOpen(W, H, pal, openAmount) {
+    const {
+        headBase, headMid, headDark, scaleLines,
+        collar, collarLight, collarDark,
+        eyeColor, gold, spotColor,
+    } = pal;
+
+    const TW = W + 10;
+    const cy = H / 2;
+
+    // How many pixels each jaw moves from the resting centre-line
+    const MAX_GAPE  = Math.round(H * 0.19);   // ≈18 px at H=96
+    const gapeHalf  = Math.round(openAmount * MAX_GAPE * 0.5);
+
+    // Layout (same proportions as buildHead)
+    const collarW  = Math.round(W * 0.22);
+    const headRX   = Math.round(W * 0.40);
+    const headRY   = Math.round(H * 0.36);
+    const headCX   = Math.round(W * 0.50);
+    const snoutCX  = Math.round(W * 0.84);
+    const snoutRX  = Math.round(W * 0.14);
+    const snoutRY  = Math.round(H * 0.22);
+
+    // Jaw centres
+    const upperCY  = cy - gapeHalf;
+    const lowerCY  = cy + gapeHalf;
+    // Upper snout is tilted slightly upward (lower jaw mirrors)
+    const uSnoutCY = upperCY - Math.round(gapeHalf * 0.15);
+    const lSnoutCY = lowerCY + Math.round(gapeHalf * 0.15);
+    const jawSnoutRY = Math.round(snoutRY * 0.85);
+
+    // Eyes shift with their respective jaws (less than the jaw centre so they
+    // stay on the head surface and don't clip the canvas edge)
+    const eyeX    = Math.round(W * 0.55);
+    const eyeR    = 5;
+    const eyeTopY = Math.round(H * 0.14) - Math.round(gapeHalf * 0.55);
+    const eyeBotY = Math.round(H * 0.86) + Math.round(gapeHalf * 0.55);
+    const slitRX  = 1.5;
+    const slitRY  = 4;
+
+    // Oral cavity geometry
+    const cavLeft  = snoutCX - snoutRX - 4;
+    const cavMidY  = cy;
+    const cavH     = Math.max(1, gapeHalf * 2 - 4);
+
+    // Fangs — appear once the gap is wide enough
+    const fangLen  = Math.max(0, Math.round((gapeHalf * 2 - 5) * 0.62));
+    const fangRX   = 2;
+    const fang1X   = snoutCX - Math.round(snoutRX * 0.38);
+    const fang2X   = snoutCX + Math.round(snoutRX * 0.28);
+    const fangBase = uSnoutCY + Math.round(jawSnoutRY * 0.75);
+
+    // Boss crown (tracks the upper eye)
+    const crownY1  = r2(eyeTopY + eyeR + 2);
+    const crownY2  = r2(eyeTopY - 3);
+    const crownPath = `M${Math.round(W*0.34)},${crownY1} L${Math.round(W*0.38)},${crownY2} L${Math.round(W*0.42)},${crownY1} L${Math.round(W*0.46)},${crownY2} L${Math.round(W*0.50)},${crownY1}`;
+
+    // Nostril y-offsets follow the upper snout
+    const nostrilDY = Math.round(H * 0.125);
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${TW} ${H}" width="${TW}" height="${H}">
+
+  <!-- Ground shadow -->
+  <ellipse cx="${headCX+2}" cy="${H-4}" rx="${headRX-3}" ry="${Math.round(H*0.11)}" fill="#000000" opacity="0.20"/>
+
+  <!-- Neck / collar -->
+  <rect x="1" y="${Math.round(H*0.25)}" width="${collarW}" height="${Math.round(H*0.50)}" rx="4" fill="${collar}" stroke="${collarDark}" stroke-width="1"/>
+  <line x1="${Math.round(collarW*0.45)}" y1="${Math.round(H*0.27)}" x2="${Math.round(collarW*0.45)}" y2="${Math.round(H*0.73)}" stroke="${collarLight}" stroke-width="1.2" opacity="0.7"/>
+  <circle cx="${Math.round(collarW*0.5)}" cy="${Math.round(H*0.28)}" r="2" fill="${collarDark}" stroke="${collarLight}" stroke-width="0.7"/>
+  <circle cx="${Math.round(collarW*0.5)}" cy="${Math.round(H*0.72)}" r="2" fill="${collarDark}" stroke="${collarLight}" stroke-width="0.7"/>
+  <rect x="1" y="${Math.round(H*0.25)}" width="${collarW}" height="2" fill="${gold}" opacity="0.8"/>
+  <rect x="1" y="${Math.round(H*0.73)}" width="${collarW}" height="2" fill="${gold}" opacity="0.8"/>
+
+  <!-- Lower jaw -->
+  <ellipse cx="${headCX}" cy="${r2(lowerCY)}" rx="${headRX}" ry="${headRY}" fill="${headDark}" stroke="${headDark}" stroke-width="1"/>
+  <ellipse cx="${snoutCX}" cy="${r2(lSnoutCY)}" rx="${snoutRX}" ry="${jawSnoutRY}" fill="${headDark}" stroke="${headDark}" stroke-width="1"/>
+
+  <!-- Oral cavity -->
+  ${gapeHalf > 1 ? `<rect x="${cavLeft}" y="${r2(uSnoutCY + jawSnoutRY * 0.55)}" width="${TW - cavLeft}" height="${r2(cavH)}" fill="#440011" opacity="0.96"/>
+  <ellipse cx="${r2(snoutCX + snoutRX * 0.1)}" cy="${r2(cavMidY)}" rx="${r2(snoutRX * 0.90)}" ry="${r2(cavH * 0.52 + 1)}" fill="#6e0018" opacity="0.92"/>
+  <ellipse cx="${r2(snoutCX + snoutRX * 0.05)}" cy="${r2(cavMidY)}" rx="${r2(snoutRX * 0.50)}" ry="${r2(cavH * 0.30 + 1)}" fill="#992233" opacity="0.65"/>` : ''}
+
+  <!-- Upper jaw -->
+  <ellipse cx="${headCX}" cy="${r2(upperCY)}" rx="${headRX}" ry="${headRY}" fill="${headBase}" stroke="${headDark}" stroke-width="1.2"/>
+  <ellipse cx="${snoutCX}" cy="${r2(uSnoutCY)}" rx="${snoutRX}" ry="${jawSnoutRY}" fill="${headMid}" stroke="${headDark}" stroke-width="1"/>
+
+  <!-- Scale lines (upper jaw) -->
+  ${[0.30, 0.44, 0.58, 0.70].map(xf => {
+      const lx = Math.round(W * xf);
+      return `<line x1="${lx}" y1="${r2(upperCY - headRY + 3)}" x2="${lx+5}" y2="${r2(upperCY + headRY - 3)}" stroke="${scaleLines}" stroke-width="1" opacity="0.50"/>`;
+  }).join('\n  ')}
+
+  <!-- Dorsal ridge (upper jaw) -->
+  <ellipse cx="${headCX}" cy="${r2(upperCY - headRY * 0.44)}" rx="${Math.round(headRX*0.55)}" ry="${Math.round(headRY*0.26)}" fill="${headMid}" opacity="0.38"/>
+
+  <!-- Spots (upper jaw) -->
+  ${spotColor ? [
+      { xf: 0.32, dyf: -0.15 },
+      { xf: 0.50, dyf:  0.22 },
+      { xf: 0.65, dyf: -0.18 },
+  ].map(s => `<ellipse cx="${r2(W*s.xf)}" cy="${r2(upperCY + headRY*s.dyf)}" rx="${r2(W*0.055)}" ry="${r2(H*0.10)}" fill="${spotColor}" opacity="0.78"/>`).join('\n  ') : ''}
+
+  <!-- Fangs (hang from upper jaw snout into oral cavity) -->
+  ${fangLen > 0 ? `<ellipse cx="${fang1X}" cy="${r2(fangBase + fangLen * 0.5)}" rx="${fangRX}" ry="${r2(fangLen + 1)}" fill="#f0edcc" stroke="#bbb890" stroke-width="0.5"/>
+  <ellipse cx="${fang2X}" cy="${r2(fangBase + fangLen * 0.5)}" rx="${fangRX}" ry="${r2(fangLen + 1)}" fill="#f0edcc" stroke="#bbb890" stroke-width="0.5"/>
+  <circle cx="${fang1X}" cy="${r2(fangBase + fangLen)}" r="2.2" fill="#bbff44" opacity="0.82"/>
+  <circle cx="${fang2X}" cy="${r2(fangBase + fangLen)}" r="2.2" fill="#bbff44" opacity="0.82"/>` : '<!-- fangs emerge at wider gape -->'}
+
+  <!-- Upper eye -->
+  <circle cx="${eyeX}" cy="${r2(eyeTopY)}" r="${eyeR + 1.5}" fill="${headMid}" stroke="${headDark}" stroke-width="0.8"/>
+  <circle cx="${eyeX}" cy="${r2(eyeTopY)}" r="${eyeR}" fill="${eyeColor}"/>
+  <ellipse cx="${eyeX}" cy="${r2(eyeTopY)}" rx="${slitRX}" ry="${slitRY}" fill="#111100"/>
+  <circle cx="${r2(eyeX - eyeR*0.35)}" cy="${r2(eyeTopY - eyeR*0.35)}" r="1" fill="white" opacity="0.65"/>
+  <circle cx="${eyeX}" cy="${r2(eyeTopY)}" r="${eyeR + 3.5}" fill="none" stroke="${gold}" stroke-width="0.8" opacity="0.45"/>
+
+  <!-- Lower eye -->
+  <circle cx="${eyeX}" cy="${r2(eyeBotY)}" r="${eyeR + 1.5}" fill="${headDark}" stroke="${headDark}" stroke-width="0.8"/>
+  <circle cx="${eyeX}" cy="${r2(eyeBotY)}" r="${eyeR}" fill="${eyeColor}"/>
+  <ellipse cx="${eyeX}" cy="${r2(eyeBotY)}" rx="${slitRX}" ry="${slitRY}" fill="#111100"/>
+  <circle cx="${r2(eyeX - eyeR*0.35)}" cy="${r2(eyeBotY - eyeR*0.35)}" r="1" fill="white" opacity="0.65"/>
+  <circle cx="${eyeX}" cy="${r2(eyeBotY)}" r="${eyeR + 3.5}" fill="none" stroke="${gold}" stroke-width="0.8" opacity="0.45"/>
+
+  <!-- Nostril dots (upper snout) -->
+  <circle cx="${Math.round(W*0.89)}" cy="${r2(uSnoutCY - nostrilDY * 0.72)}" r="1.2" fill="${headDark}" opacity="0.8"/>
+  <circle cx="${Math.round(W*0.89)}" cy="${r2(uSnoutCY + nostrilDY * 0.72)}" r="1.2" fill="${headDark}" opacity="0.8"/>
+
+  <!-- Boss crown (tracks upper eye) -->
+  <path d="${crownPath}" fill="none" stroke="${gold}" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
+</svg>`;
+}
+
 // ── Generate all sprites ──────────────────────────────────────────────────────
 const TYPES = ['basic', 'sidewinder', 'python', 'burrower', 'spitter'];
 
@@ -352,4 +488,17 @@ writeFileSync(join(outDir, 'snake-anaconda-body.svg'), bossBody, 'utf-8');
 writeFileSync(join(outDir, 'snake-anaconda-tail.svg'), bossTail, 'utf-8');
 console.log(`✔  snake-anaconda-{head,body,tail}.svg`);
 
-console.log(`\nDone — ${(TYPES.length + 1) * 3} snake SVGs generated in assets/sprites/snake/`);
+// Mouth-open animation frames: 3 opening frames + 1 held-open sprite
+// f00 = just cracking open, f01 = half open, f02 = nearly full, open = held full
+const OPEN_FRAMES = [
+    { name: 'snake-anaconda-head-open-f00.svg', amount: 0.25 },
+    { name: 'snake-anaconda-head-open-f01.svg', amount: 0.55 },
+    { name: 'snake-anaconda-head-open-f02.svg', amount: 0.82 },
+    { name: 'snake-anaconda-head-open.svg',     amount: 1.00 },
+];
+for (const { name, amount } of OPEN_FRAMES) {
+    writeFileSync(join(outDir, name), buildHeadOpen(128, 96, bossPal, amount), 'utf-8');
+    console.log(`✔  ${name}`);
+}
+
+console.log(`\nDone — ${(TYPES.length + 1) * 3 + OPEN_FRAMES.length} snake SVGs generated in assets/sprites/snake/`);
