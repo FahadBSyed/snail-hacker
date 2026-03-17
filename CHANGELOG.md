@@ -1,5 +1,18 @@
 # SNAIL HACKER — Changelog
 
+## Session — 2026-03-17
+
+### SnakeMinigame — wave 10 boss shield-break for SnakeWorldScene
+
+Added the classic Snake game as the boss-fight minigame for World 2, mirroring how FroggerMinigame works in FrogWorldScene:
+
+- **`src/minigames/SnakeMinigame.js`** — new file. Full Snake game rendered in the same 194×192 panel at (640, 600) as FroggerMinigame. WASD steers; each pellet eaten adds `GROWTH_PER_PELLET = 5` segments so the arena fills quickly. Hitting a wall or the snake's own tail fails the attempt; a timer also enforces a deadline. Eating `pointsNeeded` pellets (= `BOSS.SHIELD_DROP_WORDS`) triggers `onSuccess`. Implements the standard minigame contract (`onSuccess`, `onFailure`, `cancel()`).
+- **`src/scenes/SnakeWorldScene.js`** — added `import SnakeMinigame` and three overrides:
+  - `_wordsForWave(wave)` — returns `CONFIG.MINIGAMES.SNAKE_PELLETS_NEEDED` on wave 10 so the hack threshold matches the minigame goal.
+  - `_spawnMaxY()` — clamps enemy spawns to y ≤ 460 on wave 10, keeping the minigame panel clear.
+  - `_tryWave10Hack()` — launches `SnakeMinigame`; on success drops the boss shield (re-raises after `BOSS.SHIELD_DOWN_DURATION`), resets progress; on failure returns the snail to IDLE. Returns `true` to suppress the base typing path.
+- **`src/config.js`** — added `MINIGAMES.SNAKE_TIME_LIMIT` (40 000 ms) and `MINIGAMES.SNAKE_PELLETS_NEEDED` (3). `CONFIG_VERSION` bumped to 37.
+
 ## Session — 2026-03-16
 
 ### Python sine-wave slither movement

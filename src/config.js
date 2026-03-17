@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 36;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 37;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -169,6 +169,9 @@ export const DEFAULTS = {
         TYPING_MS_PER_CHAR:    1500,  // ms per character in typing minigame
         FROGGER_TIME_LIMIT:   45000,  // ms before frogger minigame expires
         FROGGER_CROSSINGS:        1,  // successful crossings needed to win
+
+        SNAKE_TIME_LIMIT:     40000,  // ms before snake minigame expires
+        SNAKE_PELLETS_NEEDED:     3,  // pellets required to break the boss shield
 
         HELICOPTER_GRAVITY:       140,  // px/s² downward pull
         HELICOPTER_THRUST:       -130,  // px/s² upward acceleration while SPACE held
