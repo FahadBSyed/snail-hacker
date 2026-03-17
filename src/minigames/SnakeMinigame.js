@@ -75,6 +75,8 @@ export default class SnakeMinigame {
         this.pendingGrowth = 0;
         this.score         = 0;
         this.dead          = false;
+        this.waiting       = true;   // frozen until player gives first input
+        this.startTime     = null;   // set on first keypress
 
         // Place first pellet
         this.pellet = this._randomPellet();
@@ -94,8 +96,6 @@ export default class SnakeMinigame {
             delay: 33, loop: true,
             callback: this._render, callbackScope: this,
         });
-
-        this.startTime = scene.time.now;
     }
 
     // ── Coordinate helpers ────────────────────────────────────────────────────
@@ -187,19 +187,10 @@ export default class SnakeMinigame {
         ).setOrigin(0.5);
         this.container.add(this.flashLabel);
 
-        this.scene.time.delayedCall(1800, () => {
+        // Auto-fade fallback if player somehow hasn't pressed anything after 3s
+        this.scene.time.delayedCall(3000, () => {
             if (this.cancelled) return;
-            this.scene.tweens.add({
-                targets: [this.flashGfx, this.flashArrow, this.flashLabel],
-                alpha: 0,
-                duration: 300,
-                onComplete: () => {
-                    [this.flashGfx, this.flashArrow, this.flashLabel].forEach(o => {
-                        if (o?.active) o.destroy();
-                    });
-                    this.flashGfx = this.flashArrow = this.flashLabel = null;
-                },
-            });
+            this._dismissControls();
         });
     }
 
@@ -208,11 +199,21 @@ export default class SnakeMinigame {
         // Short grace period so the E key that opened the terminal isn't captured
         this.scene.time.delayedCall(300, () => {
             if (this.cancelled) return;
+
+            // Called on the very first WASD keypress — starts the clock and
+            // dismisses the controls overlay immediately.
+            const onFirstInput = () => {
+                if (!this.waiting) return;
+                this.waiting   = false;
+                this.startTime = this.scene.time.now;
+                this._dismissControls();
+            };
+
             // Prevent 180° reversal — can't go back the way you came
-            this._kW = () => { if (this.dir.dr !==  1) this.nextDir = { dc: 0, dr: -1 }; };
-            this._kS = () => { if (this.dir.dr !== -1) this.nextDir = { dc: 0, dr:  1 }; };
-            this._kA = () => { if (this.dir.dc !==  1) this.nextDir = { dc: -1, dr: 0 }; };
-            this._kD = () => { if (this.dir.dc !== -1) this.nextDir = { dc:  1, dr: 0 }; };
+            this._kW = () => { onFirstInput(); if (this.dir.dr !==  1) this.nextDir = { dc: 0, dr: -1 }; };
+            this._kS = () => { onFirstInput(); if (this.dir.dr !== -1) this.nextDir = { dc: 0, dr:  1 }; };
+            this._kA = () => { onFirstInput(); if (this.dir.dc !==  1) this.nextDir = { dc: -1, dr: 0 }; };
+            this._kD = () => { onFirstInput(); if (this.dir.dc !== -1) this.nextDir = { dc:  1, dr: 0 }; };
             this.scene.input.keyboard.on('keydown-W', this._kW);
             this.scene.input.keyboard.on('keydown-S', this._kS);
             this.scene.input.keyboard.on('keydown-A', this._kA);
@@ -220,9 +221,20 @@ export default class SnakeMinigame {
         });
     }
 
+    // Immediately fade and destroy the controls overlay (called on first input).
+    _dismissControls() {
+        const objs = [this.flashGfx, this.flashArrow, this.flashLabel].filter(o => o?.active);
+        if (objs.length === 0) return;
+        this.scene.tweens.add({
+            targets: objs, alpha: 0, duration: 200,
+            onComplete: () => objs.forEach(o => { if (o?.active) o.destroy(); }),
+        });
+        this.flashGfx = this.flashArrow = this.flashLabel = null;
+    }
+
     // ── Game step (movement + collision) ─────────────────────────────────────
     _step() {
-        if (this.cancelled || this.dead) return;
+        if (this.cancelled || this.dead || this.waiting) return;
 
         // Commit queued direction
         this.dir = { ...this.nextDir };
@@ -248,10 +260,18 @@ export default class SnakeMinigame {
             }
         }
 
-        // Advance snake
+        // Advance snake: place new head
         this.body.unshift({ col: nc, row: nr });
+
+        // Safe growth: only keep the tail (grow) if doing so leaves the new head
+        // at least one valid move. If keeping the tail would fully surround the
+        // head, pop it anyway and keep the pendingGrowth count for a later step.
         if (this.pendingGrowth > 0) {
-            this.pendingGrowth--;
+            if (this._headHasEscape()) {
+                this.pendingGrowth--;   // growth applied this step
+            } else {
+                this.body.pop();        // defer growth — give head breathing room
+            }
         } else {
             this.body.pop();
         }
@@ -260,6 +280,19 @@ export default class SnakeMinigame {
         if (this.pellet && nc === this.pellet.col && nr === this.pellet.row) {
             this._eatPellet();
         }
+    }
+
+    // Returns true if the current head has at least one orthogonal neighbour
+    // that is neither a wall nor occupied by the snake body.
+    _headHasEscape() {
+        const head     = this.body[0];
+        const occupied = new Set(this.body.map(s => `${s.col},${s.row}`));
+        return [{ dc: 1, dr: 0 }, { dc: -1, dr: 0 }, { dc: 0, dr: 1 }, { dc: 0, dr: -1 }]
+            .some(d => {
+                const nc = head.col + d.dc;
+                const nr = head.row + d.dr;
+                return nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS && !occupied.has(`${nc},${nr}`);
+            });
     }
 
     _eatPellet() {
@@ -379,6 +412,8 @@ export default class SnakeMinigame {
 
     // ── Timer ─────────────────────────────────────────────────────────────────
     _updateTimer() {
+        // startTime is null until the player gives their first input
+        if (!this.startTime) return;
         const elapsed = this.scene.time.now - this.startTime;
         const pct     = Math.max(0, 1 - elapsed / this.timeLimit);
         this.timerFill.width = this._timerBarW * pct;
