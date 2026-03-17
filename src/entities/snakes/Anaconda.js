@@ -98,6 +98,11 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         this._bodyAllClear   = false;    // has every segment gone off-screen?
         this._exitWaitMs     = 0;        // ms elapsed after body clears
 
+        // Pre-charge wait fields (extended LOS-verified delay before peeking)
+        this._preChargeSource     = 'circling'; // which state we came from
+        this._preChargeWaitMs     = 0;          // ms of unbroken LOS accumulated
+        this._preChargeWaitTarget = 0;          // target duration (1–3 s, randomised)
+
         // Mouth-open animation
         this._mouthFrameIdx = 0;
         this._mouthTimer    = 0;
@@ -222,13 +227,14 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         tickHitWiggle(this, delta);
 
         switch (this._attackPhase) {
-            case 'slither':      this._tickSlither(delta, dt, cfg); break;
-            case 'circling':     this._tickCircling(delta, dt, cfg); break;
-            case 'peeking':      this._tickPeeking(delta, cfg); break;
-            case 'charging':     this._tickCharging(delta, dt, cfg); break;
-            case 'exiting':      this._tickExiting(delta, dt, cfg); break;
-            case 'edge_enter':   this._tickEdgeEnter(delta, dt, cfg); break;
-            case 'edge_circle':  this._tickEdgeCircle(delta, dt, cfg); break;
+            case 'slither':           this._tickSlither(delta, dt, cfg); break;
+            case 'circling':          this._tickCircling(delta, dt, cfg); break;
+            case 'pre_charge_wait':   this._tickPreChargeWait(delta, dt, cfg); break;
+            case 'peeking':           this._tickPeeking(delta, cfg); break;
+            case 'charging':          this._tickCharging(delta, dt, cfg); break;
+            case 'exiting':           this._tickExiting(delta, dt, cfg); break;
+            case 'edge_enter':        this._tickEdgeEnter(delta, dt, cfg); break;
+            case 'edge_circle':       this._tickEdgeCircle(delta, dt, cfg); break;
         }
 
         this._pushHistory(time);
@@ -297,7 +303,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
 
         if (this._hasLOS(snail.x, snail.y)) {
             this._losOkMs += delta;
-            if (this._losOkMs >= 200) this._startFirstPeek();
+            if (this._losOkMs >= 200) this._startPreChargeWait('circling');
         } else {
             this._losOkMs = 0;
         }
@@ -337,6 +343,70 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         this._mouthTimer       = 0;
         this._losOkMs          = 0;
         this.scene.soundSynth?.play('snakeHiss');
+    }
+
+    // ── Pre-charge wait: hold with LOS verification 1–3 s before committing ──
+
+    _startPreChargeWait(source) {
+        this._preChargeSource     = source;
+        this._preChargeWaitMs     = 0;
+        this._preChargeWaitTarget = 1000 + Math.random() * 2000;  // 1–3 seconds
+        this._losOkMs             = 0;
+        this._attackPhase         = 'pre_charge_wait';
+    }
+
+    _tickPreChargeWait(delta, dt, cfg) {
+        const snail = this.scene.snail;
+        const mult  = this.scene.enemySpeedMultiplier || 1.0;
+
+        // If we came from edge_circle, keep sliding along the edge so the aim stays live
+        if (this._preChargeSource === 'edge_circle') {
+            const speed = cfg.SPEED * mult;
+            switch (this._chargeExitEdge) {
+                case 'right':
+                case 'left': {
+                    const targetY = Phaser.Math.Clamp(snail.y, 80, SCREEN_H - 80);
+                    const diff    = targetY - this.y;
+                    this.y += Math.sign(diff) * Math.min(Math.abs(diff), speed * dt);
+                    break;
+                }
+                case 'top':
+                case 'bottom': {
+                    const targetX = Phaser.Math.Clamp(snail.x, 80, SCREEN_W - 80);
+                    const diff    = targetX - this.x;
+                    this.x += Math.sign(diff) * Math.min(Math.abs(diff), speed * dt);
+                    break;
+                }
+            }
+            this._pinToEdge();
+        }
+
+        // Continuously update charge direction to track snail's live position
+        const dx  = snail.x - this.x;
+        const dy  = snail.y - this.y;
+        const len = Math.max(1, Math.hypot(dx, dy));
+        this._chargeDir = { nx: dx / len, ny: dy / len };
+        this._headImg.setRotation(Math.atan2(dy, dx));
+
+        if (this._hasLOS(snail.x, snail.y)) {
+            this._preChargeWaitMs += delta;
+            if (this._preChargeWaitMs >= this._preChargeWaitTarget) {
+                // Full wait elapsed with confirmed LOS — commit to charge telegraph
+                if (this._preChargeSource === 'circling') {
+                    this._startFirstPeek();
+                } else {
+                    // edge_circle path: charge dir already set; start mouth animation
+                    this._chargePassCount  = this._chargePassCount || 1;
+                    this._attackPhase      = 'peeking';
+                    this._mouthFrameIdx    = 0;
+                    this._mouthTimer       = 0;
+                    this.scene.soundSynth?.play('snakeHiss');
+                }
+            }
+        } else {
+            // LOS broken — reset the accumulated wait; keep watching
+            this._preChargeWaitMs = 0;
+        }
     }
 
     // ── Peeking: hold in place, cycle mouth-open frames ──────────────────────
@@ -476,13 +546,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         // LOS check — body is off-screen so should clear quickly
         if (this._hasLOS(snail.x, snail.y)) {
             this._losOkMs += delta;
-            if (this._losOkMs >= 200) {
-                this._attackPhase   = 'peeking';
-                this._mouthFrameIdx = 0;
-                this._mouthTimer    = 0;
-                this._losOkMs       = 0;
-                this.scene.soundSynth?.play('snakeHiss');
-            }
+            if (this._losOkMs >= 200) this._startPreChargeWait('edge_circle');
         } else {
             this._losOkMs = 0;
         }
