@@ -5,14 +5,18 @@
  * (already baked into the SVG assets) and the same scale factors.
  *
  * Attack cycle (repeating after ATTACK_COOLDOWN):
- *   1. CIRCLING  — orbits the arena at CIRCLE_RADIUS, polling for a clear
- *                  line-of-sight from the head to the snail.  The orbit
- *                  continues until LOS is unobstructed for ≥200 ms.
- *   2. MOUTH_OPEN — stops, cycles through the four opening-frame textures
- *                  over MOUTH_OPEN_DURATION ms, then holds fully open for
- *                  MOUTH_HOLD_MS ms.
- *   3. CHARGING  — charges at the snail's position captured at the start of
- *                  MOUTH_OPEN at CHARGE_SPEED px/s for up to CHARGE_DURATION ms.
+ *   1. CIRCLING   — orbits the arena at CIRCLE_RADIUS, polling for a clear
+ *                   line-of-sight from the head to the snail.
+ *   2. PEEK_IN    — dashes off-screen to the entry edge opposite the charge
+ *                   direction, then positions head just inside the game bounds.
+ *   3. PEEKING    — holds at the edge; cycles through mouth-open frames as a
+ *                   telegraphed warning (plays snakeHiss on entry).
+ *   4. CHARGING   — rockets across the arena in the fixed charge direction.
+ *                   Continues through the snail on contact (damage dealt once
+ *                   per pass) until the head exits off-screen.
+ *   5. RETURNING  — loops back to the same entry edge off-screen.
+ *   6. PEEKING    — second peek-and-charge pass.
+ *   7. CHARGING   — second charge.
  *   (back to SLITHER, cooldown resets)
  *
  * Shield: starts shielded; SnakeWorldScene._tryWave10Hack() breaks it.
@@ -30,6 +34,12 @@ const MOUTH_FRAMES = [
     'snake-anaconda-head-open-f02',
     'snake-anaconda-head-open',
 ];
+
+const SCREEN_W       = 1280;
+const SCREEN_H       = 720;
+const PEEK_INSET     = 60;   // px — how far the head sits inside the edge during peek
+const OFF_SCREEN_M   = 200;  // px past the edge that counts as "fully exited"
+const CHARGE_CONT_R  = 48;   // px — contact radius against snail during charge
 
 export default class Anaconda extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
@@ -71,10 +81,17 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         this._attackCooldown = cfg.ATTACK_COOLDOWN * 0.5;  // quicker first attack
         this._circleAngle    = Math.atan2(y - 360, x - 640);
         this._losOkMs        = 0;
-        this._mouthFrameIdx  = 0;
-        this._mouthTimer     = 0;
-        this._chargeTarget   = null;
-        this._chargeMs       = 0;
+
+        // Peek-and-charge fields
+        this._chargeDir        = { nx: 1, ny: 0 };  // normalised direction of current charge
+        this._peekPos          = { x: 0, y: 0 };    // head position during peek (edge inset)
+        this._chargePassCount  = 0;                  // how many passes completed this cycle
+        this._chargeHitThisPass = false;             // flag: snail already hit this pass
+        this._chargeTouchedSnail = false;            // consumed by update() return value
+
+        // Mouth-open animation
+        this._mouthFrameIdx = 0;
+        this._mouthTimer    = 0;
 
         this._buildVisuals(scene, cfg.SEGMENT_COUNT);
         this._rebuildBodyHitboxes();
@@ -205,8 +222,10 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         switch (this._attackPhase) {
             case 'slither':    this._tickSlither(delta, dt, cfg); break;
             case 'circling':   this._tickCircling(delta, dt, cfg); break;
-            case 'mouth_open': this._tickMouthOpen(delta, cfg); break;
+            case 'peek_in':    this._tickPeekIn(delta, dt, cfg); break;
+            case 'peeking':    this._tickPeeking(delta, cfg); break;
             case 'charging':   this._tickCharging(delta, dt, cfg); break;
+            case 'returning':  this._tickReturning(delta, dt, cfg); break;
         }
 
         this._pushHistory(time);
@@ -215,9 +234,19 @@ export default class Anaconda extends Phaser.GameObjects.Container {
 
         if (this.shielded) { this._shieldAngle += dt * 2.5; this._drawShield(); }
 
-        const snail = this.scene.snail;
-        const dist  = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
-        if (dist < this.radius + 20) return 'reached_snail';
+        // Charge contact — consume the flag set during _tickCharging
+        if (this._chargeTouchedSnail) {
+            this._chargeTouchedSnail = false;
+            return 'reached_snail';
+        }
+
+        // Proximity contact during normal slither (not during charge passes)
+        if (this._attackPhase === 'slither' || this._attackPhase === 'circling') {
+            const snail = this.scene.snail;
+            const dist  = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
+            if (dist < this.radius + 20) return 'reached_snail';
+        }
+
         return 'alive';
     }
 
@@ -258,7 +287,6 @@ export default class Anaconda extends Phaser.GameObjects.Container {
 
         const toOrbit = Math.atan2(ty - this.y, tx - this.x);
         const orbitDist = Phaser.Math.Distance.Between(this.x, this.y, tx, ty);
-        // Pursuit speed — fast enough to stay on the orbit ring
         const orbitSpeed = Math.min(cfg.SPEED * 1.8 * mult, orbitDist * 5);
 
         this.x += Math.cos(toOrbit) * orbitSpeed * dt;
@@ -267,7 +295,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
 
         if (this._hasLOS(snail.x, snail.y)) {
             this._losOkMs += delta;
-            if (this._losOkMs >= 200) this._startMouthOpen();
+            if (this._losOkMs >= 200) this._startPeekIn();
         } else {
             this._losOkMs = 0;
         }
@@ -285,7 +313,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         for (let i = 4; i < this._segCount; i++) {
             const img = this._bodyImgs[i];
             if (!img || !img.active || !img.visible) continue;
-            const px   = img.x - ox, py = img.y - oy;
+            const px    = img.x - ox, py = img.y - oy;
             const along = px * nx + py * ny;
             if (along < 0 || along > len) continue;
             if (Math.abs(px * ny - py * nx) < r) return false;
@@ -293,23 +321,78 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         return true;
     }
 
-    // ── Mouth open ────────────────────────────────────────────────────────────
+    // ── Peek-in: dash off-screen to edge, then position head at PEEK_INSET ───
 
-    _startMouthOpen() {
+    _startPeekIn() {
         const snail = this.scene.snail;
-        this._attackPhase   = 'mouth_open';
-        this._mouthFrameIdx = 0;
-        this._mouthTimer    = 0;
-        this._chargeTarget  = { x: snail.x, y: snail.y };
-        this.scene.soundSynth?.play('snakeHiss');
+        // Compute charge direction from current position toward snail
+        const dx  = snail.x - this.x;
+        const dy  = snail.y - this.y;
+        const len = Math.max(1, Math.hypot(dx, dy));
+        this._chargeDir       = { nx: dx / len, ny: dy / len };
+        this._chargePassCount = 0;
+        this._peekPos         = this._computePeekPos();
+        this._attackPhase     = 'peek_in';
+        this._losOkMs         = 0;
     }
 
-    _tickMouthOpen(delta, cfg) {
-        this._mouthTimer += delta;
+    /**
+     * Compute the peek position: head just inside the screen edge on the side
+     * OPPOSITE to the charge direction (so the charge travels toward the snail).
+     * The cross-axis position is aligned to the snail's current location.
+     */
+    _computePeekPos() {
         const snail = this.scene.snail;
+        const { nx, ny } = this._chargeDir;
 
-        // Step through frames evenly over MOUTH_OPEN_DURATION
-        const frameDur   = cfg.MOUTH_OPEN_DURATION / (MOUTH_FRAMES.length - 1);
+        if (Math.abs(nx) >= Math.abs(ny)) {
+            const clampedY = Phaser.Math.Clamp(snail.y, 80, SCREEN_H - 80);
+            // Charging right → peek from left edge; charging left → from right edge
+            return nx > 0
+                ? { x: PEEK_INSET,          y: clampedY }
+                : { x: SCREEN_W - PEEK_INSET, y: clampedY };
+        } else {
+            const clampedX = Phaser.Math.Clamp(snail.x, 80, SCREEN_W - 80);
+            // Charging down → peek from top edge; charging up → from bottom edge
+            return ny > 0
+                ? { x: clampedX, y: PEEK_INSET }
+                : { x: clampedX, y: SCREEN_H - PEEK_INSET };
+        }
+    }
+
+    _tickPeekIn(delta, dt, cfg) {
+        // Dash head to peek position at high speed (body trails off-screen behind it)
+        const speed = cfg.CHARGE_SPEED * 2.5;
+        const px    = this._peekPos.x;
+        const py    = this._peekPos.y;
+        const dist  = Phaser.Math.Distance.Between(this.x, this.y, px, py);
+
+        if (dist < speed * dt + 4) {
+            this.x = px;
+            this.y = py;
+            // Arrived at peek position — start mouth-open telegraph
+            this._attackPhase   = 'peeking';
+            this._mouthFrameIdx = 0;
+            this._mouthTimer    = 0;
+            this.scene.soundSynth?.play('snakeHiss');
+        } else {
+            const angle = Math.atan2(py - this.y, px - this.x);
+            this.x += Math.cos(angle) * speed * dt;
+            this.y += Math.sin(angle) * speed * dt;
+            this._headImg.setRotation(angle);
+        }
+    }
+
+    // ── Peeking: hold at edge, play mouth-open animation as telegraph ─────────
+
+    _tickPeeking(delta, cfg) {
+        this._mouthTimer += delta;
+
+        // Face into the arena (charge direction)
+        this._headImg.setRotation(Math.atan2(this._chargeDir.ny, this._chargeDir.nx));
+
+        // Step through mouth-open frames evenly over MOUTH_OPEN_DURATION
+        const frameDur    = cfg.MOUTH_OPEN_DURATION / (MOUTH_FRAMES.length - 1);
         const targetFrame = Math.min(
             Math.floor(this._mouthTimer / frameDur),
             MOUTH_FRAMES.length - 1,
@@ -319,49 +402,89 @@ export default class Anaconda extends Phaser.GameObjects.Container {
             this._headImg.setTexture(MOUTH_FRAMES[this._mouthFrameIdx]);
         }
 
-        // Keep facing the snail while the mouth opens
-        this._headImg.setRotation(Math.atan2(snail.y - this.y, snail.x - this.x));
-
-        // Fully open + hold period expired → charge
+        // Fully open + hold time expired → begin charge
         if (this._mouthFrameIdx >= MOUTH_FRAMES.length - 1 &&
                 this._mouthTimer >= cfg.MOUTH_OPEN_DURATION + cfg.MOUTH_HOLD_MS) {
-            this._startCharge();
+            this._attackPhase       = 'charging';
+            this._chargeHitThisPass = false;
+            this.scene.soundSynth?.play('snakeHiss');
         }
     }
 
-    // ── Charge ────────────────────────────────────────────────────────────────
-
-    _startCharge() {
-        // Lock on to snail's current position
-        const snail = this.scene.snail;
-        this._chargeTarget = { x: snail.x, y: snail.y };
-        this._attackPhase  = 'charging';
-        this._chargeMs     = 0;
-        this.scene.soundSynth?.play('snakeHiss');
-    }
+    // ── Charging: rocket through arena, zoom past snail, exit off-screen ──────
 
     _tickCharging(delta, dt, cfg) {
-        this._chargeMs += delta;
+        const mult   = this.scene.enemySpeedMultiplier || 1.0;
+        const speed  = cfg.CHARGE_SPEED * mult;
+        const { nx, ny } = this._chargeDir;
 
-        const { x: tx, y: ty } = this._chargeTarget;
-        const angle = Math.atan2(ty - this.y, tx - this.x);
-        const mult  = this.scene.enemySpeedMultiplier || 1.0;
+        this.x += nx * speed * dt;
+        this.y += ny * speed * dt;
+        this._headImg.setRotation(Math.atan2(ny, nx));
 
-        this.x += Math.cos(angle) * cfg.CHARGE_SPEED * mult * dt;
-        this.y += Math.sin(angle) * cfg.CHARGE_SPEED * mult * dt;
-        this._headImg.setRotation(angle);
+        // Check contact with snail once per pass
+        if (!this._chargeHitThisPass) {
+            const snail = this.scene.snail;
+            const dist  = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
+            if (dist < this.radius + CHARGE_CONT_R) {
+                this._chargeHitThisPass  = true;
+                this._chargeTouchedSnail = true;  // consumed by update() return value
+            }
+        }
 
-        const arrived = Phaser.Math.Distance.Between(this.x, this.y, tx, ty) < 30;
-        if (this._chargeMs >= cfg.CHARGE_DURATION || arrived) {
-            this._endCharge();
+        // Transition when head is fully off-screen
+        if (this._isOffScreen()) {
+            this._chargePassCount++;
+            if (this._chargePassCount < 2) {
+                // Return to same entry edge for a second pass
+                this._peekPos     = this._computePeekPos();
+                this._attackPhase = 'returning';
+            } else {
+                // Two passes done — return to normal slithering
+                this._endChargeSequence();
+            }
         }
     }
 
-    _endCharge() {
+    // ── Returning: loop back to the entry edge for the second peek ────────────
+
+    _tickReturning(delta, dt, cfg) {
+        const speed = cfg.CHARGE_SPEED * 2.5;
+        const px    = this._peekPos.x;
+        const py    = this._peekPos.y;
+        const dist  = Phaser.Math.Distance.Between(this.x, this.y, px, py);
+
+        if (dist < speed * dt + 4) {
+            this.x = px;
+            this.y = py;
+            // Back at the edge — second peek-and-charge
+            this._attackPhase   = 'peeking';
+            this._mouthFrameIdx = 0;
+            this._mouthTimer    = 0;
+            this.scene.soundSynth?.play('snakeHiss');
+        } else {
+            const angle = Math.atan2(py - this.y, px - this.x);
+            this.x += Math.cos(angle) * speed * dt;
+            this.y += Math.sin(angle) * speed * dt;
+            this._headImg.setRotation(angle);
+        }
+    }
+
+    _endChargeSequence() {
         this._attackPhase    = 'slither';
         this._attackCooldown = CONFIG.ANACONDA.ATTACK_COOLDOWN;
         this._headImg.setTexture('snake-anaconda-head');
         this._mouthFrameIdx  = 0;
+    }
+
+    /** True when the head is far enough past any screen edge to count as exited. */
+    _isOffScreen() {
+        return (
+            this.x < -OFF_SCREEN_M ||
+            this.x > SCREEN_W + OFF_SCREEN_M ||
+            this.y < -OFF_SCREEN_M ||
+            this.y > SCREEN_H + OFF_SCREEN_M
+        );
     }
 
     // ── Segment helpers ───────────────────────────────────────────────────────

@@ -2,6 +2,25 @@
 
 ## Session — 2026-03-17
 
+### Anaconda — peek-and-charge attack pattern
+
+Replaced the old stop-and-charge attack with a two-pass peek-and-charge sequence:
+
+**New attack cycle** (slither → circling → peek_in → peeking → charging → returning → peeking → charging → slither):
+
+1. **`peek_in`** — when LOS is clear during circling, the anaconda calculates which screen edge to enter from (opposite side of the charge direction, aligned to the snail's current position), then dashes to the peek position at `CHARGE_SPEED × 2.5` — head just inside the screen boundary, body trailing off-screen.
+2. **`peeking`** — holds at the edge; cycles through `MOUTH_FRAMES` as a telegraphed warning over `MOUTH_OPEN_DURATION`, then holds open for `MOUTH_HOLD_MS`. Plays `snakeHiss` on entry.
+3. **`charging`** — rockets across the arena in the fixed charge direction at `CHARGE_SPEED`. Continues through the snail on contact (damage dealt once per pass; `_chargeHitThisPass` guard prevents repeat hits). Transitions when head exits off-screen (`OFF_SCREEN_M = 200 px`).
+4. **`returning`** — loops back off-screen to the same entry edge for a second pass, at `CHARGE_SPEED × 2.5`.
+5. Second **`peeking`** + **`charging`** pass.
+6. Back to `slither` with full `ATTACK_COOLDOWN` reset.
+
+Key implementation details:
+- `_chargeDir` is fixed at the start of `_startPeekIn()` and unchanged across both passes (predictable for the player to dodge).
+- Cross-axis alignment (`_computePeekPos`) re-samples snail position for each pass so both attacks are aimed.
+- Proximity `reached_snail` check in `update()` is restricted to `slither` / `circling` phases; charge contact is handled by `_chargeTouchedSnail` flag (consumed once per frame).
+- `CHARGE_CONT_R = 48 px` contact radius for charge hits.
+
 ### Anaconda boss entity — full integration into wave 10
 
 Added the Anaconda as the World 2 wave-10 boss with its own attack cycle, shield system, and scene wiring:
