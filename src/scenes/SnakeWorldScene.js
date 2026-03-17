@@ -7,6 +7,7 @@ import Sidewinder from '../entities/snakes/Sidewinder.js';
 import Python from '../entities/snakes/Python.js';
 import Burrower from '../entities/snakes/Burrower.js';
 import Spitter from '../entities/snakes/Spitter.js';
+import Anaconda from '../entities/snakes/Anaconda.js';
 import { spawnSnakeDeathAnimation } from '../entities/snakes/snakeHitReaction.js';
 import { spawnDeathBurst, checkBomberBlast, BURST_COLORS } from '../systems/CollisionSystem.js';
 import { buildNavGrid } from '../systems/PathfindingSystem.js';
@@ -34,6 +35,11 @@ export default class SnakeWorldScene extends BaseGameScene {
     init(data = {}) {
         // Force world = 2 regardless of what data says
         super.init({ ...data, world: 2 });
+    }
+
+    create() {
+        super.create();
+        this.boss = null;
     }
 
     // ── World-specific overrides ───────────────────────────────────────────────
@@ -89,6 +95,109 @@ export default class SnakeWorldScene extends BaseGameScene {
             },
         });
         return true;
+    }
+
+    // ── Boss: spawn cutscene ──────────────────────────────────────────────────
+
+    _spawnBoss() {
+        // Lock player + hide HUD for cutscene
+        this.snail.hackingActive = true;
+        this.hud.hide();
+
+        // Create anaconda off-screen right; AI is live so it slithers in immediately
+        this.boss = new Anaconda(this, 1400, 280);
+
+        // Alert sound + flashing WARNING text
+        this.soundSynth?.play('bossAlert');
+
+        const warnText = this.add.text(640, 300, '!! THE ANACONDA !!', {
+            fontSize: '22px', fontFamily: 'monospace', color: '#44ff88',
+            stroke: '#000000', strokeThickness: 4,
+        }).setOrigin(0.5).setDepth(110).setAlpha(0);
+
+        this.tweens.add({ targets: warnText, alpha: 1, duration: 300, yoyo: true, repeat: 3 });
+
+        // After 2.5 s: fade warning, restore HUD and player control
+        this.time.delayedCall(2500, () => {
+            this.tweens.add({
+                targets: warnText, alpha: 0, duration: 400,
+                onComplete: () => warnText.destroy(),
+            });
+            this.snail.hackingActive = false;
+            this.hud.show();
+            this.hud.showBossBar(this.boss.health, CONFIG.ANACONDA.HP, 'THE ANACONDA');
+        });
+    }
+
+    // ── Boss: death sequence ─────────────────────────────────────────────────
+
+    _bossDeath() {
+        if (!this.boss || !this.boss.active) return;
+        this.boss._dying = true;
+
+        const bx = this.boss.x;
+        const by = this.boss.y;
+
+        this.cameras.main.shake(600, 0.02);
+        this.soundSynth?.play('bossDeath');
+
+        // Expanding rings
+        for (let i = 0; i < 3; i++) {
+            this.time.delayedCall(i * 160, () => {
+                const r    = this.boss ? this.boss.radius : 22;
+                const ring = this.add.arc(bx, by, r, 0, 360, false, 0x44ff88, 0).setDepth(60);
+                ring.setStrokeStyle(4, 0x22cc66, 1);
+                this.tweens.add({
+                    targets: ring, scaleX: 6, scaleY: 6, alpha: 0,
+                    duration: 550, ease: 'Power2.easeOut',
+                    onComplete: () => ring.destroy(),
+                });
+            });
+        }
+
+        // Rapid flash (head only)
+        this.time.addEvent({
+            delay: 100, repeat: 7,
+            callback: () => {
+                if (this.boss && this.boss.active) {
+                    this.boss.alpha = this.boss.alpha < 0.5 ? 1 : 0.15;
+                }
+            },
+        });
+
+        // Final explosion + wave end
+        this.time.delayedCall(900, () => {
+            if (this.boss && this.boss.active) {
+                spawnDeathBurst(this, bx, by, 0x44ff88);
+                spawnDeathBurst(this, bx, by, 0x22aa44);
+                this.cameras.main.flash(500, 0, 200, 50);
+                this.boss.destroy();
+                this.boss = null;
+            }
+            this.hud.hideBossBar();
+            this.score += 50;
+            this.hud.updateScore(this.score);
+            this._completeWave();
+        });
+    }
+
+    // ── Boss: EMP + mine hooks ────────────────────────────────────────────────
+
+    _handleEmpBossCheck(x, y, blastRadius) {
+        if (!this.boss || !this.boss.active || this.boss._dying) return;
+        const dist = Phaser.Math.Distance.Between(x, y, this.boss.x, this.boss.y);
+        if (dist >= blastRadius) return;
+        const bx = this.boss.x, by = this.boss.y;
+        const hitFlash = this.add.arc(bx, by, this.boss.radius, 0, 360, false, 0x00ff88, 0.75).setDepth(58);
+        this.tweens.add({ targets: hitFlash, alpha: 0, duration: 240, onComplete: () => hitFlash.destroy() });
+        const dead = this.boss.takeDamageRaw(CONFIG.EMP.MINE_DAMAGE);
+        if (this.hud) this.hud.updateBossBar(this.boss.health);
+        if (dead) this._bossDeath();
+    }
+
+    _checkBossForMineTrigger(mine, triggerR) {
+        if (!this.boss || !this.boss.active || this.boss._dying) return false;
+        return Phaser.Math.Distance.Between(mine.x, mine.y, this.boss.x, this.boss.y) < triggerR;
     }
 
     /**
@@ -199,8 +308,9 @@ export default class SnakeWorldScene extends BaseGameScene {
     /**
      * Update acid globs and acid puddles each frame.
      * Also tracks whether the snail is currently inside a puddle (slows movement).
+     * Also updates the anaconda boss and handles projectile vs boss collisions.
      */
-    _updateWorldSpecific(_time, delta) {
+    _updateWorldSpecific(time, delta) {
         // Rebuild nav grid every 5 s to pick up mid-wave bush-scorch changes
         this._navRebuildMs = (this._navRebuildMs ?? 0) + delta;
         if (this._navRebuildMs >= 5000) {
@@ -226,6 +336,67 @@ export default class SnakeWorldScene extends BaseGameScene {
             return true;
         });
         this._snailInPuddle = inPuddle;
+
+        // ── Anaconda boss ────────────────────────────────────────────────────
+        if (this.boss && this.boss.active && !this.boss._dying) {
+            const result = this.boss.update(time, delta);
+
+            // Head touches snail → deal contact damage and apply venom
+            if (result === 'reached_snail' && !this.boardingShip) {
+                if (this.snail.shielded) {
+                    this.soundSynth?.play('shieldReflect');
+                } else {
+                    const died = this.snail.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
+                    this.hud.updateHealth(this.snail.health, this.snail.maxHealth);
+                    this.soundSynth?.play('damage');
+                    this._applyVenom();
+                    if (died) {
+                        if (this.waveManager) this.waveManager.active = false;
+                        if (this.activeHack) { this.activeHack.cancel(); this.activeHack = null; }
+                        this.scene.start('GameOverScene', { wave: this.wave, score: this.score, world: this.world });
+                        return;
+                    }
+                }
+            }
+
+            // Projectile vs anaconda head or body
+            const projR = CONFIG.PLAYER.PROJECTILE_RADIUS;
+            this.projectiles = this.projectiles.filter(proj => {
+                if (!proj.active) return false;
+
+                // Head hit
+                const headDist = Phaser.Math.Distance.Between(proj.x, proj.y, this.boss.x, this.boss.y);
+                if (headDist < this.boss.radius + projR) {
+                    proj.destroy();
+                    if (this.boss.shielded) {
+                        this.boss.flashShield();
+                        this.soundSynth?.play('shieldReflect');
+                    } else {
+                        const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
+                        this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
+                        const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                        if (this.hud) this.hud.updateBossBar(this.boss.health);
+                        if (dead) this._bossDeath();
+                    }
+                    return false;
+                }
+
+                // Body segment hit (shield does not protect body segments)
+                for (const hb of (this.boss._bodyHitboxes || [])) {
+                    if (Phaser.Math.Distance.Between(proj.x, proj.y, hb.x, hb.y) < hb.r + projR) {
+                        proj.destroy();
+                        const flash = this.add.arc(hb.x, hb.y, hb.r, 0, 360, false, 0xff2200, 0.55).setDepth(55);
+                        this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
+                        const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                        if (this.hud) this.hud.updateBossBar(this.boss.health);
+                        if (dead) this._bossDeath();
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+        }
     }
 
     /**
@@ -242,7 +413,7 @@ export default class SnakeWorldScene extends BaseGameScene {
     }
 
     /**
-     * Destroy bushes, acid globs, acid puddles, and cancel venom on wave end.
+     * Destroy bushes, acid globs, acid puddles, boss, and cancel venom on wave end.
      */
     _clearWorldEntities() {
         for (const bush of this.bushes)    { if (bush.active) bush.destroy(); }
@@ -253,6 +424,7 @@ export default class SnakeWorldScene extends BaseGameScene {
         this.acidPuddles = [];
         this._venomActive = false;
         if (this._venomTimer) { this._venomTimer.remove(false); this._venomTimer = null; }
+        if (this.boss?.active) { this.boss.destroy(); this.boss = null; }
     }
 
     /**

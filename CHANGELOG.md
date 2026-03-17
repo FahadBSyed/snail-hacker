@@ -2,6 +2,39 @@
 
 ## Session — 2026-03-17
 
+### Anaconda boss entity — full integration into wave 10
+
+Added the Anaconda as the World 2 wave-10 boss with its own attack cycle, shield system, and scene wiring:
+
+**`src/entities/snakes/Anaconda.js`** (new file):
+- Python-style multi-segment snake body with 2× display scale (`head setScale(0.845)`, body/tail `setScale(1.69)`)
+- `SEGMENT_COUNT = 24`, `SEGMENT_SPACING = 22`, history cap of 1500 entries
+- 4-state attack machine: `slither → circling → mouth_open → charging`
+  - `slither`: sine-wave approach toward the snail (uses `SLITHER_AMPLITUDE` / `SLITHER_FREQUENCY`)
+  - `circling`: orbits arena centre at `CIRCLE_RADIUS` polling for unobstructed LOS to the snail (`_hasLOS` via line-circle intersection, skips first 4 body segments, 200 ms debounce)
+  - `mouth_open`: steps through `MOUTH_FRAMES` (5 textures) over `MOUTH_OPEN_DURATION`, holds fully open for `MOUTH_HOLD_MS`, plays `snakeHiss` on entry
+  - `charging`: charges at `CHARGE_SPEED` toward snail position captured at mouth-open start, returns to slither after `CHARGE_DURATION` or arrival
+- Shield system: rotating green ring graphic (`_shieldGfx`); `dropShield()`, `raiseShield()`, `flashShield()` mirror BossAlien API
+- `takeDamage()` / `takeDamageRaw()` call `applyHitReaction`; `_onHitReactionEnd()` is a no-op
+
+**`src/scenes/SnakeWorldScene.js`** (updated):
+- `import Anaconda` added
+- `create()` override to init `this.boss = null`
+- `_spawnBoss()`: locks player, plays boss-alert sound, creates Anaconda off-screen at (1400, 280), shows flashing `!! THE ANACONDA !!` warning; after 2.5 s restores HUD and player control, shows boss bar with name "THE ANACONDA"
+- `_updateWorldSpecific()` extended: calls `this.boss.update()`; on `'reached_snail'` applies venom and snail damage; projectile vs head and body-segment collision with shield check
+- `_bossDeath()`: sets `_dying`, shakes camera, expanding green rings, head flash, final burst (green); hides boss bar, adds 50 score, calls `_completeWave()`
+- `_handleEmpBossCheck()`: EMP mines can damage the anaconda
+- `_checkBossForMineTrigger()`: EMP mines trigger on anaconda proximity
+- `_clearWorldEntities()`: destroys boss if still active on wave end
+
+**`src/config.js`** (updated):
+- `ANACONDA` block expanded with movement/attack keys: `SPEED (80)`, `SLITHER_AMPLITUDE (0.45)`, `SLITHER_FREQUENCY (0.45)`, `CIRCLE_RADIUS (280)`, `CIRCLE_SPEED (0.9)`, `ATTACK_COOLDOWN (8000)`, `CHARGE_SPEED (380)`, `CHARGE_DURATION (1400)`, `MOUTH_OPEN_DURATION (1200)`, `MOUTH_HOLD_MS (500)`
+- Removed stale planning keys (`PHASE2_HP`, `PHASE3_HP`, `PASS_DURATION_*`, `SCALE_DAMAGE_MULT`, `BOMB_*`, `ATTACK_COOLDOWNS` sub-object)
+- `CONFIG_VERSION` bumped: 37 → 38
+
+**`src/scenes/HUD.js`** (updated):
+- `showBossBar(hp, maxHp, name = 'THE OVERLORD')` — added optional `name` parameter so SnakeWorldScene can display "THE ANACONDA" in the boss bar label
+
 ### Anaconda mouth-open animation sprites
 
 Added 4 new head SVGs for an anaconda jaw-opening sequence:

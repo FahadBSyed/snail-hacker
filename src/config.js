@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 37;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 38;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -340,21 +340,20 @@ export const DEFAULTS = {
         SEGMENT_SPACING:         22,   // px between history samples
         HEAD_RADIUS:             22,
         BODY_RADIUS:             14,
-        PHASE2_HP:              250,
-        PHASE3_HP:              100,
-        PASS_DURATION_P1:      8000,   // ms per screen crossing, phase 1
-        PASS_DURATION_P2:      6000,
-        PASS_DURATION_P3:      4000,
-        SCALE_DAMAGE_MULT:      0.5,   // head takes 50% damage while scaled
-        BOMB_DAMAGE:             25,
-        BOMB_SLOW_DURATION:    5000,
-        BOMB_EXPOSED_DURATION: 5000,
-        ATTACK_COOLDOWNS: {
-            VENOM_SPIT:    6000,
-            CONSTRICT:    15000,
-            SERPENT_CALL: 20000,
-            SHED_SKIN:    25000,
-        },
+        // Movement
+        SPEED:                   80,   // px/s slither speed
+        SLITHER_AMPLITUDE:      0.45,  // radians — lateral sine oscillation
+        SLITHER_FREQUENCY:      0.45,  // cycles/s
+        // Circling attack
+        CIRCLE_RADIUS:          280,   // px — orbit radius around arena centre
+        CIRCLE_SPEED:           0.9,   // rad/s
+        // Charge attack
+        ATTACK_COOLDOWN:       8000,   // ms between charge cycles
+        CHARGE_SPEED:           380,   // px/s charge velocity
+        CHARGE_DURATION:       1400,   // ms maximum charge duration
+        // Mouth animation
+        MOUTH_OPEN_DURATION:   1200,   // ms to step through all opening frames
+        MOUTH_HOLD_MS:          500,   // ms held fully open before charging
     },
 
     BUSHES: {
