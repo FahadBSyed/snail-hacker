@@ -41,10 +41,7 @@ const MOUTH_FRAMES = [
 
 const SCREEN_W     = 1280;
 const SCREEN_H     = 720;
-const PEEK_INSET   = 360;  // px — must match SCREEN_W/2 - CIRCLE_RADIUS (640-280) so the
-                            //       second-pass charge starts at the same depth as the first
-                            //       pass (from orbit), equalising charge distances in both
-                            //       directions.
+const PEEK_INSET   = 60;   // px — head sits this far inside the edge during edge peek
 const OFF_SCREEN_M = 200;  // px past edge that counts as "fully exited"
 const CHARGE_CONT_R = 48;  // px — contact radius against snail during charge
 const EXIT_WAIT_MS  = 1000; // ms to wait after body fully clears before peeking
@@ -458,16 +455,12 @@ export default class Anaconda extends Phaser.GameObjects.Container {
 
         if (this._isOffScreen()) {
             this._chargePassCount++;
-            if (this._chargePassCount < 2) {
-                // First pass done — drift off, wait for body, peek from exit edge
-                this._chargeExitEdge = this._computeExitEdge();
-                this._bodyAllClear   = false;
-                this._exitWaitMs     = 0;
-                this._attackPhase    = 'exiting';
-            } else {
-                // Second pass done — return to slither
-                this._endChargeSequence();
-            }
+            // Always wait for the full body to exit before doing anything else,
+            // regardless of which pass just finished.
+            this._chargeExitEdge = this._computeExitEdge();
+            this._bodyAllClear   = false;
+            this._exitWaitMs     = 0;
+            this._attackPhase    = 'exiting';
         }
     }
 
@@ -486,9 +479,14 @@ export default class Anaconda extends Phaser.GameObjects.Container {
 
         this._exitWaitMs += delta;
         if (this._exitWaitMs >= EXIT_WAIT_MS) {
-            // Compute where on the exit edge the head should peek in
-            this._edgePeekPos  = this._computeEdgePeekPos();
-            this._attackPhase  = 'edge_enter';
+            if (this._chargePassCount < 2) {
+                // First pass done — peek from exit edge for second pass
+                this._edgePeekPos = this._computeEdgePeekPos();
+                this._attackPhase = 'edge_enter';
+            } else {
+                // Second pass done — body is fully clear, return to slither
+                this._endChargeSequence();
+            }
         }
     }
 
