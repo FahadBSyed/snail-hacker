@@ -186,7 +186,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         }
         if (pts.length < 2) return;
 
-        const r = CONFIG.ANACONDA.BODY_RADIUS + 12;
+        const r = CONFIG.ANACONDA.BODY_RADIUS + 30;
         const n = pts.length;
 
         // ── 2. Smooth normals ────────────────────────────────────────────────
