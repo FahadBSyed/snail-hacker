@@ -91,6 +91,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         this._chargeHitThisPass  = false;              // snail already hit this pass?
         this._chargeTouchedSnail = false;              // consumed once per frame by update()
         this._chargeExitEdge     = 'right';            // 'left'|'right'|'top'|'bottom'
+        this._chargeHeadExited   = false;              // head has crossed off-screen boundary
 
         // Offscreen wait timer (used in offscreen_wait state)
         this._offscreenWaitMs = 0;
@@ -324,9 +325,10 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         const dx  = snail.x - this.x;
         const dy  = snail.y - this.y;
         const len = Math.max(1, Math.hypot(dx, dy));
-        this._chargeDir         = { nx: dx / len, ny: dy / len };
-        this._chargeHitThisPass = false;
-        this._attackPhase       = 'peeking';
+        this._chargeDir          = { nx: dx / len, ny: dy / len };
+        this._chargeHitThisPass  = false;
+        this._chargeHeadExited   = false;
+        this._attackPhase        = 'peeking';
         this._mouthFrameIdx     = 0;
         this._mouthTimer        = 0;
         this._losOkMs           = 0;
@@ -375,8 +377,15 @@ export default class Anaconda extends Phaser.GameObjects.Container {
             }
         }
 
-        if (this._isOffScreen()) {
-            this._chargeExitEdge = this._computeExitEdge();
+        // Record exit edge the moment the head crosses off-screen
+        if (!this._chargeHeadExited && this._isOffScreen()) {
+            this._chargeExitEdge   = this._computeExitEdge();
+            this._chargeHeadExited = true;
+        }
+
+        // Wait for the tail to clear the screen before hiding + waiting
+        if (this._chargeHeadExited && this._isTailOffScreen()) {
+            this._chargeHeadExited = false;
             this._enterOffscreenWait();
         }
     }
@@ -520,6 +529,21 @@ export default class Anaconda extends Phaser.GameObjects.Container {
             this.x < -OFF_SCREEN_M || this.x > SCREEN_W + OFF_SCREEN_M ||
             this.y < -OFF_SCREEN_M || this.y > SCREEN_H + OFF_SCREEN_M
         );
+    }
+
+    /** True when every body segment AND the tail sprite are also off-screen. */
+    _isTailOffScreen() {
+        const margin = OFF_SCREEN_M;
+        for (const img of this._bodyImgs) {
+            if (!img || !img.active) continue;
+            if (img.x > -margin && img.x < SCREEN_W + margin &&
+                img.y > -margin && img.y < SCREEN_H + margin) return false;
+        }
+        if (this._tailImg?.active) {
+            if (this._tailImg.x > -margin && this._tailImg.x < SCREEN_W + margin &&
+                this._tailImg.y > -margin && this._tailImg.y < SCREEN_H + margin) return false;
+        }
+        return true;
     }
 
     // ── Segment helpers ───────────────────────────────────────────────────────
