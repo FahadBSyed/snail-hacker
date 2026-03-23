@@ -88,7 +88,8 @@ export default class Anaconda extends Phaser.GameObjects.Container {
 
         // Charge fields
         this._chargeDir          = { nx: 1, ny: 0 };  // normalised charge direction
-        this._chargeHitThisPass  = false;              // snail already hit this pass?
+        this._chargeHitThisPass  = false;              // target already hit this pass?
+        this._chargeHitDecoy     = false;              // was the hit target the decoy?
         this._chargeTouchedSnail = false;              // consumed once per frame by update()
         this._chargeExitEdge     = 'right';            // 'left'|'right'|'top'|'bottom'
         this._chargeHeadExited   = false;              // head has crossed off-screen boundary
@@ -236,14 +237,17 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         // Charge contact — consumed once per frame
         if (this._chargeTouchedSnail) {
             this._chargeTouchedSnail = false;
-            return 'reached_snail';
+            return this._chargeHitDecoy ? 'reached_decoy' : 'reached_snail';
         }
 
         // Proximity contact only during normal movement phases
         if (this._attackPhase === 'slither' || this._attackPhase === 'circling') {
-            const snail = this.scene.snail;
-            const dist  = Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y);
-            if (dist < this.radius + 20) return 'reached_snail';
+            const target = this._getTarget();
+            const dist   = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+            const decoy  = this.scene.decoy;
+            if (dist < this.radius + 20) {
+                return (decoy && decoy.active && target === decoy) ? 'reached_decoy' : 'reached_snail';
+            }
         }
 
         return 'alive';
@@ -260,11 +264,11 @@ export default class Anaconda extends Phaser.GameObjects.Container {
             return;
         }
 
-        const snail     = this.scene.snail;
+        const target    = this._getTarget();
         const mult      = this.scene.enemySpeedMultiplier || 1.0;
-        const toSnail   = Math.atan2(snail.y - this.y, snail.x - this.x);
+        const toTarget  = Math.atan2(target.y - this.y, target.x - this.x);
         this._slitherTime += dt;
-        const moveAngle = toSnail + cfg.SLITHER_AMPLITUDE *
+        const moveAngle = toTarget + cfg.SLITHER_AMPLITUDE *
             Math.sin(this._slitherTime * cfg.SLITHER_FREQUENCY * Math.PI * 2);
 
         this.x += Math.cos(moveAngle) * this.speed * mult * dt;
@@ -275,8 +279,8 @@ export default class Anaconda extends Phaser.GameObjects.Container {
     // ── Circling — orbit arena, poll LOS ─────────────────────────────────────
 
     _tickCircling(delta, dt, cfg) {
-        const snail = this.scene.snail;
-        const mult  = this.scene.enemySpeedMultiplier || 1.0;
+        const target = this._getTarget();
+        const mult   = this.scene.enemySpeedMultiplier || 1.0;
         const CX = 640, CY = 360;
 
         this._circleAngle += cfg.CIRCLE_SPEED * dt * mult;
@@ -289,14 +293,20 @@ export default class Anaconda extends Phaser.GameObjects.Container {
 
         this.x += Math.cos(toOrbit) * orbitSpeed * dt;
         this.y += Math.sin(toOrbit) * orbitSpeed * dt;
-        this._headImg.setRotation(Math.atan2(snail.y - this.y, snail.x - this.x));
+        this._headImg.setRotation(Math.atan2(target.y - this.y, target.x - this.x));
 
-        if (this._hasLOS(snail.x, snail.y)) {
+        if (this._hasLOS(target.x, target.y)) {
             this._losOkMs += delta;
             if (this._losOkMs >= 200) this._startPeek();
         } else {
             this._losOkMs = 0;
         }
+    }
+
+    /** Returns the active decoy if one exists, otherwise the snail. */
+    _getTarget() {
+        const decoy = this.scene.decoy;
+        return (decoy && decoy.active) ? decoy : this.scene.snail;
     }
 
     /**
@@ -339,12 +349,13 @@ export default class Anaconda extends Phaser.GameObjects.Container {
     // ── Peeking — hold in-arena, open mouth as charge telegraph ──────────────
 
     _startPeek() {
-        const snail = this.scene.snail;
+        const snail = this._getTarget();
         const dx  = snail.x - this.x;
         const dy  = snail.y - this.y;
         const len = Math.max(1, Math.hypot(dx, dy));
         this._chargeDir          = { nx: dx / len, ny: dy / len };
         this._chargeHitThisPass  = false;
+        this._chargeHitDecoy     = false;
         this._chargeHeadExited   = false;
         this._attackPhase        = 'peeking';
         this._mouthFrameIdx     = 0;
@@ -388,10 +399,12 @@ export default class Anaconda extends Phaser.GameObjects.Container {
 
         // One hit per charge pass
         if (!this._chargeHitThisPass) {
-            const snail = this.scene.snail;
-            if (Phaser.Math.Distance.Between(this.x, this.y, snail.x, snail.y) < this.radius + CHARGE_CONT_R) {
+            const target = this._getTarget();
+            const decoy  = this.scene.decoy;
+            if (Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y) < this.radius + CHARGE_CONT_R) {
                 this._chargeHitThisPass  = true;
                 this._chargeTouchedSnail = true;
+                this._chargeHitDecoy     = !!(decoy && decoy.active && target === decoy);
             }
         }
 
@@ -439,25 +452,25 @@ export default class Anaconda extends Phaser.GameObjects.Container {
     // ── Edge peek — respawn at exit edge, slide in, open mouth, then circle ──
 
     _enterEdgePeek() {
-        const snail = this.scene.snail;
+        const target = this._getTarget();
 
-        // Place head just outside the exit edge, aligned to snail's cross-axis
+        // Place head just outside the exit edge, aligned to target's cross-axis
         let ex, ey;
         switch (this._chargeExitEdge) {
             case 'right':
                 ex = SCREEN_W + EDGE_ENTER_DIST;
-                ey = Phaser.Math.Clamp(snail.y, 80, SCREEN_H - 80);
+                ey = Phaser.Math.Clamp(target.y, 80, SCREEN_H - 80);
                 break;
             case 'left':
                 ex = -EDGE_ENTER_DIST;
-                ey = Phaser.Math.Clamp(snail.y, 80, SCREEN_H - 80);
+                ey = Phaser.Math.Clamp(target.y, 80, SCREEN_H - 80);
                 break;
             case 'bottom':
-                ex = Phaser.Math.Clamp(snail.x, 80, SCREEN_W - 80);
+                ex = Phaser.Math.Clamp(target.x, 80, SCREEN_W - 80);
                 ey = SCREEN_H + EDGE_ENTER_DIST;
                 break;
             case 'top':
-                ex = Phaser.Math.Clamp(snail.x, 80, SCREEN_W - 80);
+                ex = Phaser.Math.Clamp(target.x, 80, SCREEN_W - 80);
                 ey = -EDGE_ENTER_DIST;
                 break;
         }

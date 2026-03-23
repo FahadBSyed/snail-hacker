@@ -341,6 +341,14 @@ export default class SnakeWorldScene extends BaseGameScene {
         if (this.boss && this.boss.active && !this.boss._dying) {
             const result = this.boss.update(time, delta);
 
+            // Head touches decoy → damage it and let the charge continue
+            if (result === 'reached_decoy') {
+                if (this.decoy && this.decoy.active) {
+                    this.decoy.takeDamage(CONFIG.DAMAGE.ALIEN_HIT_SNAIL);
+                    this.soundSynth?.play('shieldReflect');
+                }
+            }
+
             // Head touches snail → deal contact damage and apply venom
             if (result === 'reached_snail' && !this.boardingShip) {
                 if (this.snail.shielded) {
