@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 38;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 39;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -350,7 +350,7 @@ export const DEFAULTS = {
         // Charge attack
         ATTACK_COOLDOWN:       8000,   // ms between charge cycles
         CHARGE_SPEED:           380,   // px/s charge velocity
-        CHARGE_DURATION:       1400,   // ms maximum charge duration
+        OFFSCREEN_WAIT_MS:     2500,   // ms hidden off-screen before re-peeking from exit edge
         // Mouth animation
         MOUTH_OPEN_DURATION:   1200,   // ms to step through all opening frames
         MOUTH_HOLD_MS:          500,   // ms held fully open before charging

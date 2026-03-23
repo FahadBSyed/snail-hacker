@@ -1,5 +1,37 @@
 # SNAIL HACKER — Changelog
 
+## Session — 2026-03-23
+
+### Anaconda — simplified 6-state attack machine (fixes double same-side charge bug)
+
+Rewrote `Anaconda.js` to fix a bug where the anaconda could charge from the same
+side twice in a row, and body segments sometimes travelled backwards across the screen.
+
+**Root cause:** The old two-pass system (`exiting → edge_enter → edge_circle`) kept the
+body history intact and re-entered from the same exit edge, causing history-order
+confusion and repeated same-direction charges.
+
+**New state machine** (`slither → circling → peeking → charging → offscreen_wait → edge_peek → circling → …`):
+
+1. **`slither`** — initial entry only; sinusoidal approach toward snail until ATTACK_COOLDOWN elapses.
+2. **`circling`** — orbits arena centre; polls for 200 ms unbroken LOS → `peeking`.
+3. **`peeking`** — holds position in-arena; mouth-open frames telegraph the charge; after MOUTH_OPEN_DURATION + MOUTH_HOLD_MS → `charging`.
+4. **`charging`** — rockets in charge direction at CHARGE_SPEED; one snail hit per pass; on `_isOffScreen()` → `offscreen_wait`.
+5. **`offscreen_wait`** — body and tail hidden; head parked far off-screen; `_history` collapsed to single point; waits `OFFSCREEN_WAIT_MS` → `edge_peek`.
+6. **`edge_peek`** — head teleported to `EDGE_ENTER_DIST` px outside the exit edge; `_history` reset to single point so all segments start stacked off-screen; head slides inward to `PEEK_INSET` at `CHARGE_SPEED × 0.4`; mouth opens simultaneously; after mouth fully open + hold at peek position → `circling`.
+
+**Why charges now alternate sides:** after `edge_peek` entry from edge X the snake enters
+`circling` from that edge position and orbits until it has LOS — which typically faces
+toward the opposite side of the arena, producing naturally alternating charges.
+
+**Removed states:** `exiting`, `edge_enter`, `edge_circle`, `pre_charge_wait` and all
+associated fields (`_chargePassCount`, `_bodyAllClear`, `_exitWaitMs`,
+`_preChargeSource/WaitMs/WaitTarget`, `_edgePeekPos`).
+
+**`src/config.js`** (updated):
+- Replaced `CHARGE_DURATION` with `OFFSCREEN_WAIT_MS: 2500` in the `ANACONDA` block.
+- `CONFIG_VERSION` bumped: 38 → 39.
+
 ## Session — 2026-03-17
 
 ### Anaconda — peek-and-charge attack pattern
