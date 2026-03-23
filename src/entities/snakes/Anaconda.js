@@ -299,22 +299,40 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         }
     }
 
-    /** True if the straight line from head to (tx,ty) isn't blocked by own body. */
+    /**
+     * True if the straight line from head to (tx,ty) isn't blocked by:
+     *   • the anaconda's own body segments (skipping the first 4), or
+     *   • the central hacking station.
+     */
     _hasLOS(tx, ty) {
         const ox = this.x, oy = this.y;
         const dx = tx - ox, dy = ty - oy;
         const len = Math.hypot(dx, dy);
         if (len < 1) return true;
         const nx = dx / len, ny = dy / len;
-        const r  = CONFIG.ANACONDA.BODY_RADIUS * 0.85;
+
+        // Own body segments
+        const bodyR = CONFIG.ANACONDA.BODY_RADIUS * 0.85;
         for (let i = 4; i < this._segCount; i++) {
             const img = this._bodyImgs[i];
             if (!img || !img.active || !img.visible) continue;
             const px    = img.x - ox, py = img.y - oy;
             const along = px * nx + py * ny;
             if (along < 0 || along > len) continue;
-            if (Math.abs(px * ny - py * nx) < r) return false;
+            if (Math.abs(px * ny - py * nx) < bodyR) return false;
         }
+
+        // Hacking station — add a small margin so the anaconda clears it cleanly
+        const station = this.scene.station;
+        if (station?.active) {
+            const sx    = station.x - ox, sy = station.y - oy;
+            const along = sx * nx + sy * ny;
+            if (along > 0 && along < len) {
+                const stationR = station.radius + 16;
+                if (Math.abs(sx * ny - sy * nx) < stationR) return false;
+            }
+        }
+
         return true;
     }
 
