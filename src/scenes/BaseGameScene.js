@@ -1375,7 +1375,7 @@ export default class BaseGameScene extends Phaser.Scene {
             this._fireLaserRicochet(ricochetOriginX, ricochetOriginY, 0, hitSet);
         }
 
-        this._handleLaserBossChecks(sx, sy, cos, sin, laserEnd, HIT_RADIUS);
+        laserEnd = this._handleLaserBossChecks(sx, sy, cos, sin, laserEnd, HIT_RADIUS) ?? laserEnd;
 
         // Laser beam visual — outer glow + inner beam + bright core, quick fade
         const gfx = this.add.graphics().setDepth(200);
@@ -2229,7 +2229,7 @@ export default class BaseGameScene extends Phaser.Scene {
      * Called by _fireLaser after the enemy sweep.
      * Override in FrogWorldScene to check laser vs boss and boss projectiles.
      */
-    _handleLaserBossChecks(_sx, _sy, _cos, _sin, _laserEnd, _hitRadius) { }
+    _handleLaserBossChecks(_sx, _sy, _cos, _sin, _laserEnd, _hitRadius) { return _laserEnd; }
 
     /**
      * Called during mine proximity check; return true if the boss is close enough

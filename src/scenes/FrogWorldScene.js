@@ -221,6 +221,7 @@ export default class FrogWorldScene extends BaseGameScene {
                     if (this.boss.shielded) {
                         this.boss.flashShield();
                         this.soundSynth.play('shieldReflect');
+                        laserEnd = along;   // stop beam at shield
                     } else {
                         const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
                         this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
@@ -229,6 +230,7 @@ export default class FrogWorldScene extends BaseGameScene {
                         const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
                         if (this.hud) this.hud.updateBossBar(this.boss.health);
                         if (dead) this._bossDeath();
+                        else laserEnd = along;   // surviving boss blocks the beam
                     }
                 }
             }
@@ -253,6 +255,8 @@ export default class FrogWorldScene extends BaseGameScene {
             bp.onHit();
             return true;
         });
+
+        return laserEnd;
     }
 
     _checkBossForMineTrigger(mine, triggerR) {

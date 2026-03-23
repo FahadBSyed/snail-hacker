@@ -343,11 +343,16 @@ export default class SnakeWorldScene extends BaseGameScene {
                 for (const hb of (this.boss._bodyHitboxes || [])) {
                     if (Phaser.Math.Distance.Between(proj.x, proj.y, hb.x, hb.y) < hb.r + projR) {
                         proj.destroy();
-                        const flash = this.add.arc(hb.x, hb.y, hb.r, 0, 360, false, 0xff2200, 0.55).setDepth(55);
-                        this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
-                        const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
-                        if (this.hud) this.hud.updateBossBar(this.boss.health);
-                        if (dead) this._bossDeath();
+                        if (this.boss.shielded) {
+                            this.boss.flashShield();
+                            this.soundSynth?.play('shieldReflect');
+                        } else {
+                            const flash = this.add.arc(hb.x, hb.y, hb.r, 0, 360, false, 0xff2200, 0.55).setDepth(55);
+                            this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
+                            const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                            if (this.hud) this.hud.updateBossBar(this.boss.health);
+                            if (dead) this._bossDeath();
+                        }
                         return false;
                     }
                 }
@@ -355,6 +360,55 @@ export default class SnakeWorldScene extends BaseGameScene {
                 return true;
             });
         }
+    }
+
+    /**
+     * Laser vs anaconda: check head then every body segment, nearest-first.
+     * Shielded hit: deflect + stop beam.  Unshielded hit: damage + stop beam.
+     * Returns the (possibly shortened) laserEnd so the beam visual is correct.
+     */
+    _handleLaserBossChecks(sx, sy, cos, sin, laserEnd, hitRadius) {
+        if (!this.boss || !this.boss.active || this.boss._dying) return laserEnd;
+
+        // Build candidates: head + body segments
+        const candidates = [];
+
+        const hrx = this.boss.x - sx, hry = this.boss.y - sy;
+        const hAlong = hrx * cos + hry * sin;
+        if (hAlong > 0 && hAlong <= laserEnd &&
+            Math.abs(hrx * sin - hry * cos) <= this.boss.radius + hitRadius) {
+            candidates.push({ x: this.boss.x, y: this.boss.y, r: this.boss.radius, along: hAlong });
+        }
+
+        for (const hb of (this.boss._bodyHitboxes || [])) {
+            const rx = hb.x - sx, ry = hb.y - sy;
+            const along = rx * cos + ry * sin;
+            if (along > 0 && along <= laserEnd &&
+                Math.abs(rx * sin - ry * cos) <= hb.r + hitRadius) {
+                candidates.push({ x: hb.x, y: hb.y, r: hb.r, along });
+            }
+        }
+
+        if (candidates.length === 0) return laserEnd;
+        candidates.sort((a, b) => a.along - b.along);
+        const hit = candidates[0];
+
+        if (this.boss.shielded) {
+            this.boss.flashShield();
+            this.soundSynth?.play('shieldReflect');
+            // Blue spark at the impact point on the shield surface
+            const spark = this.add.arc(hit.x, hit.y, 6, 0, 360, false, 0x33bbff, 0.9).setDepth(58);
+            this.tweens.add({ targets: spark, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 220, onComplete: () => spark.destroy() });
+            return hit.along;
+        }
+
+        // Unshielded — deal damage and stop beam
+        const flash = this.add.arc(hit.x, hit.y, hit.r, 0, 360, false, 0xff2200, 0.55).setDepth(55);
+        this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
+        const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+        if (this.hud) this.hud.updateBossBar(this.boss.health);
+        if (dead) this._bossDeath();
+        return hit.along;
     }
 
     /**
