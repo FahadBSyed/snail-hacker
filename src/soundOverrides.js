@@ -25,14 +25,10 @@
  *   slithering  ← looped via playLooped(); procedural fallback built-in
  */
 export const SOUND_OVERRIDES = {
-    alienSpawn: [
-        { url: 'assets/sounds/frog-croak-a.mp3', volume: 0.3 },
-        { url: 'assets/sounds/frog-croak-b.mp3', volume: 0.3 },
-        { url: 'assets/sounds/frog-croak-c.mp3', volume: 0.3 },
-    ],
-    alienRibbet: [
-        { url: 'assets/sounds/frog-croak-d.mp3', volume: 0.3 },
-        { url: 'assets/sounds/frog-croak-e.mp3', volume: 0.3 },
+    damage: [
+         { url: 'assets/sounds/damage-a.mp3', volume: 0.3 },
+         { url: 'assets/sounds/damage-b.mp3', volume: 0.4 },
+         { url: 'assets/sounds/damage-c.mp3', volume: 0.3 }
     ],
     error: [
          { url: 'assets/sounds/error-a.mp3', volume: 0.15 },
@@ -45,10 +41,14 @@ export const SOUND_OVERRIDES = {
          { url: 'assets/sounds/explosion-c.mp3', volume: 0.3 },
          { url: 'assets/sounds/explosion-d.mp3', volume: 0.3 }
     ],
-    damage: [
-         { url: 'assets/sounds/damage-a.mp3', volume: 0.3 },
-         { url: 'assets/sounds/damage-b.mp3', volume: 0.4 },
-         { url: 'assets/sounds/damage-c.mp3', volume: 0.3 }
+    frogSpawn: [
+        { url: 'assets/sounds/frog-croak-a.mp3', volume: 0.3 },
+        { url: 'assets/sounds/frog-croak-b.mp3', volume: 0.3 },
+        { url: 'assets/sounds/frog-croak-c.mp3', volume: 0.3 },
+    ],
+    frogRibbet: [
+        { url: 'assets/sounds/frog-croak-d.mp3', volume: 0.3 },
+        { url: 'assets/sounds/frog-croak-e.mp3', volume: 0.3 },
     ],
     grab: [
         { url: 'assets/sounds/grab.mp3', volume: 0.6 }
@@ -61,6 +61,17 @@ export const SOUND_OVERRIDES = {
     ],
     shootTurret: [
          { url: 'assets/sounds/shoot-d.mp3', volume: 0.085 }
+    ],
+    acidSpawn: [
+        { url: 'assets/sounds/venom-a.mp3', volume: 0.35 },
+    ],
+    snakeSpawn: [
+        { url: 'assets/sounds/hiss-a.mp3', volume: 0.3 },
+        { url: 'assets/sounds/hiss-b.mp3', volume: 0.3 },
+    ],
+    snakeHiss: [
+        { url: 'assets/sounds/hiss-d.mp3', volume: 0.3 },
+        { url: 'assets/sounds/hiss-c.mp3', volume: 0.3 },
     ],
     waveStart: [
         // { url: 'assets/sounds/wave-start.mp3', volume: 0.4 }

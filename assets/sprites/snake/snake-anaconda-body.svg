@@ -1,21 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 28" width="36" height="28">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" width="64" height="48">
 
   <!-- Shadow -->
-  <ellipse cx="19" cy="26" rx="15" ry="3" fill="#000000" opacity="0.18"/>
+  <ellipse cx="33" cy="46" rx="29" ry="3" fill="#000000" opacity="0.18"/>
 
   <!-- Body pill -->
-  <rect x="2" y="4" width="32" height="20" rx="10" fill="#1e0c30" stroke="#0a0414" stroke-width="1"/>
+  <rect x="2" y="4" width="60" height="40" rx="20" fill="#1a3810" stroke="#0c1e06" stroke-width="1"/>
 
   <!-- Dorsal ridge (lighter top surface) -->
-  <ellipse cx="18" cy="10" rx="13" ry="4" fill="#2c1244" opacity="0.5"/>
+  <ellipse cx="32" cy="16" rx="25" ry="8" fill="#2c5218" opacity="0.5"/>
 
   <!-- Scale plate arcs -->
-  <ellipse cx="8" cy="15" rx="6" ry="8" fill="none" stroke="#1a0c2c" stroke-width="1" opacity="0.6"/>
-  <ellipse cx="18" cy="15" rx="6" ry="8" fill="none" stroke="#1a0c2c" stroke-width="1" opacity="0.6"/>
-  <ellipse cx="28" cy="15" rx="6" ry="8" fill="none" stroke="#1a0c2c" stroke-width="1" opacity="0.6"/>
+  <ellipse cx="14" cy="26" rx="11" ry="17" fill="none" stroke="#0e2808" stroke-width="1" opacity="0.6"/>
+  <ellipse cx="32" cy="26" rx="11" ry="17" fill="none" stroke="#0e2808" stroke-width="1" opacity="0.6"/>
+  <ellipse cx="50" cy="26" rx="11" ry="17" fill="none" stroke="#0e2808" stroke-width="1" opacity="0.6"/>
+
+  <!-- Black spots (boss anaconda only) -->
+  <ellipse cx="14" cy="20" rx="5.4" ry="8.8" fill="#050e03" opacity="0.82"/>
+  <ellipse cx="24.8" cy="29.6" rx="4.8" ry="8" fill="#050e03" opacity="0.82"/>
+  <ellipse cx="35" cy="18.4" rx="5.4" ry="8.8" fill="#050e03" opacity="0.82"/>
+  <ellipse cx="45.8" cy="28.8" rx="4.8" ry="8" fill="#050e03" opacity="0.82"/>
+  <ellipse cx="54.8" cy="20.8" rx="4.2" ry="7.2" fill="#050e03" opacity="0.82"/>
 
   <!-- Spine seam (glowing line along body center) -->
-  <line x1="12" y1="14" x2="24" y2="14" stroke="#aa44ff" stroke-width="1.2" opacity="0.7"/>
+  <line x1="22" y1="24" x2="42" y2="24" stroke="#4aaa22" stroke-width="1.2" opacity="0.7"/>
   <!-- Seam glow -->
-  <line x1="12" y1="14" x2="24" y2="14" stroke="#aa44ff" stroke-width="3" opacity="0.2"/>
+  <line x1="22" y1="24" x2="42" y2="24" stroke="#4aaa22" stroke-width="3" opacity="0.2"/>
 </svg>

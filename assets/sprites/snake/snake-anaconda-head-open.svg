@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 138 96" width="138" height="96">
+
+  <!-- Ground shadow -->
+  <ellipse cx="66" cy="92" rx="48" ry="11" fill="#000000" opacity="0.20"/>
+
+  <!-- Neck / collar -->
+  <rect x="1" y="24" width="28" height="48" rx="4" fill="#1e4010" stroke="#0a1a06" stroke-width="1"/>
+  <line x1="13" y1="26" x2="13" y2="70" stroke="#2e5c1a" stroke-width="1.2" opacity="0.7"/>
+  <circle cx="14" cy="27" r="2" fill="#0a1a06" stroke="#2e5c1a" stroke-width="0.7"/>
+  <circle cx="14" cy="69" r="2" fill="#0a1a06" stroke="#2e5c1a" stroke-width="0.7"/>
+  <rect x="1" y="24" width="28" height="2" fill="#ffcc44" opacity="0.8"/>
+  <rect x="1" y="70" width="28" height="2" fill="#ffcc44" opacity="0.8"/>
+
+  <!-- Lower jaw -->
+  <ellipse cx="64" cy="57" rx="51" ry="35" fill="#0c1e06" stroke="#0c1e06" stroke-width="1"/>
+  <ellipse cx="108" cy="58" rx="18" ry="18" fill="#0c1e06" stroke="#0c1e06" stroke-width="1"/>
+
+  <!-- Oral cavity -->
+  <rect x="86" y="47.9" width="52" height="14" fill="#440011" opacity="0.96"/>
+  <ellipse cx="109.8" cy="48" rx="16.2" ry="8.28" fill="#6e0018" opacity="0.92"/>
+  <ellipse cx="108.9" cy="48" rx="9" ry="5.2" fill="#992233" opacity="0.65"/>
+
+  <!-- Upper jaw -->
+  <ellipse cx="64" cy="39" rx="51" ry="35" fill="#1a380a" stroke="#0c1e06" stroke-width="1.2"/>
+  <ellipse cx="108" cy="38" rx="18" ry="18" fill="#2d5c16" stroke="#0c1e06" stroke-width="1"/>
+
+  <!-- Scale lines (upper jaw) -->
+  <line x1="38" y1="7" x2="43" y2="71" stroke="#0e2808" stroke-width="1" opacity="0.50"/>
+  <line x1="56" y1="7" x2="61" y2="71" stroke="#0e2808" stroke-width="1" opacity="0.50"/>
+  <line x1="74" y1="7" x2="79" y2="71" stroke="#0e2808" stroke-width="1" opacity="0.50"/>
+  <line x1="90" y1="7" x2="95" y2="71" stroke="#0e2808" stroke-width="1" opacity="0.50"/>
+
+  <!-- Dorsal ridge (upper jaw) -->
+  <ellipse cx="64" cy="23.6" rx="28" ry="9" fill="#2d5c16" opacity="0.38"/>
+
+  <!-- Spots (upper jaw) -->
+  <ellipse cx="40.96" cy="33.75" rx="7.04" ry="9.6" fill="#050e03" opacity="0.78"/>
+  <ellipse cx="64" cy="46.7" rx="7.04" ry="9.6" fill="#050e03" opacity="0.78"/>
+  <ellipse cx="83.2" cy="32.7" rx="7.04" ry="9.6" fill="#050e03" opacity="0.78"/>
+
+  <!-- Fangs (hang from upper jaw snout into oral cavity) -->
+  <ellipse cx="101" cy="56" rx="2" ry="9" fill="#f0edcc" stroke="#bbb890" stroke-width="0.5"/>
+  <ellipse cx="113" cy="56" rx="2" ry="9" fill="#f0edcc" stroke="#bbb890" stroke-width="0.5"/>
+  <circle cx="101" cy="60" r="2.2" fill="#bbff44" opacity="0.82"/>
+  <circle cx="113" cy="60" r="2.2" fill="#bbff44" opacity="0.82"/>
+
+  <!-- Upper eye -->
+  <circle cx="70" cy="8" r="6.5" fill="#2d5c16" stroke="#0c1e06" stroke-width="0.8"/>
+  <circle cx="70" cy="8" r="5" fill="#ffee00"/>
+  <ellipse cx="70" cy="8" rx="1.5" ry="4" fill="#111100"/>
+  <circle cx="68.25" cy="6.25" r="1" fill="white" opacity="0.65"/>
+  <circle cx="70" cy="8" r="8.5" fill="none" stroke="#ffcc44" stroke-width="0.8" opacity="0.45"/>
+
+  <!-- Lower eye -->
+  <circle cx="70" cy="88" r="6.5" fill="#0c1e06" stroke="#0c1e06" stroke-width="0.8"/>
+  <circle cx="70" cy="88" r="5" fill="#ffee00"/>
+  <ellipse cx="70" cy="88" rx="1.5" ry="4" fill="#111100"/>
+  <circle cx="68.25" cy="86.25" r="1" fill="white" opacity="0.65"/>
+  <circle cx="70" cy="88" r="8.5" fill="none" stroke="#ffcc44" stroke-width="0.8" opacity="0.45"/>
+
+  <!-- Nostril dots (upper snout) -->
+  <circle cx="114" cy="29.36" r="1.2" fill="#0c1e06" opacity="0.8"/>
+  <circle cx="114" cy="46.64" r="1.2" fill="#0c1e06" opacity="0.8"/>
+
+  <!-- Boss crown (tracks upper eye) -->
+  <path d="M44,15 L49,5 L54,15 L59,5 L64,15" fill="none" stroke="#ffcc44" stroke-width="1.8" stroke-linejoin="round" opacity="0.9"/>
+</svg>

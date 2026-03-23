@@ -21,9 +21,9 @@ const SVG96 = { width: 96, height: 96 };
 const SVG_SH = { width: 64, height: 48 };  // snake head
 const SVG_SB = { width: 32, height: 24 };  // snake body segment
 const SVG_ST = { width: 28, height: 20 };  // snake tail
-const SVG_AH = { width: 80, height: 60 };  // anaconda head (boss, larger)
-const SVG_AB = { width: 36, height: 28 };  // anaconda body segment
-const SVG_AT = { width: 32, height: 24 };  // anaconda tail
+const SVG_AH = { width: 138, height: 96 };  // anaconda head (boss, 2× python; +10px tongue)
+const SVG_AB = { width: 64,  height: 48 };  // anaconda body segment
+const SVG_AT = { width: 56,  height: 40 };  // anaconda tail
 
 // Prop sizes (match existing assets)
 const PROP_SIZES = {
@@ -101,6 +101,11 @@ for (const type of ['basic', 'sidewinder', 'python', 'burrower', 'spitter']) {
 add('snake-anaconda-head', 'assets/sprites/snake/snake-anaconda-head.svg', SVG_AH, W2);
 add('snake-anaconda-body', 'assets/sprites/snake/snake-anaconda-body.svg', SVG_AB, W2);
 add('snake-anaconda-tail', 'assets/sprites/snake/snake-anaconda-tail.svg', SVG_AT, W2);
+// Mouth-open animation (3 opening frames + held-open sprite)
+add('snake-anaconda-head-open-f00', 'assets/sprites/snake/snake-anaconda-head-open-f00.svg', SVG_AH, W2);
+add('snake-anaconda-head-open-f01', 'assets/sprites/snake/snake-anaconda-head-open-f01.svg', SVG_AH, W2);
+add('snake-anaconda-head-open-f02', 'assets/sprites/snake/snake-anaconda-head-open-f02.svg', SVG_AH, W2);
+add('snake-anaconda-head-open',     'assets/sprites/snake/snake-anaconda-head-open.svg',     SVG_AH, W2);
 
 // ── World 2: bush props ──────────────────────────────────────────────────────
 add('bush',          'assets/sprites/props/bush.svg',          { width: 72, height: 60 }, W2);

@@ -106,7 +106,7 @@ export default class HUD {
 
     // ── Boss HP bar ───────────────────────────────────────────────────────────
 
-    showBossBar(hp, maxHp) {
+    showBossBar(hp, maxHp, name = 'THE OVERLORD') {
         const scene  = this.scene;
         const cx     = 640;
         const BAR_W  = 400;
@@ -116,7 +116,7 @@ export default class HUD {
 
         this._bossMaxHp = maxHp;
 
-        this._bossLabel = scene.add.text(cx, barY - 14, 'THE OVERLORD', {
+        this._bossLabel = scene.add.text(cx, barY - 14, name, {
             fontSize: '12px', fontFamily: 'monospace', color: '#ff4444',
         }).setOrigin(0.5, 1).setDepth(100);
 

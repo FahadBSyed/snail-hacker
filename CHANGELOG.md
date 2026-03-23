@@ -1,6 +1,120 @@
 # SNAIL HACKER — Changelog
 
+## Session — 2026-03-17
+
+### Anaconda — peek-and-charge attack pattern
+
+Replaced the old stop-and-charge attack with a two-pass peek-and-charge sequence:
+
+**New attack cycle** (slither → circling → peek_in → peeking → charging → returning → peeking → charging → slither):
+
+1. **`peek_in`** — when LOS is clear during circling, the anaconda calculates which screen edge to enter from (opposite side of the charge direction, aligned to the snail's current position), then dashes to the peek position at `CHARGE_SPEED × 2.5` — head just inside the screen boundary, body trailing off-screen.
+2. **`peeking`** — holds at the edge; cycles through `MOUTH_FRAMES` as a telegraphed warning over `MOUTH_OPEN_DURATION`, then holds open for `MOUTH_HOLD_MS`. Plays `snakeHiss` on entry.
+3. **`charging`** — rockets across the arena in the fixed charge direction at `CHARGE_SPEED`. Continues through the snail on contact (damage dealt once per pass; `_chargeHitThisPass` guard prevents repeat hits). Transitions when head exits off-screen (`OFF_SCREEN_M = 200 px`).
+4. **`returning`** — loops back off-screen to the same entry edge for a second pass, at `CHARGE_SPEED × 2.5`.
+5. Second **`peeking`** + **`charging`** pass.
+6. Back to `slither` with full `ATTACK_COOLDOWN` reset.
+
+Key implementation details:
+- `_chargeDir` is fixed at the start of `_startPeekIn()` and unchanged across both passes (predictable for the player to dodge).
+- Cross-axis alignment (`_computePeekPos`) re-samples snail position for each pass so both attacks are aimed.
+- Proximity `reached_snail` check in `update()` is restricted to `slither` / `circling` phases; charge contact is handled by `_chargeTouchedSnail` flag (consumed once per frame).
+- `CHARGE_CONT_R = 48 px` contact radius for charge hits.
+
+### Anaconda boss entity — full integration into wave 10
+
+Added the Anaconda as the World 2 wave-10 boss with its own attack cycle, shield system, and scene wiring:
+
+**`src/entities/snakes/Anaconda.js`** (new file):
+- Python-style multi-segment snake body with 2× display scale (`head setScale(0.845)`, body/tail `setScale(1.69)`)
+- `SEGMENT_COUNT = 24`, `SEGMENT_SPACING = 22`, history cap of 1500 entries
+- 4-state attack machine: `slither → circling → mouth_open → charging`
+  - `slither`: sine-wave approach toward the snail (uses `SLITHER_AMPLITUDE` / `SLITHER_FREQUENCY`)
+  - `circling`: orbits arena centre at `CIRCLE_RADIUS` polling for unobstructed LOS to the snail (`_hasLOS` via line-circle intersection, skips first 4 body segments, 200 ms debounce)
+  - `mouth_open`: steps through `MOUTH_FRAMES` (5 textures) over `MOUTH_OPEN_DURATION`, holds fully open for `MOUTH_HOLD_MS`, plays `snakeHiss` on entry
+  - `charging`: charges at `CHARGE_SPEED` toward snail position captured at mouth-open start, returns to slither after `CHARGE_DURATION` or arrival
+- Shield system: rotating green ring graphic (`_shieldGfx`); `dropShield()`, `raiseShield()`, `flashShield()` mirror BossAlien API
+- `takeDamage()` / `takeDamageRaw()` call `applyHitReaction`; `_onHitReactionEnd()` is a no-op
+
+**`src/scenes/SnakeWorldScene.js`** (updated):
+- `import Anaconda` added
+- `create()` override to init `this.boss = null`
+- `_spawnBoss()`: locks player, plays boss-alert sound, creates Anaconda off-screen at (1400, 280), shows flashing `!! THE ANACONDA !!` warning; after 2.5 s restores HUD and player control, shows boss bar with name "THE ANACONDA"
+- `_updateWorldSpecific()` extended: calls `this.boss.update()`; on `'reached_snail'` applies venom and snail damage; projectile vs head and body-segment collision with shield check
+- `_bossDeath()`: sets `_dying`, shakes camera, expanding green rings, head flash, final burst (green); hides boss bar, adds 50 score, calls `_completeWave()`
+- `_handleEmpBossCheck()`: EMP mines can damage the anaconda
+- `_checkBossForMineTrigger()`: EMP mines trigger on anaconda proximity
+- `_clearWorldEntities()`: destroys boss if still active on wave end
+
+**`src/config.js`** (updated):
+- `ANACONDA` block expanded with movement/attack keys: `SPEED (80)`, `SLITHER_AMPLITUDE (0.45)`, `SLITHER_FREQUENCY (0.45)`, `CIRCLE_RADIUS (280)`, `CIRCLE_SPEED (0.9)`, `ATTACK_COOLDOWN (8000)`, `CHARGE_SPEED (380)`, `CHARGE_DURATION (1400)`, `MOUTH_OPEN_DURATION (1200)`, `MOUTH_HOLD_MS (500)`
+- Removed stale planning keys (`PHASE2_HP`, `PHASE3_HP`, `PASS_DURATION_*`, `SCALE_DAMAGE_MULT`, `BOMB_*`, `ATTACK_COOLDOWNS` sub-object)
+- `CONFIG_VERSION` bumped: 37 → 38
+
+**`src/scenes/HUD.js`** (updated):
+- `showBossBar(hp, maxHp, name = 'THE OVERLORD')` — added optional `name` parameter so SnakeWorldScene can display "THE ANACONDA" in the boss bar label
+
+### Anaconda mouth-open animation sprites
+
+Added 4 new head SVGs for an anaconda jaw-opening sequence:
+
+- **`snake-anaconda-head-open-f00.svg`** — jaws just cracking open (openAmount 0.25), no fangs yet
+- **`snake-anaconda-head-open-f01.svg`** — half open (0.55), fangs begin to emerge
+- **`snake-anaconda-head-open-f02.svg`** — nearly full (0.82), fangs and oral cavity clearly visible
+- **`snake-anaconda-head-open.svg`** — fully open (1.0), held state; large ivory fangs with venom-tip glow, deep-red oral cavity
+
+Design: the upper jaw shifts up and the lower jaw shifts down from the resting centre-line. A dark-red oval fills the gap (three-layer depth: cavity `#440011` → `#6e0018` → `#992233`). Two ivory fangs (`#f0edcc`) with bright green venom tips (`#bbff44`) hang from the upper snout. Spots, boss crown, and gold collar trim persist across all frames. Dimensions match the regular anaconda head (138×96).
+
+New `buildHeadOpen(W, H, pal, openAmount)` function added to `scripts/generate-snake-sprites.js`.
+
+Also fixed `assetManifest.js`:
+- `SVG_AH` corrected from `80×60` → `138×96` (was stale from before the 2× resize)
+- `SVG_AB` corrected from `36×28` → `64×48`
+- `SVG_AT` corrected from `32×24` → `56×40`
+- 4 new mouth-open sprite keys registered under World 2.
+
+### Anaconda boss sprites — dark green with black spots, 2× scale
+
+Redesigned the anaconda's colour palette and doubled its sprite size:
+
+- **Palette** changed from deep purple to dark green scales (`#1a380a` / `#2d5c16`) with near-black spots (`#050e03`), bright yellow eyes (`#ffee00`), green visor, and gold boss crown/trim — visually distinct from the python while keeping the boss crown.
+- **Sprite dimensions** changed to 2× Python's sizes: head 128×96 (was 80×60), body 64×48 (was 36×28), tail 56×40 (was 32×24).
+- **Black spots** added to all three sprite parts via new `pal.spotColor` property in the generator — 5 staggered oval spots on body, 2 on tail, 3 on head.
+- `scripts/generate-snake-sprites.js` updated; sprites regenerated.
+- `assets/sprites/PALETTE_SWAPS.md` updated.
+
+### SnakeMinigame — safe tail growth + wait-for-first-input
+
+- Safe growth: after placing the new head, if keeping the tail (`pendingGrowth > 0`) would leave the head with no valid moves, the tail is popped anyway and growth deferred to a later step.
+- Wait for first input: snake is frozen until the first WASD keypress; the countdown only starts then; the controls overlay is dismissed immediately on first input.
+
+### SnakeMinigame — wave 10 boss shield-break for SnakeWorldScene
+
+Added the classic Snake game as the boss-fight minigame for World 2, mirroring how FroggerMinigame works in FrogWorldScene:
+
+- **`src/minigames/SnakeMinigame.js`** — new file. Full Snake game rendered in the same 194×192 panel at (640, 600) as FroggerMinigame. WASD steers; each pellet eaten adds `GROWTH_PER_PELLET = 5` segments so the arena fills quickly. Hitting a wall or the snake's own tail fails the attempt; a timer also enforces a deadline. Eating `pointsNeeded` pellets (= `BOSS.SHIELD_DROP_WORDS`) triggers `onSuccess`. Implements the standard minigame contract (`onSuccess`, `onFailure`, `cancel()`).
+- **`src/scenes/SnakeWorldScene.js`** — added `import SnakeMinigame` and three overrides:
+  - `_wordsForWave(wave)` — returns `CONFIG.MINIGAMES.SNAKE_PELLETS_NEEDED` on wave 10 so the hack threshold matches the minigame goal.
+  - `_spawnMaxY()` — clamps enemy spawns to y ≤ 460 on wave 10, keeping the minigame panel clear.
+  - `_tryWave10Hack()` — launches `SnakeMinigame`; on success drops the boss shield (re-raises after `BOSS.SHIELD_DOWN_DURATION`), resets progress; on failure returns the snail to IDLE. Returns `true` to suppress the base typing path.
+- **`src/config.js`** — added `MINIGAMES.SNAKE_TIME_LIMIT` (40 000 ms) and `MINIGAMES.SNAKE_PELLETS_NEEDED` (3). `CONFIG_VERSION` bumped to 37.
+
 ## Session — 2026-03-16
+
+### Python sine-wave slither movement
+
+Replaced the Python's jitter state machine (random bursts of orthogonal movement) with a continuous sine-wave oscillation:
+
+- `_jitterMs`, `_jitterDir`, `_jitterCooldown` fields removed from `Python.js`
+- New `_slitherTime` accumulator drives `moveAngle = toTarget + SLITHER_AMPLITUDE * sin(time * SLITHER_FREQUENCY * 2π)`, giving a smooth S-curve approach toward the player
+- New config keys in `CONFIG.SNAKES.PYTHON`: `SLITHER_AMPLITUDE` (0.75 rad) and `SLITHER_FREQUENCY` (1.8 Hz)
+- `CONFIG_VERSION` bumped to 36
+
+### No overlapping bushes on terminals
+
+`SnakeWorldScene._spawnBushes()` now filters the fixed SLOTS list against all active terminals before placing bushes. Any slot within `TERMINAL_RADIUS + OCCUPY_RADIUS + 10 px` (71 px) of a terminal is skipped, preventing bush sprites from rendering on top of terminals each wave.
+
+
 
 ### Refactor GameScene into BaseGameScene + FrogWorldScene + SnakeWorldScene
 
