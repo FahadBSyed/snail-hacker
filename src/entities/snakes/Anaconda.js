@@ -75,7 +75,9 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         this._history     = [{ x, y }];
         this._slitherTime = 0;
 
-        this.shielded = false;
+        this.shielded     = true;
+        this._shieldGfx   = null;
+        this._shieldPhase = 0;   // drives the alpha pulse animation
 
         // Attack state machine
         this._attackPhase    = 'slither';
@@ -122,6 +124,144 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         this._tailImg = scene.add.image(this.x, this.y, 'snake-anaconda-tail');
         this._tailImg.setOrigin(0.5, 0.5).setScale(1.69).setDepth(this.depth - 2);
 
+        // Shield — rendered above all body parts
+        this._shieldGfx = scene.add.graphics().setDepth(this.depth + 2);
+    }
+
+    // ── Shield spline ────────────────────────────────────────────────────────
+
+    dropShield() {
+        this.shielded = false;
+        this._shieldGfx.clear();
+        // Burst outward flash
+        const burst = this.scene.add.circle(this.x, this.y, this.radius + 20, 0x33bbff, 0.6)
+            .setDepth(this.depth + 3);
+        this.scene.tweens.add({
+            targets: burst, scaleX: 2.8, scaleY: 2.8, alpha: 0,
+            duration: 450, ease: 'Power2.easeOut',
+            onComplete: () => burst.destroy(),
+        });
+    }
+
+    flashShield() {
+        const flash = this.scene.add.circle(this.x, this.y, this.radius + 22, 0xffffff, 0.5)
+            .setDepth(this.depth + 3);
+        this.scene.tweens.add({
+            targets: flash, alpha: 0, duration: 180,
+            onComplete: () => flash.destroy(),
+        });
+    }
+
+    /**
+     * Redraws the spline-path shield outline every frame.
+     *
+     * Algorithm:
+     *  1. Collect de-duplicated spine positions: head → body segments → tail.
+     *  2. Compute smooth normals (average of adjacent segment tangent perps).
+     *  3. Build left rail (head→tail) and right rail (head→tail), offset by r.
+     *  4. Semicircular cap at the tail (bridges left→right) and head (right→left).
+     *  5. Assemble the full closed outline.  Append first 3 pts for Catmull-Rom closure.
+     *  6. Two draw passes: wide dim outer glow + thin bright inner line, alpha-pulsed.
+     */
+    _drawShield(time) {
+        const g = this._shieldGfx;
+        g.clear();
+        if (!this.shielded || this._attackPhase === 'offscreen_wait') return;
+
+        // ── 1. Spine positions ───────────────────────────────────────────────
+        const pts = [{ x: this.x, y: this.y }];
+        for (let i = 0; i < this._segCount; i++) {
+            const img = this._bodyImgs[i];
+            if (!img?.active) continue;
+            const last = pts[pts.length - 1];
+            if (Math.hypot(img.x - last.x, img.y - last.y) > 6) {
+                pts.push({ x: img.x, y: img.y });
+            }
+        }
+        if (this._tailImg?.active) {
+            const last = pts[pts.length - 1];
+            if (Math.hypot(this._tailImg.x - last.x, this._tailImg.y - last.y) > 6) {
+                pts.push({ x: this._tailImg.x, y: this._tailImg.y });
+            }
+        }
+        if (pts.length < 2) return;
+
+        const r = CONFIG.ANACONDA.BODY_RADIUS + 12;
+        const n = pts.length;
+
+        // ── 2. Smooth normals ────────────────────────────────────────────────
+        const normals = [];
+        for (let i = 0; i < n; i++) {
+            let nx = 0, ny = 0;
+            if (i > 0) {
+                const dx = pts[i].x - pts[i-1].x, dy = pts[i].y - pts[i-1].y;
+                const l = Math.hypot(dx, dy) || 1;
+                nx += -dy / l;  ny += dx / l;
+            }
+            if (i < n - 1) {
+                const dx = pts[i+1].x - pts[i].x, dy = pts[i+1].y - pts[i].y;
+                const l = Math.hypot(dx, dy) || 1;
+                nx += -dy / l;  ny += dx / l;
+            }
+            const l = Math.hypot(nx, ny) || 1;
+            normals.push({ x: nx / l, y: ny / l });
+        }
+
+        // ── 3. Left / right offset rails ────────────────────────────────────
+        const left  = pts.map((p, i) => ({ x: p.x + normals[i].x * r, y: p.y + normals[i].y * r }));
+        const right = pts.map((p, i) => ({ x: p.x - normals[i].x * r, y: p.y - normals[i].y * r }));
+
+        // ── 4. Semicircular caps ─────────────────────────────────────────────
+        const CAPS = 10;   // arc interpolation steps
+
+        // Tail cap: left[n-1] → right[n-1], curving past the tail tip
+        const tdx = pts[n-1].x - pts[n-2].x, tdy = pts[n-1].y - pts[n-2].y;
+        const tl = Math.hypot(tdx, tdy) || 1;
+        const tfx = tdx / tl, tfy = tdy / tl;
+        const tailCap = [];
+        for (let j = 0; j <= CAPS; j++) {
+            const a = Math.PI * j / CAPS;
+            tailCap.push({
+                x: pts[n-1].x + (normals[n-1].x * Math.cos(a) + tfx * Math.sin(a)) * r,
+                y: pts[n-1].y + (normals[n-1].y * Math.cos(a) + tfy * Math.sin(a)) * r,
+            });
+        }
+
+        // Head cap: right[0] → left[0], curving past the head tip
+        const hdx = pts[0].x - pts[1].x, hdy = pts[0].y - pts[1].y;
+        const hl = Math.hypot(hdx, hdy) || 1;
+        const hfx = hdx / hl, hfy = hdy / hl;
+        const headCap = [];
+        for (let j = 0; j <= CAPS; j++) {
+            const a = Math.PI * j / CAPS;
+            headCap.push({
+                x: pts[0].x + (-normals[0].x * Math.cos(a) + hfx * Math.sin(a)) * r,
+                y: pts[0].y + (-normals[0].y * Math.cos(a) + hfy * Math.sin(a)) * r,
+            });
+        }
+
+        // ── 5. Assemble closed outline ───────────────────────────────────────
+        // Order: left rail (head→tail) + tail cap + reversed right rail (tail→head) + head cap
+        const outline = [
+            ...left,
+            ...tailCap,
+            ...right.slice().reverse(),
+            ...headCap,
+        ];
+
+        // Append the first 3 control points so Catmull-Rom closes smoothly
+        const vecs = [...outline, outline[0], outline[1], outline[2]]
+            .map(p => new Phaser.Math.Vector2(p.x, p.y));
+        const spline  = new Phaser.Curves.Spline(vecs);
+        const samples = outline.length * 2;
+
+        // ── 6. Two-pass draw: outer glow + inner bright edge ─────────────────
+        const pulse = 0.5 + 0.2 * Math.sin(time * 0.0025);
+        g.lineStyle(7, 0x1188cc, pulse * 0.5);
+        spline.draw(g, samples);
+
+        g.lineStyle(2.5, 0x88ddff, pulse);
+        spline.draw(g, samples);
     }
 
     // ── Damage ────────────────────────────────────────────────────────────────
@@ -161,7 +301,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
             this._stunMs -= delta;
             this._updateSegments();
             this._rebuildBodyHitboxes();
-    
+            this._drawShield(time);
             return 'alive';
         }
 
@@ -179,8 +319,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         this._pushHistory(time);
         this._updateSegments();
         this._rebuildBodyHitboxes();
-
-
+        this._drawShield(time);
 
         // Charge contact — consumed once per frame
         if (this._chargeTouchedSnail) {
@@ -372,9 +511,10 @@ export default class Anaconda extends Phaser.GameObjects.Container {
     // ── Offscreen wait — hide snake, pause before re-entry ───────────────────
 
     _enterOffscreenWait() {
-        // Hide body and tail so no segments streak across the screen
+        // Hide body, tail, and shield so nothing streaks across the screen
         for (const img of this._bodyImgs) img.setVisible(false);
         if (this._tailImg) this._tailImg.setVisible(false);
+        this._shieldGfx?.clear();
 
         // Park head far off-screen so it's not visible
         const { nx, ny } = this._chargeDir;
@@ -560,7 +700,9 @@ export default class Anaconda extends Phaser.GameObjects.Container {
     // ── Cleanup ───────────────────────────────────────────────────────────────
 
     destroy(fromScene) {
-for (const img of this._bodyImgs) { if (img?.active) img.destroy(); }
+        if (this._shieldGfx?.active) this._shieldGfx.destroy();
+        this._shieldGfx = null;
+        for (const img of this._bodyImgs) { if (img?.active) img.destroy(); }
         this._bodyImgs = [];
         if (this._tailImg?.active) { this._tailImg.destroy(); this._tailImg = null; }
         super.destroy(fromScene);
