@@ -75,10 +75,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         this._history     = [{ x, y }];
         this._slitherTime = 0;
 
-        // Shield state
-        this.shielded     = true;
-        this._shieldGfx   = null;
-        this._shieldAngle = 0;
+        this.shielded = false;
 
         // Attack state machine
         this._attackPhase    = 'slither';
@@ -125,55 +122,6 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         this._tailImg = scene.add.image(this.x, this.y, 'snake-anaconda-tail');
         this._tailImg.setOrigin(0.5, 0.5).setScale(1.69).setDepth(this.depth - 2);
 
-        // Shield ring graphics (drawn around the head)
-        this._shieldGfx = scene.add.graphics().setDepth(this.depth + 2);
-        this._drawShield();
-    }
-
-    // ── Shield ────────────────────────────────────────────────────────────────
-
-    _drawShield() {
-        const g = this._shieldGfx;
-        g.clear();
-        if (!this.shielded) return;
-
-        const r = this.radius + 18;
-        g.lineStyle(3, 0x44ff88, 0.7);
-        g.strokeCircle(this.x, this.y, r);
-        const a1 = this._shieldAngle;
-        const a2 = a1 + Math.PI * 0.6;
-        g.lineStyle(4, 0x88ffcc, 0.9);
-        g.beginPath();
-        for (let i = 0; i <= 20; i++) {
-            const a = a1 + (a2 - a1) * (i / 20);
-            const px = this.x + Math.cos(a) * r;
-            const py = this.y + Math.sin(a) * r;
-            if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
-        }
-        g.strokePath();
-    }
-
-    dropShield() {
-        this.shielded = false;
-        this._shieldGfx.clear();
-        const burst = this.scene.add.circle(this.x, this.y, this.radius + 20, 0x44ff88, 0.6)
-            .setDepth(this.depth + 3);
-        this.scene.tweens.add({
-            targets: burst, scaleX: 2.5, scaleY: 2.5, alpha: 0,
-            duration: 400, ease: 'Power2.easeOut',
-            onComplete: () => burst.destroy(),
-        });
-    }
-
-    raiseShield() { this.shielded = true; }
-
-    flashShield() {
-        const flash = this.scene.add.circle(this.x, this.y, this.radius + 22, 0xffffff, 0.5)
-            .setDepth(this.depth + 3);
-        this.scene.tweens.add({
-            targets: flash, alpha: 0, duration: 180,
-            onComplete: () => flash.destroy(),
-        });
     }
 
     // ── Damage ────────────────────────────────────────────────────────────────
@@ -213,7 +161,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
             this._stunMs -= delta;
             this._updateSegments();
             this._rebuildBodyHitboxes();
-            if (this.shielded) { this._shieldAngle += dt * 2.5; this._drawShield(); }
+    
             return 'alive';
         }
 
@@ -232,7 +180,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         this._updateSegments();
         this._rebuildBodyHitboxes();
 
-        if (this.shielded) { this._shieldAngle += dt * 2.5; this._drawShield(); }
+
 
         // Charge contact — consumed once per frame
         if (this._chargeTouchedSnail) {
@@ -612,9 +560,7 @@ export default class Anaconda extends Phaser.GameObjects.Container {
     // ── Cleanup ───────────────────────────────────────────────────────────────
 
     destroy(fromScene) {
-        if (this._shieldGfx?.active) this._shieldGfx.destroy();
-        this._shieldGfx = null;
-        for (const img of this._bodyImgs) { if (img?.active) img.destroy(); }
+for (const img of this._bodyImgs) { if (img?.active) img.destroy(); }
         this._bodyImgs = [];
         if (this._tailImg?.active) { this._tailImg.destroy(); this._tailImg = null; }
         super.destroy(fromScene);

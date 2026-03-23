@@ -1,5 +1,4 @@
 import { CONFIG } from '../config.js';
-import SnakeMinigame from '../minigames/SnakeMinigame.js';
 import HealthDrop from '../entities/HealthDrop.js';
 import Bush from '../entities/Bush.js';
 import BasicSnake from '../entities/snakes/BasicSnake.js';
@@ -44,57 +43,8 @@ export default class SnakeWorldScene extends BaseGameScene {
 
     // ── World-specific overrides ───────────────────────────────────────────────
 
-    /** Wave 10 uses the Snake pellet count instead of the normal word target. */
-    _wordsForWave(wave) {
-        if (wave === 10) return CONFIG.MINIGAMES.SNAKE_PELLETS_NEEDED;
-        return super._wordsForWave(wave);
-    }
-
-    /**
-     * On wave 10 the SnakeMinigame occupies the bottom third (y > 480),
-     * so clamp side-edge spawns to the top two-thirds.
-     */
     _spawnMaxY() {
-        return this.wave === 10 ? 460 : 670;
-    }
-
-    /**
-     * Launch the SnakeMinigame to break the anaconda boss shield.
-     * Returns true so BaseGameScene._startHack() skips the normal typing path.
-     */
-    _tryWave10Hack() {
-        this.activeHack = new SnakeMinigame(this, {
-            pointsNeeded: this.hackThreshold,  // = BOSS.SHIELD_DROP_WORDS (3)
-            onPellet: (count) => {
-                this.hackProgress = count;
-                this.hud.updateHack(this.hackProgress, this.hackThreshold, 'SHIELD');
-                this.station.setHackProgress(this.hackProgress / this.hackThreshold);
-            },
-            onSuccess: () => {
-                this.activeHack = null;
-                this.snail.hackingActive = false;
-                this.snail.setState('IDLE');
-                if (this.boss && this.boss.active && !this.boss._dying) {
-                    this.boss.dropShield();
-                    this.soundSynth?.play('shieldReflect');
-                    this.time.delayedCall(CONFIG.BOSS.SHIELD_DOWN_DURATION, () => {
-                        if (this.boss && this.boss.active && !this.boss._dying) {
-                            this.boss.raiseShield();
-                        }
-                    });
-                }
-                // Reset progress bar so player can break shield again
-                this.hackProgress = 0;
-                this.hud.updateHack(0, this.hackThreshold, 'SHIELD');
-                this.station.setHackProgress(0);
-            },
-            onFailure: () => {
-                this.activeHack = null;
-                this.snail.hackingActive = false;
-                this.snail.setState('IDLE');
-            },
-        });
-        return true;
+        return 670;
     }
 
     // ── Boss: spawn cutscene ──────────────────────────────────────────────────
@@ -376,20 +326,15 @@ export default class SnakeWorldScene extends BaseGameScene {
                 const headDist = Phaser.Math.Distance.Between(proj.x, proj.y, this.boss.x, this.boss.y);
                 if (headDist < this.boss.radius + projR) {
                     proj.destroy();
-                    if (this.boss.shielded) {
-                        this.boss.flashShield();
-                        this.soundSynth?.play('shieldReflect');
-                    } else {
-                        const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
-                        this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
-                        const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
-                        if (this.hud) this.hud.updateBossBar(this.boss.health);
-                        if (dead) this._bossDeath();
-                    }
+                    const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
+                    this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
+                    const dead = this.boss.takeDamage(CONFIG.DAMAGE.PROJECTILE_HIT_ALIEN);
+                    if (this.hud) this.hud.updateBossBar(this.boss.health);
+                    if (dead) this._bossDeath();
                     return false;
                 }
 
-                // Body segment hit (shield does not protect body segments)
+                // Body segment hit
                 for (const hb of (this.boss._bodyHitboxes || [])) {
                     if (Phaser.Math.Distance.Between(proj.x, proj.y, hb.x, hb.y) < hb.r + projR) {
                         proj.destroy();
