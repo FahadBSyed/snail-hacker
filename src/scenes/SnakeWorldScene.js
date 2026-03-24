@@ -321,11 +321,24 @@ export default class SnakeWorldScene extends BaseGameScene {
             // Anaconda charge vs upgrade terminals — scatter + cooldown on collision
             if (this.boss._attackPhase === 'charging') {
                 if (!this._chargeHitTerminals) this._chargeHitTerminals = new Set();
-                const hitR = this.boss.radius + CONFIG.PROPS.TERMINAL_RADIUS;
+                const termR = CONFIG.PROPS.TERMINAL_RADIUS * 1.25;
+                const headR = this.boss.radius * 1.25;
+                const bodyR = CONFIG.ANACONDA.BODY_RADIUS * 1.25;
                 for (const term of (this.terminals || [])) {
-                    if (term.label === 'RELOAD') continue;      // reload terminal has its own relocate logic
+                    if (term.label === 'RELOAD') continue;
                     if (!term.active || this._chargeHitTerminals.has(term)) continue;
-                    if (Phaser.Math.Distance.Between(this.boss.x, this.boss.y, term.x, term.y) < hitR) {
+                    // Check head
+                    let hit = Phaser.Math.Distance.Between(this.boss.x, this.boss.y, term.x, term.y) < headR + termR;
+                    // Check each body segment
+                    if (!hit) {
+                        for (const hb of (this.boss._bodyHitboxes || [])) {
+                            if (Phaser.Math.Distance.Between(hb.x, hb.y, term.x, term.y) < bodyR + termR) {
+                                hit = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (hit) {
                         this._chargeHitTerminals.add(term);
                         this._scatterTerminal(term);
                         this.soundSynth?.play('shieldReflect');
