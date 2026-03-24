@@ -147,6 +147,21 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         this.shielded = true;
     }
 
+    /**
+     * Freeze all movement for durationMs.  If the anaconda is currently
+     * charging or peeking, the attack is cancelled and it returns to circling
+     * so the charge doesn't resume immediately after the stun ends.
+     */
+    stun(durationMs) {
+        this._stunMs = Math.max(this._stunMs, durationMs);
+        if (this._attackPhase === 'charging' || this._attackPhase === 'peeking') {
+            this._attackPhase = 'circling';
+            this._losOkMs     = 0;
+            this._circleAngle = Math.atan2(this.y - 360, this.x - 640);
+            this._headImg.setTexture('snake-anaconda-head');
+        }
+    }
+
     flashShield() {
         const flash = this.scene.add.circle(this.x, this.y, this.radius + 22, 0xffffff, 0.5)
             .setDepth(this.depth + 3);

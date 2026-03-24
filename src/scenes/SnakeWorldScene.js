@@ -502,20 +502,37 @@ export default class SnakeWorldScene extends BaseGameScene {
     /**
      * Launch the SnakeMinigame to break the anaconda's shield.
      * Returns true so BaseGameScene._startHack() skips the normal typing path.
+     *
+     * Shield-down duration scales with each successive pellet (+1 s per pellet,
+     * starting at 0.75 s).  If the shield is already down, the new duration is
+     * stacked on top of the remaining time so progress is never lost.
+     *
+     * Eating all required pellets (win) spawns a reward bomb on the anaconda.
      */
     _tryWave10Hack() {
+        this._pelletCount = 0;  // reset per-minigame pellet counter
+
         this.activeHack = new SnakeMinigame(this, {
             pointsNeeded: this.hackThreshold,
             onPellet: (count) => {
+                this._pelletCount = count;
                 this.hackProgress = count;
                 this.hud.updateHack(this.hackProgress, this.hackThreshold, 'SHIELD');
                 this.station.setHackProgress(this.hackProgress / this.hackThreshold);
-                // Each pellet briefly drops the shield so the gun player can shoot
+
                 if (this.boss && this.boss.active && !this.boss._dying) {
-                    this.boss.dropShield();
+                    // Progressive duration: pellet 1 = 750 ms, +1000 ms each successive pellet
+                    const newDuration = 750 + (count - 1) * 1000;
+                    // Stack onto any remaining shield-down time
+                    const remaining = this._pelletShieldTimer
+                        ? Math.max(0, this._pelletShieldTimer.delay - this._pelletShieldTimer.elapsed)
+                        : 0;
+                    const total = remaining + newDuration;
+
+                    if (this.boss.shielded) this.boss.dropShield();
                     this.soundSynth?.play('shieldReflect');
                     if (this._pelletShieldTimer) this._pelletShieldTimer.remove(false);
-                    this._pelletShieldTimer = this.time.delayedCall(750, () => {
+                    this._pelletShieldTimer = this.time.delayedCall(total, () => {
                         this._pelletShieldTimer = null;
                         if (this.boss && this.boss.active && !this.boss._dying && this.activeHack) {
                             this.boss.raiseShield();
@@ -527,16 +544,9 @@ export default class SnakeWorldScene extends BaseGameScene {
                 this.activeHack = null;
                 this.snail.hackingActive = false;
                 this.snail.setState('IDLE');
+                // Cancel pellet re-raise timer — bomb takes over shield timing
                 if (this._pelletShieldTimer) { this._pelletShieldTimer.remove(false); this._pelletShieldTimer = null; }
-                if (this.boss && this.boss.active && !this.boss._dying) {
-                    this.boss.dropShield();
-                    this.soundSynth?.play('shieldReflect');
-                    this.time.delayedCall(CONFIG.BOSS.SHIELD_DOWN_DURATION, () => {
-                        if (this.boss && this.boss.active && !this.boss._dying) {
-                            this.boss.raiseShield();
-                        }
-                    });
-                }
+                this._spawnAnacondaBomb();
                 this.hackProgress = 0;
                 this.hud.updateHack(0, this.hackThreshold, 'SHIELD');
                 this.station.setHackProgress(0);
@@ -550,6 +560,65 @@ export default class SnakeWorldScene extends BaseGameScene {
             },
         });
         return true;
+    }
+
+    /**
+     * Win reward for completing the SnakeMinigame.
+     * Spawns a glowing bomb at the anaconda's position with a short fuse.
+     * On detonation: stuns the anaconda, deals raw damage, and drops the
+     * shield for BOMB_SHIELD_DOWN_MS (stacks onto any existing downtime).
+     */
+    _spawnAnacondaBomb() {
+        if (!this.boss || !this.boss.active || this.boss._dying) return;
+
+        const cfg = CONFIG.ANACONDA;
+        const bx = this.boss.x, by = this.boss.y;
+
+        // Visual — pulsing green core + ring
+        const core = this.add.arc(bx, by, 16, 0, 360, false, 0x44ff88, 1).setDepth(62);
+        const ring = this.add.arc(bx, by, 30, 0, 360, false, 0x00ff44, 0.55).setDepth(61);
+        const pulse = this.tweens.add({
+            targets: core, scaleX: 1.5, scaleY: 1.5, alpha: 0.6,
+            duration: 200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+        });
+
+        this.time.delayedCall(300, () => {
+            pulse.stop();
+            core.destroy();
+            ring.destroy();
+
+            if (!this.boss || !this.boss.active || this.boss._dying) return;
+
+            // Stun — cancels any active charge and freezes movement
+            this.boss.stun(cfg.BOMB_STUN_MS);
+
+            // Raw damage (bypasses shield)
+            const dead = this.boss.takeDamageRaw(cfg.BOMB_DAMAGE);
+            if (this.hud) this.hud.updateBossBar(this.boss.health);
+
+            // Shield stays/goes down for BOMB_SHIELD_DOWN_MS; stack onto remaining time
+            const remaining = this._pelletShieldTimer
+                ? Math.max(0, this._pelletShieldTimer.delay - this._pelletShieldTimer.elapsed)
+                : 0;
+            const total = remaining + cfg.BOMB_SHIELD_DOWN_MS;
+            if (this.boss.shielded) this.boss.dropShield();
+            if (this._pelletShieldTimer) this._pelletShieldTimer.remove(false);
+            this._pelletShieldTimer = this.time.delayedCall(total, () => {
+                this._pelletShieldTimer = null;
+                if (this.boss && this.boss.active && !this.boss._dying) this.boss.raiseShield();
+            });
+
+            // Explosion visual
+            const burst = this.add.arc(bx, by, 30, 0, 360, false, 0x88ffaa, 0.9).setDepth(62);
+            this.tweens.add({
+                targets: burst, scaleX: 5, scaleY: 5, alpha: 0,
+                duration: 450, ease: 'Power2.easeOut',
+                onComplete: () => burst.destroy(),
+            });
+            this.soundSynth?.play('shieldReflect');
+
+            if (dead) this._bossDeath();
+        });
     }
 
     /**

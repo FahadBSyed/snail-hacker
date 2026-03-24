@@ -1,5 +1,5 @@
 const STORAGE_KEY = 'snail-hacker-config';
-const CONFIG_VERSION = 39;  // increment whenever DEFAULTS change in a breaking way
+const CONFIG_VERSION = 40;  // increment whenever DEFAULTS change in a breaking way
 
 export const DEFAULTS = {
     DEV_MODE: true,
@@ -354,6 +354,10 @@ export const DEFAULTS = {
         // Mouth animation
         MOUTH_OPEN_DURATION:   1200,   // ms to step through all opening frames
         MOUTH_HOLD_MS:          500,   // ms held fully open before charging
+        // Snake-minigame win reward
+        BOMB_DAMAGE:             75,   // raw HP dealt by the reward bomb
+        BOMB_STUN_MS:          2000,   // ms the anaconda is frozen by the bomb
+        BOMB_SHIELD_DOWN_MS:   3000,   // ms the shield stays down after the bomb
     },
 
     BUSHES: {

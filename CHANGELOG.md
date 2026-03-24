@@ -2,6 +2,34 @@
 
 ## Session — 2026-03-24
 
+### SnakeMinigame — progressive shield-down + win-reward bomb
+
+**Progressive shield timing** — each pellet eaten keeps the shield down longer:
+pellet 1 = 0.75 s, pellet 2 = 1.75 s, pellet 3 = 2.75 s (+1 s per pellet).
+If the shield is already down when a new pellet is eaten, the new duration is
+stacked on top of the remaining time (`timer.delay - timer.elapsed + newDuration`).
+
+**Win reward bomb** — completing the minigame spawns a glowing green bomb at the
+anaconda's position with a 0.3 s fuse.  On detonation:
+- **Stun** — `boss.stun(BOMB_STUN_MS = 2000)`: freezes all movement; if the
+  anaconda is charging or peeking the attack phase resets to `circling` so the
+  charge is cancelled rather than resumed after the stun ends.
+- **Raw damage** — `takeDamageRaw(BOMB_DAMAGE = 75)` bypasses the shield check.
+- **Shield extension** — drops shield (if still up) and keeps it down for
+  `BOMB_SHIELD_DOWN_MS = 3000` ms, stacked on any pre-existing pellet downtime.
+
+Implementation details:
+- **`src/config.js`** — three new keys in `ANACONDA`: `BOMB_DAMAGE: 75`,
+  `BOMB_STUN_MS: 2000`, `BOMB_SHIELD_DOWN_MS: 3000`. `CONFIG_VERSION` 39 → 40.
+- **`src/entities/snakes/Anaconda.js`** — `stun(durationMs)`: sets `_stunMs`
+  (already ticked to zero in `update()`); if phase is `charging` or `peeking`,
+  resets to `circling` and restores the closed-mouth head texture.
+- **`src/scenes/SnakeWorldScene.js`** — `_tryWave10Hack` rewritten: tracks
+  `_pelletCount`, computes stacked total duration, cancels/reschedules
+  `_pelletShieldTimer` each pellet. `onSuccess` hands off to `_spawnAnacondaBomb`
+  instead of scheduling its own SHIELD_DOWN_DURATION timer. New
+  `_spawnAnacondaBomb()` handles visual + fuse + stun + damage + shield.
+
 ### Anaconda charge scatters collided upgrade terminals
 
 When the anaconda charges across the arena, any upgrade terminal its head touches is
