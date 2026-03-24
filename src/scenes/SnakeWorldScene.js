@@ -480,11 +480,24 @@ export default class SnakeWorldScene extends BaseGameScene {
                 this.hackProgress = count;
                 this.hud.updateHack(this.hackProgress, this.hackThreshold, 'SHIELD');
                 this.station.setHackProgress(this.hackProgress / this.hackThreshold);
+                // Each pellet briefly drops the shield so the gun player can shoot
+                if (this.boss && this.boss.active && !this.boss._dying) {
+                    this.boss.dropShield();
+                    this.soundSynth?.play('shieldReflect');
+                    if (this._pelletShieldTimer) this._pelletShieldTimer.remove(false);
+                    this._pelletShieldTimer = this.time.delayedCall(750, () => {
+                        this._pelletShieldTimer = null;
+                        if (this.boss && this.boss.active && !this.boss._dying && this.activeHack) {
+                            this.boss.raiseShield();
+                        }
+                    });
+                }
             },
             onSuccess: () => {
                 this.activeHack = null;
                 this.snail.hackingActive = false;
                 this.snail.setState('IDLE');
+                if (this._pelletShieldTimer) { this._pelletShieldTimer.remove(false); this._pelletShieldTimer = null; }
                 if (this.boss && this.boss.active && !this.boss._dying) {
                     this.boss.dropShield();
                     this.soundSynth?.play('shieldReflect');
@@ -502,6 +515,8 @@ export default class SnakeWorldScene extends BaseGameScene {
                 this.activeHack = null;
                 this.snail.hackingActive = false;
                 this.snail.setState('IDLE');
+                if (this._pelletShieldTimer) { this._pelletShieldTimer.remove(false); this._pelletShieldTimer = null; }
+                if (this.boss && this.boss.active && !this.boss._dying) this.boss.raiseShield();
             },
         });
         return true;

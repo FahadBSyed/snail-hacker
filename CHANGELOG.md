@@ -2,6 +2,14 @@
 
 ## Session — 2026-03-24
 
+### SnakeMinigame — each pellet briefly drops the anaconda shield (0.75 s)
+
+Each pellet eaten in the SnakeMinigame now drops the anaconda's shield for 750 ms,
+giving the gun player a window to deal damage without waiting for a full win.
+
+- **`src/entities/snakes/Anaconda.js`** — added `raiseShield()` (sets `this.shielded = true`; `_drawShield` already runs every frame when shielded so the visual restores automatically).
+- **`src/scenes/SnakeWorldScene.js`** — `onPellet` callback now calls `boss.dropShield()` + `shieldReflect` sound, cancels any pending re-raise timer, and schedules a 750 ms `delayedCall` to `boss.raiseShield()`. The timer is cancelled in both `onSuccess` and `onFailure` so the shield state is always consistent when the minigame ends. On failure the shield is explicitly re-raised immediately.
+
 ### Fix: SnakeWorldScene wave-10 hack now uses SnakeMinigame
 
 `SnakeWorldScene` was not overriding `_tryWave10Hack()`, so pressing E at the hacking station on wave 10 fell through to the base typing/math/helicopter rotation instead of launching the SnakeMinigame.

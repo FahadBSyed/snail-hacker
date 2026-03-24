@@ -143,6 +143,10 @@ export default class Anaconda extends Phaser.GameObjects.Container {
         });
     }
 
+    raiseShield() {
+        this.shielded = true;
+    }
+
     flashShield() {
         const flash = this.scene.add.circle(this.x, this.y, this.radius + 22, 0xffffff, 0.5)
             .setDepth(this.depth + 3);
