@@ -318,6 +318,23 @@ export default class SnakeWorldScene extends BaseGameScene {
                 }
             }
 
+            // Anaconda charge vs upgrade terminals — scatter + cooldown on collision
+            if (this.boss._attackPhase === 'charging') {
+                if (!this._chargeHitTerminals) this._chargeHitTerminals = new Set();
+                const hitR = this.boss.radius + CONFIG.PROPS.TERMINAL_RADIUS;
+                for (const term of (this.terminals || [])) {
+                    if (term.label === 'RELOAD') continue;      // reload terminal has its own relocate logic
+                    if (!term.active || this._chargeHitTerminals.has(term)) continue;
+                    if (Phaser.Math.Distance.Between(this.boss.x, this.boss.y, term.x, term.y) < hitR) {
+                        this._chargeHitTerminals.add(term);
+                        this._scatterTerminal(term);
+                        this.soundSynth?.play('shieldReflect');
+                    }
+                }
+            } else {
+                this._chargeHitTerminals = null;
+            }
+
             // Projectile vs anaconda head or body
             const projR = CONFIG.PLAYER.PROJECTILE_RADIUS;
             this.projectiles = this.projectiles.filter(proj => {

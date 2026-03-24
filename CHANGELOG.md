@@ -2,6 +2,22 @@
 
 ## Session — 2026-03-24
 
+### Anaconda charge scatters collided upgrade terminals
+
+When the anaconda charges across the arena, any upgrade terminal its head touches is
+teleported to a new random orbital position and put on cooldown — the same effect as
+the RELOAD terminal relocating after ammo is refilled.
+
+- **`src/scenes/BaseGameScene.js`** — new `_scatterTerminal(term)` method: picks a
+  new random orbital angle that keeps `MIN_SEPARATION` from other upgrade terminals,
+  updates `upgradesList[i].angle` so future scatters know the new position, moves the
+  terminal with a `Back.easeOut` pop-in tween, and starts its cooldown if it was IDLE.
+- **`src/scenes/SnakeWorldScene.js`** — inside `_updateWorldSpecific`, during the
+  `charging` attack phase, checks the anaconda head against every non-RELOAD terminal
+  using `boss.radius + TERMINAL_RADIUS`. Each terminal is only scattered once per
+  charge pass (tracked via `_chargeHitTerminals` Set, cleared when phase leaves
+  `charging`). Plays `shieldReflect` sound on each scatter.
+
 ### SnakeMinigame — each pellet briefly drops the anaconda shield (0.75 s)
 
 Each pellet eaten in the SnakeMinigame now drops the anaconda's shield for 750 ms,

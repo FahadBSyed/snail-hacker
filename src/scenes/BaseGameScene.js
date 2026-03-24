@@ -618,6 +618,58 @@ export default class BaseGameScene extends Phaser.Scene {
         return CONFIG.HACK.BASE_WORDS + (wave - 1) * CONFIG.HACK.WORDS_GROWTH;
     }
 
+    /**
+     * Teleport an upgrade terminal to a new random orbital position and put it
+     * on cooldown — the same effect triggered when the RELOAD terminal is used.
+     *
+     * The new angle avoids other upgrade terminals by CONFIG.UPGRADES.MIN_SEPARATION.
+     * The terminal pops into place with a Back.easeOut scale tween.
+     * If the terminal is already on cooldown it stays on cooldown (the relocate
+     * still happens so it can't be camped).
+     */
+    _scatterTerminal(term) {
+        const cx = 640, cy = 360;
+        const r  = CONFIG.UPGRADES.ORBIT_RADIUS;
+
+        // Pick a new angle that doesn't overlap other upgrade terminals
+        let angle, attempts = 0;
+        do {
+            angle = Math.random() * Math.PI * 2;
+            const tooClose = this.upgradesList.some(u => {
+                if (u.type === 'DRONE') return false;
+                // Skip the terminal being scattered itself (compare by position)
+                const ux = r * Math.cos(u.angle);
+                const uy = r * Math.sin(u.angle);
+                if (Math.abs(ux - (term.x - cx)) < 1 && Math.abs(uy - (term.y - cy)) < 1) return false;
+                const dx = r * Math.cos(angle) - ux;
+                const dy = r * Math.sin(angle) - uy;
+                return Math.sqrt(dx * dx + dy * dy) < CONFIG.UPGRADES.MIN_SEPARATION;
+            });
+            if (!tooClose) break;
+            attempts++;
+        } while (attempts < 50);
+
+        // Update the upgrade entry's stored angle so future scatters use the new position
+        const entry = this.upgradesList.find(u => {
+            const ux = cx + Math.cos(u.angle) * r;
+            const uy = cy + Math.sin(u.angle) * r;
+            return Math.abs(ux - term.x) < 2 && Math.abs(uy - term.y) < 2;
+        });
+        if (entry) entry.angle = angle;
+
+        term.x = cx + Math.cos(angle) * r;
+        term.y = cy + Math.sin(angle) * r;
+        term.setScale(0);
+        this.tweens.add({
+            targets: term, scaleX: 1, scaleY: 1,
+            duration: 250, ease: 'Back.easeOut',
+        });
+
+        if (term.terminalState === 'IDLE') {
+            term.startCooldown(term.cooldownDuration);
+        }
+    }
+
     _spawnUpgradeTerminals() {
         const cx = 640, cy = 360;
         const r  = CONFIG.UPGRADES.ORBIT_RADIUS;
