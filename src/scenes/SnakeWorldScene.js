@@ -327,8 +327,9 @@ export default class SnakeWorldScene extends BaseGameScene {
                 if (headDist < this.boss.radius + projR) {
                     proj.destroy();
                     if (this.boss.shielded) {
-                        this.boss.flashShield();
                         this.soundSynth?.play('shieldReflect');
+                        const spark = this.add.arc(this.boss.x, this.boss.y, 6, 0, 360, false, 0x33bbff, 0.9).setDepth(58);
+                        this.tweens.add({ targets: spark, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 220, onComplete: () => spark.destroy() });
                     } else {
                         const flash = this.add.arc(this.boss.x, this.boss.y, this.boss.radius, 0, 360, false, 0xff2200, 0.55).setDepth(55);
                         this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
@@ -344,8 +345,9 @@ export default class SnakeWorldScene extends BaseGameScene {
                     if (Phaser.Math.Distance.Between(proj.x, proj.y, hb.x, hb.y) < hb.r + projR) {
                         proj.destroy();
                         if (this.boss.shielded) {
-                            this.boss.flashShield();
                             this.soundSynth?.play('shieldReflect');
+                            const spark = this.add.arc(hb.x, hb.y, 6, 0, 360, false, 0x33bbff, 0.9).setDepth(58);
+                            this.tweens.add({ targets: spark, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 220, onComplete: () => spark.destroy() });
                         } else {
                             const flash = this.add.arc(hb.x, hb.y, hb.r, 0, 360, false, 0xff2200, 0.55).setDepth(55);
                             this.tweens.add({ targets: flash, alpha: 0, duration: 200, onComplete: () => flash.destroy() });
@@ -394,7 +396,6 @@ export default class SnakeWorldScene extends BaseGameScene {
         const hit = candidates[0];
 
         if (this.boss.shielded) {
-            this.boss.flashShield();
             this.soundSynth?.play('shieldReflect');
             // Blue spark at the impact point on the shield surface
             const spark = this.add.arc(hit.x, hit.y, 6, 0, 360, false, 0x33bbff, 0.9).setDepth(58);

@@ -1,5 +1,17 @@
 # SNAIL HACKER — Changelog
 
+## Session — 2026-03-24
+
+### Fix: Laser visual not shortened by anaconda shield + no head flash on shielded hits
+
+Two bugs fixed affecting Ricochet II + Laser I vs the Anaconda:
+
+- **Laser passes through shield visually** — `ex/ey` (the beam endpoint used for the glow/line draw) were computed from `laserEnd` *before* `_handleLaserBossChecks` had a chance to shorten it. Moved the `ex/ey` assignment to *after* the boss check so the visual beam always terminates at the correct collision point.
+  - `src/scenes/BaseGameScene.js` — moved `const ex = …; const ey = …;` from before to after `laserEnd = this._handleLaserBossChecks(…)`.
+
+- **Head flashes on shielded body/segment hits** — `flashShield()` draws and tweens a white ring centred on the head, so calling it for any shield collision (including body segments far from the head) caused an unrelated flash at the wrong position. Removed all `flashShield()` calls from the anaconda shield-hit paths in `SnakeWorldScene`; the blue spark at the actual impact point (`hit.x/y` or `hb.x/y`) already provides correct positional feedback. The `shieldReflect` sound is preserved in all paths.
+  - `src/scenes/SnakeWorldScene.js` — removed `this.boss.flashShield()` from projectile-vs-head shield path, projectile-vs-body-segment shield path, and laser `_handleLaserBossChecks` shield path. Added a blue spark to the projectile head/body paths to match the spark already present in the laser path.
+
 ## Session — 2026-03-23
 
 ### Anaconda — simplified 6-state attack machine (fixes double same-side charge bug)

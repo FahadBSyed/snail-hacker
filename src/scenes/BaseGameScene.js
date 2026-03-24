@@ -1367,15 +1367,15 @@ export default class BaseGameScene extends Phaser.Scene {
             }
         }
 
-        const ex = sx + cos * laserEnd;
-        const ey = sy + sin * laserEnd;
-
         // Laser ricochet — fires from the farthest hit alien toward a new target
         if (this.ricochetEnabled && hitSet.size > 0) {
             this._fireLaserRicochet(ricochetOriginX, ricochetOriginY, 0, hitSet);
         }
 
         laserEnd = this._handleLaserBossChecks(sx, sy, cos, sin, laserEnd, HIT_RADIUS) ?? laserEnd;
+
+        const ex = sx + cos * laserEnd;
+        const ey = sy + sin * laserEnd;
 
         // Laser beam visual — outer glow + inner beam + bright core, quick fade
         const gfx = this.add.graphics().setDepth(200);
