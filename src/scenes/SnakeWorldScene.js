@@ -504,6 +504,12 @@ export default class SnakeWorldScene extends BaseGameScene {
         return pool;
     }
 
+    /** Wave 10 uses the SnakeMinigame — return pellet count as threshold. */
+    _wordsForWave(wave) {
+        if (wave === 10) return CONFIG.MINIGAMES.SNAKE_PELLETS_NEEDED;
+        return super._wordsForWave(wave);
+    }
+
     /**
      * On wave 10 the SnakeMinigame panel occupies the bottom (y > 480),
      * so clamp side-edge spawns above that region.

@@ -2,6 +2,15 @@
 
 ## Session — 2026-03-24
 
+### Bug fix: SnakeMinigame win never triggered (bomb never spawned)
+
+- **`src/scenes/SnakeWorldScene.js`** — added `_wordsForWave(wave)` override
+  (identical pattern to `FrogWorldScene`): returns `CONFIG.MINIGAMES.SNAKE_PELLETS_NEEDED`
+  for wave 10, delegates to `super` for all other waves. Without this override,
+  `hackThreshold` on wave 10 was 37 (10 + 9 × 3), so the SnakeMinigame demanded
+  37 pellets to call `onSuccess` — the arena fills up well before that, making
+  the win (and therefore the reward bomb) unreachable.
+
 ### Auto-turret targets anaconda boss + charge-scatter immunity while active
 
 - **`src/scenes/BaseGameScene.js`** — new `_turretEnemyPool()` hook (returns
