@@ -2,6 +2,17 @@
 
 ## Session — 2026-03-24
 
+### Fix: SnakeWorldScene wave-10 hack now uses SnakeMinigame
+
+`SnakeWorldScene` was not overriding `_tryWave10Hack()`, so pressing E at the hacking station on wave 10 fell through to the base typing/math/helicopter rotation instead of launching the SnakeMinigame.
+
+- **`src/scenes/SnakeWorldScene.js`**:
+  - Added `import SnakeMinigame` at the top.
+  - Added `_spawnMaxY()` override (returns 460 on wave 10, 670 otherwise) to keep enemy spawns above the SnakeMinigame panel — mirrors the equivalent override in `FrogWorldScene`.
+  - Added `_tryWave10Hack()` override: launches `SnakeMinigame` with `pointsNeeded = hackThreshold`, wires `onPellet` → HUD + station progress bar, `onSuccess` → drops the anaconda shield for `SHIELD_DOWN_DURATION` then re-raises it and resets progress, `onFailure` → resets snail state. Returns `true` to short-circuit the base typing path.
+
+
+
 ### Fix: Laser visual not shortened by anaconda shield + no head flash on shielded hits
 
 Two bugs fixed affecting Ricochet II + Laser I vs the Anaconda:

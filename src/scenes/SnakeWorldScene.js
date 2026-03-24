@@ -11,6 +11,7 @@ import { spawnSnakeDeathAnimation } from '../entities/snakes/snakeHitReaction.js
 import { spawnDeathBurst, checkBomberBlast, BURST_COLORS } from '../systems/CollisionSystem.js';
 import { buildNavGrid } from '../systems/PathfindingSystem.js';
 import BaseGameScene from './BaseGameScene.js';
+import SnakeMinigame from '../minigames/SnakeMinigame.js';
 
 const SNAKE_TYPES = new Set(['basic-snake', 'sidewinder', 'spitter', 'burrower', 'python']);
 
@@ -457,6 +458,52 @@ export default class SnakeWorldScene extends BaseGameScene {
             const pythonCount = this.enemies.filter(e => e.active && e.alienType === 'python').length;
             if (pythonCount >= 2) return false;
         }
+        return true;
+    }
+
+    /**
+     * On wave 10 the SnakeMinigame panel occupies the bottom (y > 480),
+     * so clamp side-edge spawns above that region.
+     */
+    _spawnMaxY() {
+        return this.wave === 10 ? 460 : 670;
+    }
+
+    /**
+     * Launch the SnakeMinigame to break the anaconda's shield.
+     * Returns true so BaseGameScene._startHack() skips the normal typing path.
+     */
+    _tryWave10Hack() {
+        this.activeHack = new SnakeMinigame(this, {
+            pointsNeeded: this.hackThreshold,
+            onPellet: (count) => {
+                this.hackProgress = count;
+                this.hud.updateHack(this.hackProgress, this.hackThreshold, 'SHIELD');
+                this.station.setHackProgress(this.hackProgress / this.hackThreshold);
+            },
+            onSuccess: () => {
+                this.activeHack = null;
+                this.snail.hackingActive = false;
+                this.snail.setState('IDLE');
+                if (this.boss && this.boss.active && !this.boss._dying) {
+                    this.boss.dropShield();
+                    this.soundSynth?.play('shieldReflect');
+                    this.time.delayedCall(CONFIG.BOSS.SHIELD_DOWN_DURATION, () => {
+                        if (this.boss && this.boss.active && !this.boss._dying) {
+                            this.boss.raiseShield();
+                        }
+                    });
+                }
+                this.hackProgress = 0;
+                this.hud.updateHack(0, this.hackThreshold, 'SHIELD');
+                this.station.setHackProgress(0);
+            },
+            onFailure: () => {
+                this.activeHack = null;
+                this.snail.hackingActive = false;
+                this.snail.setState('IDLE');
+            },
+        });
         return true;
     }
 
