@@ -2,6 +2,22 @@
 
 ## Session — 2026-03-24
 
+### Auto-turret targets anaconda boss + charge-scatter immunity while active
+
+- **`src/scenes/BaseGameScene.js`** — new `_turretEnemyPool()` hook (returns
+  `this.enemies` by default). Both CANNON and CANNON II `getEnemies` callbacks
+  now call `this._turretEnemyPool()` instead of returning `this.enemies` directly.
+- **`src/scenes/SnakeWorldScene.js`** — overrides `_turretEnemyPool()` to append
+  `this.boss` to the pool whenever it is alive (not dying). The existing
+  `enemyFilter: (a) => !a.shielded` on the DefenseStation then handles the
+  shield check automatically — no special-casing needed. Cannon projectiles
+  already go into `scene.projectiles`, so the existing boss collision loop in
+  `_updateWorldSpecific` detects hits and deals damage correctly.
+- **Charge-scatter immunity** — the terminal scatter loop in `_updateWorldSpecific`
+  now skips (`continue`) any terminal whose `terminalState` is `'ACTIVE'` or
+  `'EFFECT_ACTIVE'`, so the cannon terminal is never teleported or put on cooldown
+  while the turret is in its active firing window.
+
 ### SnakeMinigame — progressive shield-down + win-reward bomb
 
 **Progressive shield timing** — each pellet eaten keeps the shield down longer:

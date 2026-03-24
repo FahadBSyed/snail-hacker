@@ -704,7 +704,7 @@ export default class BaseGameScene extends Phaser.Scene {
                 case 'CANNON': {
                     const cannon = new DefenseStation(this, x, y - 30, {
                         type:        'CANNON',
-                        getEnemies:   () => this.enemies,
+                        getEnemies:   () => this._turretEnemyPool(),
                         enemyFilter: (a) => !a.shielded,   // ignore shielded aliens
                     });
                     term = new Terminal(this, x, y + 25, {
@@ -780,7 +780,7 @@ export default class BaseGameScene extends Phaser.Scene {
                 case 'CANNON_2': {
                     const cannon2 = new DefenseStation(this, x, y - 30, {
                         type:           'CANNON II',
-                        getEnemies:      () => this.enemies,
+                        getEnemies:      () => this._turretEnemyPool(),
                         enemyFilter:    (a) => !a.shielded,
                         fireInterval:   CONFIG.TERMINALS.CANNON_2.FIRE_INTERVAL,
                         activeDuration: CONFIG.TERMINALS.CANNON_2.DURATION,
@@ -2250,6 +2250,12 @@ export default class BaseGameScene extends Phaser.Scene {
      * Override in SnakeWorldScene.
      */
     _createWorldSpecificEnemy(_type, _x, _y) { return null; }
+
+    /**
+     * Returns the enemy pool available to auto-turrets.
+     * Override in world scenes that have a boss to include it when targetable.
+     */
+    _turretEnemyPool() { return this.enemies; }
 
     /**
      * Called when wave === 10 and the snail activates the station hack.

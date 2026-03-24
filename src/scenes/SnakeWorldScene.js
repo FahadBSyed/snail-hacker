@@ -327,6 +327,8 @@ export default class SnakeWorldScene extends BaseGameScene {
                 for (const term of (this.terminals || [])) {
                     if (term.label === 'RELOAD') continue;
                     if (!term.active || this._chargeHitTerminals.has(term)) continue;
+                    // Don't scatter while the turret is actively firing
+                    if (term.terminalState === 'ACTIVE' || term.terminalState === 'EFFECT_ACTIVE') continue;
                     // Check head
                     let hit = Phaser.Math.Distance.Between(this.boss.x, this.boss.y, term.x, term.y) < headR + termR;
                     // Check each body segment
@@ -489,6 +491,17 @@ export default class SnakeWorldScene extends BaseGameScene {
             if (pythonCount >= 2) return false;
         }
         return true;
+    }
+
+    /**
+     * Include the anaconda boss in the turret target pool when its shield is down.
+     * The existing enemyFilter (!a.shielded) handles the shield check, so we
+     * only need to add the boss when it's alive.
+     */
+    _turretEnemyPool() {
+        const pool = this.enemies.filter(e => e.active);
+        if (this.boss && this.boss.active && !this.boss._dying) pool.push(this.boss);
+        return pool;
     }
 
     /**
